@@ -3,11 +3,14 @@ import { NextRequest, NextResponse } from 'next/server'
 // GitHub OAuth 配置
 const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID || ''
 const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET || ''
-const REDIRECT_URI = process.env.REDIRECT_URI || 'http://localhost:3000/api/auth/github/callback'
+const REDIRECT_URI = process.env.REDIRECT_URI || 'https://api-g.lacs.cc/api/auth/github/callback'
 
 // 允许的用户名和邮箱
 const ALLOWED_USERNAME = 'LACS-Official'
 const ALLOWED_EMAIL = '2935278133@qq.com'
+
+// 前端登录结果页地址
+const FRONTEND_URL = 'https://admin.lacs.cc/oauth-result'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
@@ -16,13 +19,13 @@ export async function GET(request: NextRequest) {
   const error = searchParams.get('error')
   
   if (error) {
-    const errorUrl = `/oauth-test?error=${encodeURIComponent('GitHub OAuth 授权失败')}&details=${encodeURIComponent(error)}`
-    return NextResponse.redirect(new URL(errorUrl, request.url))
+    const errorUrl = `${FRONTEND_URL}?error=${encodeURIComponent('GitHub OAuth 授权失败')}&details=${encodeURIComponent(error)}`
+    return NextResponse.redirect(errorUrl)
   }
   
   if (!code) {
-    const errorUrl = `/oauth-test?error=${encodeURIComponent('缺少授权码')}`
-    return NextResponse.redirect(new URL(errorUrl, request.url))
+    const errorUrl = `${FRONTEND_URL}?error=${encodeURIComponent('缺少授权码')}`
+    return NextResponse.redirect(errorUrl)
   }
   
   try {
@@ -45,23 +48,23 @@ export async function GET(request: NextRequest) {
     
     if (!tokenResponse.ok) {
       console.error('Token response error:', tokenResponse.status, tokenResponse.statusText)
-      const errorUrl = `/oauth-test?error=${encodeURIComponent('获取访问令牌失败')}`
-      return NextResponse.redirect(new URL(errorUrl, request.url))
+      const errorUrl = `${FRONTEND_URL}?error=${encodeURIComponent('获取访问令牌失败')}`
+      return NextResponse.redirect(errorUrl)
     }
     
     const tokenData = await tokenResponse.json()
     
     if (tokenData.error) {
       console.error('Token data error:', tokenData)
-      const errorUrl = `/oauth-test?error=${encodeURIComponent('获取访问令牌失败')}&details=${encodeURIComponent(tokenData.error_description || '')}`
-      return NextResponse.redirect(new URL(errorUrl, request.url))
+      const errorUrl = `${FRONTEND_URL}?error=${encodeURIComponent('获取访问令牌失败')}&details=${encodeURIComponent(tokenData.error_description || '')}`
+      return NextResponse.redirect(errorUrl)
     }
     
     const accessToken = tokenData.access_token
     
     if (!accessToken) {
-      const errorUrl = `/oauth-test?error=${encodeURIComponent('未获取到访问令牌')}`
-      return NextResponse.redirect(new URL(errorUrl, request.url))
+      const errorUrl = `${FRONTEND_URL}?error=${encodeURIComponent('未获取到访问令牌')}`
+      return NextResponse.redirect(errorUrl)
     }
     
     // 使用访问令牌获取用户信息
@@ -76,8 +79,8 @@ export async function GET(request: NextRequest) {
     
     if (!userResponse.ok) {
       console.error('User response error:', userResponse.status, userResponse.statusText)
-      const errorUrl = `/oauth-test?error=${encodeURIComponent('获取用户信息失败')}`
-      return NextResponse.redirect(new URL(errorUrl, request.url))
+      const errorUrl = `${FRONTEND_URL}?error=${encodeURIComponent('获取用户信息失败')}`
+      return NextResponse.redirect(errorUrl)
     }
     
     const userData = await userResponse.json()
@@ -100,8 +103,8 @@ export async function GET(request: NextRequest) {
     
     // 权限校验：只允许指定用户名和邮箱
     if (userData.login !== ALLOWED_USERNAME || primaryEmail !== ALLOWED_EMAIL) {
-      const errorUrl = `/oauth-test?error=${encodeURIComponent('该账号无权限登录')}`
-      return NextResponse.redirect(new URL(errorUrl, request.url))
+      const errorUrl = `${FRONTEND_URL}?error=${encodeURIComponent('该账号无权限登录')}`
+      return NextResponse.redirect(errorUrl)
     }
     
     // 将用户信息和令牌编码到 URL 参数中
@@ -114,8 +117,8 @@ export async function GET(request: NextRequest) {
       html_url: userData.html_url,
     }
     
-    const successUrl = `/oauth-test?success=true&user=${encodeURIComponent(JSON.stringify(userInfo))}&token=${encodeURIComponent(accessToken)}`
-    return NextResponse.redirect(new URL(successUrl, request.url))
+    const successUrl = `${FRONTEND_URL}?success=true&user=${encodeURIComponent(JSON.stringify(userInfo))}&token=${encodeURIComponent(accessToken)}`
+    return NextResponse.redirect(successUrl)
     
   } catch (error: any) {
     console.error('GitHub OAuth 错误:', error)
@@ -126,7 +129,7 @@ export async function GET(request: NextRequest) {
     if (error.code === 'UND_ERR_CONNECT_TIMEOUT') {
       errorMessage = '网络连接超时，请检查网络连接'
     }
-    const errorUrl = `/oauth-test?error=${encodeURIComponent(errorMessage)}&details=${encodeURIComponent(error.message || '')}`
-    return NextResponse.redirect(new URL(errorUrl, request.url))
+    const errorUrl = `${FRONTEND_URL}?error=${encodeURIComponent(errorMessage)}&details=${encodeURIComponent(error.message || '')}`
+    return NextResponse.redirect(errorUrl)
   }
 } 

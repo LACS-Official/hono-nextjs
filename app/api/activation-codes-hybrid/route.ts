@@ -5,11 +5,26 @@ import { Hono } from 'hono'
 import { handle } from 'hono/vercel'
 import { kv } from '@vercel/kv'
 import { db } from '@/lib/db-connection'
-import { activationCodes } from '@/lib/db-schema'
+import { activationCodes, type ActivationCode } from '@/lib/db-schema'
 import { eq, desc, and, lt, gt, count } from 'drizzle-orm'
 import { v4 as uuidv4 } from 'uuid'
 
 export const dynamic = 'force-dynamic'
+
+// KV 存储的激活码类型（日期为字符串格式）
+interface KVActivationCode {
+  id: string
+  code: string
+  createdAt: string
+  expiresAt: string
+  isUsed: boolean
+  usedAt?: string
+  metadata?: any
+  productInfo?: any
+}
+
+// 统一的激活码类型
+type UnifiedActivationCode = ActivationCode | KVActivationCode
 
 const app = new Hono().basePath('/api/activation-codes-hybrid')
 
@@ -27,7 +42,7 @@ async function checkDatabaseConnection() {
     await db.select().from(activationCodes).limit(1)
     return true
   } catch (error) {
-    console.warn('Postgres 连接失败，回退到 KV:', error.message)
+    console.warn('Postgres 连接失败，回退到 KV:', error instanceof Error ? error.message : String(error))
     return false
   }
 }
@@ -74,7 +89,7 @@ app.post('/', async (c) => {
           }
         })
       } catch (error) {
-        console.warn('Postgres 写入失败，回退到 KV:', error.message)
+        console.warn('Postgres 写入失败，回退到 KV:', error instanceof Error ? error.message : String(error))
       }
     }
 
@@ -128,8 +143,8 @@ app.post('/verify', async (c) => {
       }, 400)
     }
 
-    let activationCode = null
-    let source = null
+    let activationCode: UnifiedActivationCode | null = null
+    let source: 'postgres' | 'kv' | null = null
 
     // 首先尝试从 Postgres 查找
     const isPostgresAvailable = await checkDatabaseConnection()
@@ -147,20 +162,20 @@ app.post('/verify', async (c) => {
           source = 'postgres'
         }
       } catch (error) {
-        console.warn('Postgres 查询失败:', error.message)
+        console.warn('Postgres 查询失败:', error instanceof Error ? error.message : String(error))
       }
     }
 
     // 如果 Postgres 中没有找到，尝试 KV
     if (!activationCode) {
       try {
-        const kvCode = await kv.get(`activation:${code}`)
+        const kvCode = await kv.get<KVActivationCode>(`activation:${code}`)
         if (kvCode) {
           activationCode = kvCode
           source = 'kv'
         }
       } catch (error) {
-        console.warn('KV 查询失败:', error.message)
+        console.warn('KV 查询失败:', error instanceof Error ? error.message : String(error))
       }
     }
 
@@ -270,7 +285,7 @@ app.get('/stats', async (c) => {
           active: activeResult[0]?.count || 0
         }
       } catch (error) {
-        console.warn('获取 Postgres 统计失败:', error.message)
+        console.warn('获取 Postgres 统计失败:', error instanceof Error ? error.message : String(error))
       }
     }
 
@@ -280,7 +295,7 @@ app.get('/stats', async (c) => {
       kvStats.total = codes.length
 
       for (const code of codes) {
-        const activationCode = await kv.get(`activation:${code}`)
+        const activationCode = await kv.get<KVActivationCode>(`activation:${code}`)
         if (activationCode) {
           if (activationCode.isUsed) {
             kvStats.used++
@@ -292,7 +307,7 @@ app.get('/stats', async (c) => {
         }
       }
     } catch (error) {
-      console.warn('获取 KV 统计失败:', error.message)
+      console.warn('获取 KV 统计失败:', error instanceof Error ? error.message : String(error))
     }
 
     const totalStats = {

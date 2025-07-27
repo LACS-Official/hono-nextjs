@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db-connection'
 import { activationCodes } from '@/lib/db-schema'
-import { eq, and, lt, count } from 'drizzle-orm'
+import { eq, and, lt, gt, count } from 'drizzle-orm'
 
 export async function GET(request: NextRequest) {
   try {
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
         .from(activationCodes)
         .where(and(
           eq(activationCodes.isUsed, false),
-          lt(now, activationCodes.expiresAt)
+          gt(activationCodes.expiresAt, now)
         ))
     ])
 

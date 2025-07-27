@@ -36,7 +36,7 @@ interface ActivationCode {
 
 ### 1. 生成激活码
 
-**POST** `/api/activation-codes`
+**POST** `/api/v2/activation-codes`
 
 生成一个新的激活码。
 
@@ -78,7 +78,7 @@ interface ActivationCode {
 
 ### 2. 验证激活码
 
-**POST** `/api/activation-codes/verify`
+**POST** `/api/v2/activation-codes/verify`
 
 验证激活码并标记为已使用。
 
@@ -122,7 +122,7 @@ interface ActivationCode {
 
 ### 3. 获取激活码列表
 
-**GET** `/api/activation-codes`
+**GET** `/api/v2/activation-codes/list`
 
 获取激活码列表，支持分页和状态过滤。
 
@@ -135,7 +135,7 @@ interface ActivationCode {
 #### 示例
 
 ```
-GET /api/activation-codes?page=1&limit=5&status=unused
+GET /api/v2/activation-codes/list?page=1&limit=5&status=unused
 ```
 
 #### 响应
@@ -170,7 +170,7 @@ GET /api/activation-codes?page=1&limit=5&status=unused
 
 ### 4. 获取单个激活码详情
 
-**GET** `/api/activation-codes/:id`
+**GET** `/api/v2/activation-codes/:id`
 
 根据 ID 获取激活码的详细信息。
 
@@ -200,7 +200,7 @@ GET /api/activation-codes?page=1&limit=5&status=unused
 
 ### 5. 删除激活码
 
-**DELETE** `/api/activation-codes/:id`
+**DELETE** `/api/v2/activation-codes/:id`
 
 根据 ID 删除激活码。
 
@@ -235,7 +235,7 @@ GET /api/activation-codes?page=1&limit=5&status=unused
 
 ```javascript
 // 生成激活码
-const response = await fetch('/api/activation-codes', {
+const response = await fetch('/api/v2/activation-codes', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json'
@@ -254,7 +254,7 @@ const result = await response.json()
 console.log(result.data.code) // 激活码
 
 // 验证激活码
-const verifyResponse = await fetch('/api/activation-codes/verify', {
+const verifyResponse = await fetch('/api/v2/activation-codes/verify', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json'
@@ -284,12 +284,12 @@ npm install undici
 npm run dev
 
 # 在另一个终端运行测试
-node test-activation-codes.js
+node debug/test-postgres-api.js
 ```
 
 ## 部署注意事项
 
-1. **环境变量配置**：确保在 Vercel 中配置了 KV 数据库
+1. **环境变量配置**：确保在 Vercel 中配置了 Postgres 数据库
 2. **安全性**：在生产环境中建议添加 API 认证
 3. **监控**：建议添加日志记录和错误监控
 4. **备份**：定期备份激活码数据

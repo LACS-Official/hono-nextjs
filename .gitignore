@@ -111,3 +111,10 @@ jspm_packages/
 
 # TernJS port file
 .tern-port
+
+# Debug and test files
+debug/
+test-*.js
+storage-analysis.js
+app/activation-test/
+app/oauth-test/

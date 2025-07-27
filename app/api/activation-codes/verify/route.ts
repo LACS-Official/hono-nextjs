@@ -1,4 +1,4 @@
-// 验证激活码接口 (Neon Postgres 版本)
+// 验证激活码接口
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db-connection'
 import { activationCodes } from '@/lib/db-schema'

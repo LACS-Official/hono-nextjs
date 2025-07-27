@@ -1,4 +1,4 @@
-// Neon Postgres 版本的激活码 API
+// 激活码 API - 主路由
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db-connection'
 import { activationCodes } from '@/lib/db-schema'

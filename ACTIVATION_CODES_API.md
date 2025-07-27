@@ -36,7 +36,7 @@ interface ActivationCode {
 
 ### 1. 生成激活码
 
-**POST** `/api/v2/activation-codes`
+**POST** `/api/activation-codes`
 
 生成一个新的激活码。
 
@@ -78,7 +78,7 @@ interface ActivationCode {
 
 ### 2. 验证激活码
 
-**POST** `/api/v2/activation-codes/verify`
+**POST** `/api/activation-codes/verify`
 
 验证激活码并标记为已使用。
 
@@ -122,7 +122,7 @@ interface ActivationCode {
 
 ### 3. 获取激活码列表
 
-**GET** `/api/v2/activation-codes/list`
+**GET** `/api/activation-codes`
 
 获取激活码列表，支持分页和状态过滤。
 
@@ -135,7 +135,7 @@ interface ActivationCode {
 #### 示例
 
 ```
-GET /api/v2/activation-codes/list?page=1&limit=5&status=unused
+GET /api/activation-codes?page=1&limit=5&status=unused
 ```
 
 #### 响应
@@ -170,7 +170,7 @@ GET /api/v2/activation-codes/list?page=1&limit=5&status=unused
 
 ### 4. 获取单个激活码详情
 
-**GET** `/api/v2/activation-codes/:id`
+**GET** `/api/activation-codes/:id`
 
 根据 ID 获取激活码的详细信息。
 
@@ -200,7 +200,7 @@ GET /api/v2/activation-codes/list?page=1&limit=5&status=unused
 
 ### 5. 删除激活码
 
-**DELETE** `/api/v2/activation-codes/:id`
+**DELETE** `/api/activation-codes/:id`
 
 根据 ID 删除激活码。
 
@@ -235,7 +235,7 @@ GET /api/v2/activation-codes/list?page=1&limit=5&status=unused
 
 ```javascript
 // 生成激活码
-const response = await fetch('/api/v2/activation-codes', {
+const response = await fetch('/api/activation-codes', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json'
@@ -254,7 +254,7 @@ const result = await response.json()
 console.log(result.data.code) // 激活码
 
 // 验证激活码
-const verifyResponse = await fetch('/api/v2/activation-codes/verify', {
+const verifyResponse = await fetch('/api/activation-codes/verify', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json'

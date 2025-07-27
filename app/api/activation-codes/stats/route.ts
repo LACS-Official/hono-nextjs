@@ -1,4 +1,4 @@
-// 统计信息接口 (Neon Postgres 版本)
+// 统计信息接口
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db-connection'
 import { activationCodes } from '@/lib/db-schema'
@@ -44,24 +44,22 @@ export async function GET(request: NextRequest) {
     const used = usedResult[0]?.count || 0
     const expired = expiredResult[0]?.count || 0
     const active = activeResult[0]?.count || 0
+    const unused = total - used
 
-    // 估算存储大小 (每个记录约300字节)
-    const estimatedSize = total * 300
-    const maxCapacity = 512 * 1024 * 1024 // 512MB
-    const usagePercentage = (estimatedSize / maxCapacity) * 100
+    // 计算使用率和过期率
+    const usageRate = total > 0 ? (used / total) * 100 : 0
+    const expirationRate = total > 0 ? (expired / total) * 100 : 0
 
     return NextResponse.json({
       success: true,
       data: {
         total,
-        active,
         used,
+        unused,
         expired,
-        estimatedSizeBytes: estimatedSize,
-        estimatedSizeMB: (estimatedSize / 1024 / 1024).toFixed(2),
-        maxCapacityMB: 512,
-        usagePercentage: usagePercentage.toFixed(2),
-        remainingCapacityMB: ((maxCapacity - estimatedSize) / 1024 / 1024).toFixed(2)
+        active,
+        usageRate: parseFloat(usageRate.toFixed(2)),
+        expirationRate: parseFloat(expirationRate.toFixed(2))
       }
     })
   } catch (error) {

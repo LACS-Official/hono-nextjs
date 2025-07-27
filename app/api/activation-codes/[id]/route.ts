@@ -1,4 +1,4 @@
-// 单个激活码操作接口 (Neon Postgres 版本)
+// 单个激活码操作接口
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db-connection'
 import { activationCodes } from '@/lib/db-schema'
@@ -74,7 +74,7 @@ export async function DELETE(
 
     return NextResponse.json({
       success: true,
-      message: 'Activation code deleted successfully'
+      message: '激活码删除成功'
     })
   } catch (error) {
     console.error('Error deleting activation code:', error)

@@ -54,11 +54,13 @@ hono-nextjs/
 │   │   │   ├── login/route.ts      # GitHub OAuth 登录
 │   │   │   ├── callback/route.ts   # OAuth 回调处理
 │   │   │   └── user/route.ts       # 用户信息获取
-│   │   ├── v2/activation-codes/    # Postgres 版激活码 API
-│   │   │   ├── route.ts            # 生成激活码
+│   │   ├── activation-codes/       # 激活码 API
+│   │   │   ├── route.ts            # 生成和获取激活码
 │   │   │   ├── verify/route.ts     # 验证激活码
-│   │   │   └── list/route.ts       # 激活码列表
-│   │   ├── activation-codes-hybrid/ # 混合模式 API
+│   │   │   ├── stats/route.ts      # 激活码统计
+│   │   │   ├── cleanup/route.ts    # 清理过期激活码
+│   │   │   └── [id]/route.ts       # 单个激活码操作
+│   │   ├── activation-codes-hybrid/ # 混合模式 API（迁移期间）
 │   │   │   └── route.ts            # KV + Postgres 混合
 
 │   ├── oauth-test/page.tsx         # OAuth 测试页面
@@ -167,21 +169,251 @@ GET /api/auth/github/user
 
 ### 激活码 API 端点
 
+激活码管理系统提供完整的激活码生命周期管理功能，包括生成、验证、查询和统计等操作。
 
-
-#### Postgres 版本（推荐）
+#### 1. 生成激活码
 ```
-POST /api/v2/activation-codes          # 生成激活码
-POST /api/v2/activation-codes/verify   # 验证激活码
-GET  /api/v2/activation-codes/list     # 获取激活码列表
+POST /api/activation-codes
 ```
 
-#### 混合模式（迁移期间）
-```
-POST /api/activation-codes-hybrid     # 混合模式激活码操作
+**功能描述**：生成一个新的激活码，支持自定义过期时间和产品信息。
+
+**请求体参数**：
+```json
+{
+  "expirationDays": 365,           // 可选，过期天数，默认 365
+  "metadata": {                    // 可选，自定义元数据
+    "customerEmail": "user@example.com",
+    "licenseType": "enterprise"
+  },
+  "productInfo": {                 // 可选，产品信息
+    "name": "我的软件",
+    "version": "1.0.0",
+    "features": ["premium", "support"]
+  }
+}
 ```
 
-详细的激活码 API 文档请参考：[ACTIVATION_CODES_API.md](ACTIVATION_CODES_API.md)
+**响应示例**：
+```json
+{
+  "success": true,
+  "data": {
+    "id": "uuid-here",
+    "code": "ABC123-DEF456-GHI789",
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "expiresAt": "2025-01-01T00:00:00.000Z",
+    "productInfo": {
+      "name": "我的软件",
+      "version": "1.0.0",
+      "features": ["premium", "support"]
+    }
+  }
+}
+```
+
+#### 2. 验证激活码
+```
+POST /api/activation-codes/verify
+```
+
+**功能描述**：验证激活码的有效性并标记为已使用。
+
+**请求体参数**：
+```json
+{
+  "code": "ABC123-DEF456-GHI789"
+}
+```
+
+**成功响应**：
+```json
+{
+  "success": true,
+  "data": {
+    "id": "uuid-here",
+    "code": "ABC123-DEF456-GHI789",
+    "productInfo": {
+      "name": "我的软件",
+      "version": "1.0.0",
+      "features": ["premium", "support"]
+    },
+    "metadata": {
+      "customerEmail": "user@example.com"
+    },
+    "activatedAt": "2024-01-01T12:00:00.000Z"
+  }
+}
+```
+
+**失败响应**：
+```json
+{
+  "success": false,
+  "error": "激活码无效或已过期"
+}
+```
+
+#### 3. 获取激活码列表
+```
+GET /api/activation-codes
+```
+
+**功能描述**：获取激活码列表，支持分页和状态过滤。
+
+**查询参数**：
+- `page`: 页码，默认 1
+- `limit`: 每页数量，默认 10
+- `status`: 状态过滤
+  - `all`: 全部（默认）
+  - `used`: 已使用
+  - `unused`: 未使用
+  - `expired`: 已过期
+  - `active`: 有效（未使用且未过期）
+
+**请求示例**：
+```
+GET /api/activation-codes?page=1&limit=5&status=unused
+```
+
+**响应示例**：
+```json
+{
+  "success": true,
+  "data": {
+    "codes": [
+      {
+        "id": "uuid-here",
+        "code": "ABC123-DEF456-GHI789",
+        "createdAt": "2024-01-01T00:00:00.000Z",
+        "expiresAt": "2025-01-01T00:00:00.000Z",
+        "isUsed": false,
+        "productInfo": {
+          "name": "我的软件",
+          "version": "1.0.0",
+          "features": ["premium"]
+        }
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "limit": 5,
+      "total": 10,
+      "totalPages": 2
+    }
+  }
+}
+```
+
+#### 4. 获取单个激活码详情
+```
+GET /api/activation-codes/[id]
+```
+
+**功能描述**：根据 ID 获取激活码的详细信息。
+
+**响应示例**：
+```json
+{
+  "success": true,
+  "data": {
+    "id": "uuid-here",
+    "code": "ABC123-DEF456-GHI789",
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "expiresAt": "2025-01-01T00:00:00.000Z",
+    "isUsed": false,
+    "isExpired": false,
+    "productInfo": {
+      "name": "我的软件",
+      "version": "1.0.0",
+      "features": ["premium"]
+    },
+    "metadata": {
+      "customerEmail": "user@example.com"
+    }
+  }
+}
+```
+
+#### 5. 删除激活码
+```
+DELETE /api/activation-codes/[id]
+```
+
+**功能描述**：根据 ID 删除指定的激活码。
+
+**响应示例**：
+```json
+{
+  "success": true,
+  "message": "激活码删除成功"
+}
+```
+
+#### 6. 获取激活码统计信息
+```
+GET /api/activation-codes/stats
+```
+
+**功能描述**：获取激活码的统计信息，包括总数、已使用数量、过期数量等。
+
+**响应示例**：
+```json
+{
+  "success": true,
+  "data": {
+    "total": 100,
+    "used": 45,
+    "unused": 35,
+    "expired": 20,
+    "active": 35,
+    "usageRate": 45.0
+  }
+}
+```
+
+#### 7. 清理过期激活码
+```
+POST /api/activation-codes/cleanup
+```
+
+**功能描述**：清理过期超过指定天数的激活码。
+
+**请求体参数**：
+```json
+{
+  "daysOld": 30  // 可选，清理过期超过多少天的激活码，默认 30
+}
+```
+
+**响应示例**：
+```json
+{
+  "success": true,
+  "message": "已清理 15 个过期激活码",
+  "deletedCount": 15
+}
+```
+
+#### 错误处理
+
+所有接口在出错时都会返回统一的错误格式：
+
+```json
+{
+  "success": false,
+  "error": "错误描述信息"
+}
+```
+
+**常见错误码**：
+- `400`: 请求参数错误
+- `404`: 资源不存在
+- `500`: 服务器内部错误
+
+详细的激活码 API 文档请参考：
+- [激活码API文档.md](激活码API文档.md) - 完整的中文文档
+- [ACTIVATION_CODES_API.md](ACTIVATION_CODES_API.md) - 英文版本文档
 
 ### 通用 API 端点
 
@@ -216,14 +448,23 @@ curl http://localhost:3000/api/hello
 curl -H "Authorization: Bearer YOUR_TOKEN" http://localhost:3000/api/auth/github/user
 
 # 测试激活码生成
-curl -X POST http://localhost:3000/api/v2/activation-codes \
+curl -X POST http://localhost:3000/api/activation-codes \
   -H "Content-Type: application/json" \
   -d '{"expirationDays": 30, "productInfo": {"name": "Test Product"}}'
 
 # 测试激活码验证
-curl -X POST http://localhost:3000/api/v2/activation-codes/verify \
+curl -X POST http://localhost:3000/api/activation-codes/verify \
   -H "Content-Type: application/json" \
   -d '{"code": "YOUR_ACTIVATION_CODE"}'
+
+# 测试激活码列表
+curl http://localhost:3000/api/activation-codes?page=1&limit=10&status=active
+
+# 测试激活码统计
+curl http://localhost:3000/api/activation-codes/stats
+
+# 测试 API 路径（运行完整测试）
+node scripts/test-activation-codes-api.js
 ```
 
 ## 🚀 部署指南
@@ -326,9 +567,10 @@ npm run test:postgres
 如果您遇到问题或有建议，请：
 
 1. 查看 [GitHub OAuth 设置指南](GITHUB_OAUTH_SETUP.md)
-2. 查看 [激活码 API 文档](ACTIVATION_CODES_API.md)
-3. 搜索现有的 [Issues](../../issues)
-4. 创建新的 [Issue](../../issues/new)
+2. 查看 [激活码 API 中文文档](激活码API文档.md)
+3. 查看 [激活码 API 英文文档](ACTIVATION_CODES_API.md)
+4. 搜索现有的 [Issues](../../issues)
+5. 创建新的 [Issue](../../issues/new)
 
 ### 常见问题
 

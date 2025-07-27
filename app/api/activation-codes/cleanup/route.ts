@@ -1,4 +1,4 @@
-// 清理过期激活码接口 (Neon Postgres 版本)
+// 清理过期激活码接口
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db-connection'
 import { activationCodes } from '@/lib/db-schema'
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: `Cleaned up ${deletedCodes.length} expired activation codes`,
+      message: `已清理 ${deletedCodes.length} 个过期激活码`,
       deletedCount: deletedCodes.length
     })
   } catch (error) {

@@ -1,16 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { generateToken, isAuthorizedAdmin, createAuthHeaders, type User } from '@/lib/auth'
 
 // GitHub OAuth 配置
 const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID || ''
 const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET || ''
-const REDIRECT_URI = process.env.REDIRECT_URI || 'https://api-g.lacs.cc/api/auth/github/callback'
-
-// 允许的用户名和邮箱
-const ALLOWED_USERNAME = 'LACS-Official'
-const ALLOWED_EMAIL = '2935278133@qq.com'
+const REDIRECT_URI = process.env.REDIRECT_URI || 'http://localhost:3000/api/auth/github/callback'
 
 // 前端登录结果页地址
-const FRONTEND_URL = 'https://admin.lacs.cc/oauth-result'
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000/admin'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
@@ -22,7 +19,7 @@ export async function GET(request: NextRequest) {
     const errorUrl = `${FRONTEND_URL}?error=${encodeURIComponent('GitHub OAuth 授权失败')}&details=${encodeURIComponent(error)}`
     return NextResponse.redirect(errorUrl)
   }
-  
+
   if (!code) {
     const errorUrl = `${FRONTEND_URL}?error=${encodeURIComponent('缺少授权码')}`
     return NextResponse.redirect(errorUrl)
@@ -101,14 +98,8 @@ export async function GET(request: NextRequest) {
       primaryEmail = emailsData.find((email: any) => email.primary)?.email || ''
     }
     
-    // 权限校验：只允许指定用户名和邮箱
-    if (userData.login !== ALLOWED_USERNAME || primaryEmail !== ALLOWED_EMAIL) {
-      const errorUrl = `${FRONTEND_URL}?error=${encodeURIComponent('该账号无权限登录')}`
-      return NextResponse.redirect(errorUrl)
-    }
-    
-    // 将用户信息和令牌编码到 URL 参数中
-    const userInfo = {
+    // 创建用户对象
+    const user: User = {
       id: userData.id,
       login: userData.login,
       name: userData.name,
@@ -116,9 +107,30 @@ export async function GET(request: NextRequest) {
       avatar_url: userData.avatar_url,
       html_url: userData.html_url,
     }
-    
-    const successUrl = `${FRONTEND_URL}?success=true&user=${encodeURIComponent(JSON.stringify(userInfo))}&token=${encodeURIComponent(accessToken)}`
-    return NextResponse.redirect(successUrl)
+
+    // 权限校验：只允许指定用户名和邮箱
+    if (!isAuthorizedAdmin(user)) {
+      const errorUrl = `${FRONTEND_URL}?error=${encodeURIComponent('该账号无权限登录')}`
+      return NextResponse.redirect(errorUrl)
+    }
+
+    // 生成 JWT Token
+    const token = generateToken(user)
+
+    // 创建认证头部
+    const authHeaders = createAuthHeaders(token)
+
+    // 重定向到管理员页面，并设置认证 Cookie
+    const response = NextResponse.redirect(FRONTEND_URL)
+
+    // 设置认证 Cookie
+    Object.entries(authHeaders).forEach(([key, value]) => {
+      if (key === 'Set-Cookie') {
+        response.headers.set(key, value)
+      }
+    })
+
+    return response
     
   } catch (error: any) {
     console.error('GitHub OAuth 错误:', error)

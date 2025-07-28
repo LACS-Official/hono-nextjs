@@ -5,8 +5,7 @@ import { logger } from 'hono/logger'
 import { prettyJSON } from 'hono/pretty-json'
 import { HTTPException } from 'hono/http-exception'
 
-// 导入软件管理路由
-// import { softwareRoutes } from './software' // 已迁移到 /app/software
+// 软件管理路由已移至独立的 API 路由
 // 导入中间件
 import {
   rateLimit,
@@ -66,8 +65,7 @@ app.get('/health', (c) => {
   })
 })
 
-// 软件管理路由已迁移到 /app/software
-// 保留此注释以便了解路由迁移历史
+// 软件管理路由已移至 /api/software
 
 // 导出处理器
 export const GET = handle(app)

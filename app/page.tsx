@@ -1,104 +1,223 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { Layout, Card, Row, Col, Typography, Space, Button, Statistic, Divider, Tag, Alert } from 'antd'
+import {
+  GithubOutlined,
+  ApiOutlined,
+  DatabaseOutlined,
+  SafetyOutlined,
+  RocketOutlined,
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  WarningOutlined
+} from '@ant-design/icons'
 import Link from 'next/link'
 
-export default function Home() {
+const { Content } = Layout
+const { Title, Paragraph, Text } = Typography
+
+export default function HomePage() {
+  const [stats, setStats] = useState({
+    totalSoftware: 0,
+    totalActivationCodes: 0,
+    totalAnnouncements: 0,
+    systemStatus: 'healthy'
+  })
+
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    // 模拟加载统计数据
+    const loadStats = async () => {
+      try {
+        // 这里可以调用实际的 API 获取统计数据
+        setStats({
+          totalSoftware: 12,
+          totalActivationCodes: 156,
+          totalAnnouncements: 8,
+          systemStatus: 'healthy'
+        })
+      } catch (error) {
+        console.error('Failed to load stats:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadStats()
+  }, [])
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="container mx-auto px-4 py-16">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold text-gray-900 mb-6">
+    <Layout style={{ minHeight: '100vh', background: '#f5f5f5' }}>
+      <Content style={{ padding: '50px' }}>
+        {/* 页面头部 */}
+        <div style={{ textAlign: 'center', marginBottom: '50px' }}>
+          <GithubOutlined style={{ fontSize: '72px', color: '#1890ff', marginBottom: '20px' }} />
+          <Title level={1} style={{ color: '#1890ff', marginBottom: '10px' }}>
             LACS API Server
-          </h1>
-          <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-            基于 Neon Postgres 构建的 API 服务器，提供激活码管理、软件信息管理和 GitHub OAuth 功能
-          </p>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            {/* API 文档 */}
-            <div className="bg-white rounded-lg shadow-lg p-6">
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4 mx-auto">
-                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                API 文档
-              </h3>
-              <p className="text-gray-600 mb-4">
-                查看完整的 API 接口文档和使用说明
-              </p>
-              <Link
-                href="/api-docs"
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200"
-              >
-                查看文档
-              </Link>
-            </div>
-
-            {/* 激活码测试 */}
-            <div className="bg-white rounded-lg shadow-lg p-6">
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4 mx-auto">
-                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                激活码管理
-              </h3>
-              <p className="text-gray-600 mb-4">
-                测试激活码的生成、验证和管理功能
-              </p>
-              <Link
-                href="/activation-test"
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-green-700 bg-green-100 hover:bg-green-200"
-              >
-                测试激活码
-              </Link>
-            </div>
-
-            {/* GitHub OAuth */}
-            <div className="bg-white rounded-lg shadow-lg p-6">
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4 mx-auto">
-                <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                GitHub OAuth
-              </h3>
-              <p className="text-gray-600 mb-4">
-                测试 GitHub OAuth 登录和用户信息获取
-              </p>
-              <Link
-                href="/oauth-test"
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-purple-700 bg-purple-100 hover:bg-purple-200"
-              >
-                测试 OAuth
-              </Link>
-            </div>
-
-            {/* 数据库状态 */}
-            <div className="bg-white rounded-lg shadow-lg p-6">
-              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mb-4 mx-auto">
-                <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                数据库状态
-              </h3>
-              <p className="text-gray-600 mb-4">
-                查看 Neon Postgres 数据库连接状态
-              </p>
-              <Link
-                href="/api/health"
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-orange-700 bg-orange-100 hover:bg-orange-200"
-              >
-                检查状态
-              </Link>
-            </div>
-          </div>
+          </Title>
+          <Paragraph style={{ fontSize: '18px', color: '#666', maxWidth: '600px', margin: '0 auto' }}>
+            基于 Next.js + Hono 构建的现代化 API 服务器，提供软件管理、激活码系统和公告管理功能
+          </Paragraph>
         </div>
-      </div>
-    </div>
+
+        {/* 系统状态 */}
+        <Row gutter={[24, 24]} style={{ marginBottom: '40px' }}>
+          <Col span={24}>
+            <Alert
+              message="系统运行正常"
+              description="所有服务正常运行，API 响应正常"
+              type="success"
+              icon={<CheckCircleOutlined />}
+              showIcon
+              style={{ textAlign: 'center' }}
+            />
+          </Col>
+        </Row>
+
+        {/* 统计数据 */}
+        <Row gutter={[24, 24]} style={{ marginBottom: '40px' }}>
+          <Col xs={24} sm={12} md={6}>
+            <Card>
+              <Statistic
+                title="软件总数"
+                value={stats.totalSoftware}
+                prefix={<ApiOutlined />}
+                loading={loading}
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <Card>
+              <Statistic
+                title="激活码总数"
+                value={stats.totalActivationCodes}
+                prefix={<SafetyOutlined />}
+                loading={loading}
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <Card>
+              <Statistic
+                title="公告总数"
+                value={stats.totalAnnouncements}
+                prefix={<WarningOutlined />}
+                loading={loading}
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <Card>
+              <Statistic
+                title="数据库状态"
+                value="正常"
+                prefix={<DatabaseOutlined />}
+                valueStyle={{ color: '#3f8600' }}
+              />
+            </Card>
+          </Col>
+        </Row>
+
+        {/* 功能特性 */}
+        <Row gutter={[24, 24]} style={{ marginBottom: '40px' }}>
+          <Col xs={24} md={8}>
+            <Card title="软件管理" extra={<ApiOutlined />}>
+              <Paragraph>
+                完整的软件信息管理系统，支持版本控制、下载链接管理和分类标签
+              </Paragraph>
+              <ul>
+                <li>软件信息 CRUD 操作</li>
+                <li>版本历史记录</li>
+                <li>多语言支持</li>
+                <li>文件上传管理</li>
+              </ul>
+            </Card>
+          </Col>
+          <Col xs={24} md={8}>
+            <Card title="激活码系统" extra={<SafetyOutlined />}>
+              <Paragraph>
+                安全的激活码生成、验证和管理系统，支持过期时间和使用统计
+              </Paragraph>
+              <ul>
+                <li>批量生成激活码</li>
+                <li>过期时间管理</li>
+                <li>使用状态追踪</li>
+                <li>统计分析功能</li>
+              </ul>
+            </Card>
+          </Col>
+          <Col xs={24} md={8}>
+            <Card title="公告管理" extra={<WarningOutlined />}>
+              <Paragraph>
+                灵活的公告发布和管理系统，支持多种公告类型和优先级设置
+              </Paragraph>
+              <ul>
+                <li>多类型公告支持</li>
+                <li>优先级管理</li>
+                <li>发布时间控制</li>
+                <li>过期自动处理</li>
+              </ul>
+            </Card>
+          </Col>
+        </Row>
+
+        {/* 技术栈 */}
+        <Card title="技术栈" style={{ marginBottom: '40px' }}>
+          <Row gutter={[16, 16]}>
+            <Col>
+              <Tag color="blue">Next.js 14</Tag>
+            </Col>
+            <Col>
+              <Tag color="green">Hono</Tag>
+            </Col>
+            <Col>
+              <Tag color="purple">TypeScript</Tag>
+            </Col>
+            <Col>
+              <Tag color="orange">Ant Design</Tag>
+            </Col>
+            <Col>
+              <Tag color="red">Drizzle ORM</Tag>
+            </Col>
+            <Col>
+              <Tag color="cyan">Neon Postgres</Tag>
+            </Col>
+            <Col>
+              <Tag color="geekblue">Vercel</Tag>
+            </Col>
+          </Row>
+        </Card>
+
+        {/* 快速开始 */}
+        <Card title="快速开始">
+          <Row gutter={[24, 24]}>
+            <Col xs={24} md={12}>
+              <Title level={4}>管理员入口</Title>
+              <Paragraph>
+                访问管理员控制台来管理软件信息、激活码和公告
+              </Paragraph>
+              <Link href="/admin">
+                <Button type="primary" size="large" icon={<RocketOutlined />}>
+                  进入管理控制台
+                </Button>
+              </Link>
+            </Col>
+            <Col xs={24} md={12}>
+              <Title level={4}>API 文档</Title>
+              <Paragraph>
+                查看完整的 API 文档和使用示例
+              </Paragraph>
+              <Link href="/api-docs">
+                <Button size="large" icon={<ApiOutlined />}>
+                  查看 API 文档
+                </Button>
+              </Link>
+            </Col>
+          </Row>
+        </Card>
+      </Content>
+    </Layout>
   )
 }

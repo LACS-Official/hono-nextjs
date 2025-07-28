@@ -1,4 +1,8 @@
 import '../styles/globals.css';
+import { AntdRegistry } from '@ant-design/nextjs-registry';
+import { ConfigProvider } from 'antd';
+import zhCN from 'antd/locale/zh_CN';
+import { AuthProvider } from '@/contexts/AuthContext';
 
 export const metadata = {
   title: 'LACS API Server',
@@ -11,9 +15,15 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
+    <html lang="zh-CN">
       <body>
-        {children}
+        <AntdRegistry>
+          <ConfigProvider locale={zhCN}>
+            <AuthProvider>
+              {children}
+            </AuthProvider>
+          </ConfigProvider>
+        </AntdRegistry>
       </body>
     </html>
   )

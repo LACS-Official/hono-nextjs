@@ -1,0 +1,25 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { db } from '@/lib/db-connection'
+
+export async function GET(request: NextRequest) {
+  try {
+    // 测试数据库连接
+    await db.execute('SELECT 1')
+    
+    return NextResponse.json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      database: 'connected',
+      version: '1.0.0'
+    })
+  } catch (error) {
+    console.error('Health check failed:', error)
+    
+    return NextResponse.json({
+      status: 'error',
+      timestamp: new Date().toISOString(),
+      database: 'disconnected',
+      error: 'Database connection failed'
+    }, { status: 503 })
+  }
+}

@@ -1,7 +1,7 @@
 // Neon Postgres 数据库模式定义
 import { pgTable, text, timestamp, boolean, jsonb, uuid } from 'drizzle-orm/pg-core'
 
-// 激活码表
+// 激活码表 - 与 Stack Auth 集成
 export const activationCodes = pgTable('activation_codes', {
   id: uuid('id').primaryKey().defaultRandom(),
   code: text('code').notNull().unique(),
@@ -9,6 +9,7 @@ export const activationCodes = pgTable('activation_codes', {
   expiresAt: timestamp('expires_at').notNull(),
   isUsed: boolean('is_used').default(false).notNull(),
   usedAt: timestamp('used_at'),
+  usedByStackUserId: text('used_by_stack_user_id'), // Stack Auth 用户 ID
   metadata: jsonb('metadata'),
   productInfo: jsonb('product_info'),
 })

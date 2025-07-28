@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
     if (!code) {
       return corsResponse({
         success: false,
-        error: 'Activation code is required'
+        error: '激活码参数缺失'
       }, { status: 400 }, origin, userAgent)
     }
 
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
     if (!activationCode) {
       return corsResponse({
         success: false,
-        error: 'Invalid activation code'
+        error: '激活码不存在'
       }, { status: 404 }, origin, userAgent)
     }
 
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
     if (activationCode.isUsed) {
       return corsResponse({
         success: false,
-        error: 'Activation code has already been used',
+        error: '激活码已被使用',
         usedAt: activationCode.usedAt
       }, { status: 400 }, origin, userAgent)
     }
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
     if (now > activationCode.expiresAt) {
       return corsResponse({
         success: false,
-        error: 'Activation code has expired',
+        error: '激活码已过期',
         expiresAt: activationCode.expiresAt
       }, { status: 400 }, origin, userAgent)
     }

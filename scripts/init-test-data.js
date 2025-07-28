@@ -143,10 +143,10 @@ async function initTestData() {
 
     console.log('测试数据初始化完成！')
     console.log('\n可以使用以下 API 端点进行测试：')
-    console.log('- GET http://localhost:3000/api/app/software')
-    console.log('- GET http://localhost:3000/api/app/software/Visual%20Studio%20Code')
-    console.log('- GET http://localhost:3000/api/app/software/微信/announcements')
-    console.log('- GET http://localhost:3000/api/app/software/Chrome/latest-announcement')
+    console.log('- GET http://localhost:3000/app/software')
+    console.log('- GET http://localhost:3000/app/software/Visual%20Studio%20Code')
+    console.log('- GET http://localhost:3000/app/software/微信/announcements')
+    console.log('- GET http://localhost:3000/app/software/Chrome/latest-announcement')
 
   } catch (error) {
     console.error('初始化测试数据失败:', error)

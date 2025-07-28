@@ -219,7 +219,7 @@ export async function GET(request: NextRequest) {
     console.error('Error fetching activation codes:', error)
     return corsResponse({
       success: false,
-      error: 'Failed to fetch activation codes'
+      error: '获取激活码列表失败'
     }, { status: 500 }, origin, userAgent)
   }
 }

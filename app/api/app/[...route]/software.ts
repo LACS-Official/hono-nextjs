@@ -1,3 +1,7 @@
+// 此文件已弃用 - 软件管理路由已迁移到 /app/software
+// 保留此文件作为备份和参考
+// 新的软件管理路由位于: app/software/[...route]/route.ts
+
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { z } from 'zod'
@@ -6,7 +10,7 @@ import { software, softwareAnnouncements, softwareVersionHistory } from '@/lib/s
 import { eq, and, desc, asc, like, or, isNull, gte, lte, ne, inArray } from 'drizzle-orm'
 import { handleFileUpload, FileUploadError } from '@/lib/file-upload'
 
-// 创建软件路由
+// 创建软件路由（已弃用）
 export const softwareRoutes = new Hono()
 
 // 输入验证模式

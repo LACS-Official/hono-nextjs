@@ -6,7 +6,7 @@ import { prettyJSON } from 'hono/pretty-json'
 import { HTTPException } from 'hono/http-exception'
 
 // 导入软件管理路由
-import { softwareRoutes } from './software'
+// import { softwareRoutes } from './software' // 已迁移到 /app/software
 // 导入中间件
 import {
   rateLimit,
@@ -66,9 +66,8 @@ app.get('/health', (c) => {
   })
 })
 
-// 注册软件管理路由（对写操作应用权限验证）
-app.use('/software/*', writeOperationAuth())
-app.route('/software', softwareRoutes)
+// 软件管理路由已迁移到 /app/software
+// 保留此注释以便了解路由迁移历史
 
 // 导出处理器
 export const GET = handle(app)

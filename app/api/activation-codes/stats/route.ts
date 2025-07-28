@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
     console.error('Error getting stats:', error)
     return corsResponse({
       success: false,
-      error: 'Failed to get statistics'
+      error: '获取统计信息失败'
     }, { status: 500 }, origin, userAgent)
   }
 }

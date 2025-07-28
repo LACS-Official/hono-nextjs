@@ -21,7 +21,7 @@ export async function GET(
     if (!activationCode) {
       return NextResponse.json({
         success: false,
-        error: 'Activation code not found'
+        error: '激活码不存在'
       }, { status: 404 })
     }
 
@@ -47,7 +47,7 @@ export async function GET(
     console.error('Error fetching activation code:', error)
     return NextResponse.json({
       success: false,
-      error: 'Failed to fetch activation code'
+      error: '获取激活码详情失败'
     }, { status: 500 })
   }
 }
@@ -68,7 +68,7 @@ export async function DELETE(
     if (!deletedCode) {
       return NextResponse.json({
         success: false,
-        error: 'Activation code not found'
+        error: '激活码不存在'
       }, { status: 404 })
     }
 
@@ -80,7 +80,7 @@ export async function DELETE(
     console.error('Error deleting activation code:', error)
     return NextResponse.json({
       success: false,
-      error: 'Failed to delete activation code'
+      error: '删除激活码失败'
     }, { status: 500 })
   }
 }

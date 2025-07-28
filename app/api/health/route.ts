@@ -26,25 +26,31 @@ export async function GET(request: NextRequest) {
     const overallStatus = activationCodesStatus === 'connected' && softwareStatus === 'connected' ? 'ok' : 'partial'
 
     return corsResponse({
-      status: overallStatus,
-      timestamp: new Date().toISOString(),
-      databases: {
-        activationCodes: activationCodesStatus,
-        software: softwareStatus
-      },
-      version: '1.0.0'
+      success: true,
+      data: {
+        status: overallStatus,
+        timestamp: new Date().toISOString(),
+        databases: {
+          activationCodes: activationCodesStatus,
+          software: softwareStatus
+        },
+        version: '1.0.0'
+      }
     }, overallStatus === 'ok' ? undefined : { status: 503 }, origin, userAgent)
   } catch (error) {
     console.error('Health check failed:', error)
 
     return corsResponse({
-      status: 'error',
-      timestamp: new Date().toISOString(),
-      databases: {
-        activationCodes: 'disconnected',
-        software: 'disconnected'
-      },
-      error: 'Database connection failed'
+      success: false,
+      error: 'Database connection failed',
+      data: {
+        status: 'error',
+        timestamp: new Date().toISOString(),
+        databases: {
+          activationCodes: 'disconnected',
+          software: 'disconnected'
+        }
+      }
     }, { status: 503 }, origin, userAgent)
   }
 }

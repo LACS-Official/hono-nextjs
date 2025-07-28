@@ -9,7 +9,7 @@ const nextConfig = {
         headers: [
           {
             key: "Access-Control-Allow-Origin",
-            value: "https://admin.lacs.cc",
+            value: "*",
           },
           {
             key: "Access-Control-Allow-Methods",

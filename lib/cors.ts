@@ -38,37 +38,8 @@ function isApiTestingTool(origin?: string | null, userAgent?: string | null): bo
 
 // 根据请求来源动态设置CORS头部
 function getCorsHeaders(origin?: string | null, userAgent?: string | null) {
-  // 检查是否为允许的域名
-  const isAllowedOrigin = ALLOWED_ORIGINS.includes(origin || '');
-
-  // 检查是否为 API 测试工具
-  const isTestingTool = isApiTestingTool(origin, userAgent);
-
-  // 开发模式：允许所有 localhost 和 127.0.0.1
-  const isDevelopment = process.env.NODE_ENV === 'development';
-  const isLocalhost = origin?.includes('localhost') || origin?.includes('127.0.0.1');
-
-  // 检查是否启用了 API 工具支持
-  const enableApiToolsSupport = process.env.ENABLE_CORS_FOR_API_TOOLS === 'true';
-
-  // 决定是否允许该来源
-  let allowedOrigin: string;
-
-  if (isAllowedOrigin) {
-    allowedOrigin = origin!;
-  } else if (enableApiToolsSupport && isTestingTool) {
-    // 如果启用了 API 工具支持且检测到是测试工具，则允许
-    allowedOrigin = origin || '*';
-  } else if (isDevelopment && isLocalhost) {
-    // 开发环境允许 localhost
-    allowedOrigin = origin || '*';
-  } else if (isDevelopment) {
-    // 开发环境下更宽松的策略
-    allowedOrigin = origin || '*';
-  } else {
-    // 生产环境默认使用第一个允许的域名
-    allowedOrigin = ALLOWED_ORIGINS[0];
-  }
+  // 允许所有来源访问
+  const allowedOrigin = '*';
 
   return {
     'Access-Control-Allow-Origin': allowedOrigin,

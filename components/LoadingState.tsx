@@ -144,6 +144,47 @@ export function StatisticLoading() {
   )
 }
 
+// 移动端友好的加载状态
+export function MobileLoading({ tip = '加载中...' }: { tip?: string }) {
+  return (
+    <div style={{
+      padding: '40px 20px',
+      textAlign: 'center',
+      minHeight: '200px',
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'center',
+      alignItems: 'center'
+    }}>
+      <Spin size="large" />
+      <Text type="secondary" style={{ marginTop: '16px', fontSize: '14px' }}>
+        {tip}
+      </Text>
+    </div>
+  )
+}
+
+// 响应式表格加载状态
+export function ResponsiveTableLoading() {
+  return (
+    <div style={{ padding: '16px' }}>
+      {/* 移动端显示卡片式骨架屏 */}
+      <div className="block md:hidden">
+        {[1, 2, 3].map(i => (
+          <Card key={i} style={{ marginBottom: '12px' }}>
+            <Skeleton active paragraph={{ rows: 2 }} />
+          </Card>
+        ))}
+      </div>
+
+      {/* 桌面端显示表格式骨架屏 */}
+      <div className="hidden md:block">
+        <Skeleton active paragraph={{ rows: 8 }} />
+      </div>
+    </div>
+  )
+}
+
 // 列表项加载状态
 export function ListItemLoading({ count = 5 }: { count?: number }) {
   return (

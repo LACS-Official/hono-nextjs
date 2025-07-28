@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter, usePathname } from 'next/navigation'
-import { Layout, Menu, Avatar, Dropdown, Space, Button, Typography } from 'antd'
+import { Layout, Menu, Avatar, Dropdown, Space, Button, Typography, Drawer } from 'antd'
 import {
   GithubOutlined,
   HomeOutlined,
@@ -11,10 +11,12 @@ import {
   SettingOutlined,
   KeyOutlined,
   AppstoreOutlined,
-  NotificationOutlined
+  NotificationOutlined,
+  MenuOutlined
 } from '@ant-design/icons'
 import type { MenuProps } from 'antd'
 import { useAuth } from '@/contexts/AuthContext'
+import { useState, useEffect } from 'react'
 
 const { Header } = Layout
 const { Text } = Typography
@@ -27,6 +29,20 @@ export default function Navigation({ className }: NavigationProps) {
   const router = useRouter()
   const pathname = usePathname()
   const { user, logout } = useAuth()
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+
+  // 检测屏幕尺寸
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+
+    checkScreenSize()
+    window.addEventListener('resize', checkScreenSize)
+
+    return () => window.removeEventListener('resize', checkScreenSize)
+  }, [])
 
   const handleLogout = async () => {
     await logout()
@@ -119,74 +135,113 @@ export default function Navigation({ className }: NavigationProps) {
   ]
 
   return (
-    <Header
-      style={{
-        position: 'fixed',
-        zIndex: 1000,
-        width: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        background: '#fff',
-        borderBottom: '1px solid #f0f0f0',
-        padding: '0 24px',
-        height: '64px',
-      }}
-      className={className}
-    >
-      {/* Logo区域 */}
-      <div style={{ display: 'flex', alignItems: 'center' }}>
-        <Button
-          type="text"
-          onClick={() => router.push('/admin')}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '4px 8px',
-            height: 'auto',
-            fontSize: '18px',
-            fontWeight: 600,
-            color: '#1890ff',
-          }}
-        >
-          <GithubOutlined style={{ fontSize: '24px' }} />
-          <Text strong style={{ fontSize: '18px', color: '#1890ff' }}>
-            LACS Admin
-          </Text>
-        </Button>
-      </div>
+    <>
+      <Header
+        style={{
+          position: 'fixed',
+          zIndex: 1000,
+          width: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          background: '#fff',
+          borderBottom: '1px solid #f0f0f0',
+          padding: isMobile ? '0 16px' : '0 24px',
+          height: '64px',
+        }}
+        className={className}
+      >
+        {/* Logo区域 */}
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <Button
+            type="text"
+            onClick={() => router.push('/admin')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '4px 8px',
+              height: 'auto',
+              fontSize: isMobile ? '16px' : '18px',
+              fontWeight: 600,
+              color: '#1890ff',
+            }}
+          >
+            <GithubOutlined style={{ fontSize: isMobile ? '20px' : '24px' }} />
+            {!isMobile && (
+              <Text strong style={{ fontSize: '18px', color: '#1890ff' }}>
+                LACS Admin
+              </Text>
+            )}
+          </Button>
+        </div>
 
-      {/* 导航菜单 */}
-      <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+        {/* 桌面端导航菜单 */}
+        {!isMobile && (
+          <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+            <Menu
+              mode="horizontal"
+              selectedKeys={getSelectedKeys()}
+              items={menuItems}
+              style={{
+                border: 'none',
+                background: 'transparent',
+                minWidth: '200px',
+              }}
+            />
+          </div>
+        )}
+
+        {/* 用户操作区域 */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* 移动端菜单按钮 */}
+          {isMobile && (
+            <Button
+              type="text"
+              icon={<MenuOutlined />}
+              onClick={() => setMobileMenuOpen(true)}
+              style={{ fontSize: '18px' }}
+            />
+          )}
+
+          <Dropdown
+            menu={{ items: userMenuItems }}
+            placement="bottomRight"
+            arrow
+          >
+            <Space style={{ cursor: 'pointer', padding: '8px' }}>
+              <Avatar
+                src={user?.avatar_url}
+                icon={!user?.avatar_url && <UserOutlined />}
+                size={isMobile ? 'small' : 'default'}
+              />
+              {!isMobile && (
+                <Text>{user?.name || user?.login || '管理员'}</Text>
+              )}
+            </Space>
+          </Dropdown>
+        </div>
+      </Header>
+
+      {/* 移动端抽屉菜单 */}
+      <Drawer
+        title="导航菜单"
+        placement="left"
+        onClose={() => setMobileMenuOpen(false)}
+        open={mobileMenuOpen}
+        width={280}
+        styles={{
+          body: { padding: 0 }
+        }}
+      >
         <Menu
-          mode="horizontal"
+          mode="vertical"
           selectedKeys={getSelectedKeys()}
           items={menuItems}
-          style={{
-            border: 'none',
-            background: 'transparent',
-            minWidth: '200px',
-          }}
+          style={{ border: 'none' }}
+          onClick={() => setMobileMenuOpen(false)}
         />
-      </div>
-
-      {/* 用户操作区域 */}
-      <div style={{ display: 'flex', alignItems: 'center' }}>
-        <Dropdown
-          menu={{ items: userMenuItems }}
-          placement="bottomRight"
-          arrow
-        >
-          <Space style={{ cursor: 'pointer', padding: '8px' }}>
-            <Avatar
-              src={user?.avatar_url}
-              icon={!user?.avatar_url && <UserOutlined />}
-            />
-            <Text>{user?.name || user?.login || '管理员'}</Text>
-          </Space>
-        </Dropdown>
-      </div>
-    </Header>
+      </Drawer>
+    </>
   )
 }

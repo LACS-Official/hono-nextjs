@@ -40,7 +40,7 @@ export default function AdminDashboard() {
 
   return (
     <Layout>
-      {/* 侧边栏 */}
+      {/* 侧边栏 - 仅在桌面端显示 */}
       <Sider
         width={250}
         style={{
@@ -50,8 +50,11 @@ export default function AdminDashboard() {
           position: 'fixed',
           left: 0,
           top: 64,
-          zIndex: 100
+          zIndex: 100,
+          display: window.innerWidth < 768 ? 'none' : 'block'
         }}
+        breakpoint="md"
+        collapsedWidth="0"
       >
         <Menu
           mode="inline"
@@ -94,7 +97,13 @@ export default function AdminDashboard() {
       </Sider>
 
       {/* 主内容区域 */}
-      <Content style={{ marginLeft: '250px', padding: '24px', background: '#f5f5f5' }}>
+      <Content
+        style={{
+          marginLeft: window.innerWidth < 768 ? '0' : '250px',
+          padding: window.innerWidth < 768 ? '16px' : '24px',
+          background: '#f5f5f5'
+        }}
+      >
         {/* 页面头部 */}
         <div style={{ marginBottom: '24px' }}>
           <Title level={2}>管理控制台</Title>

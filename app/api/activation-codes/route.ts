@@ -1,7 +1,7 @@
 // 激活码 API - 主路由
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db-connection'
-import { activationCodes } from '@/lib/db-schema'
+import { activationCodesDb as db } from '@/lib/activation-codes-db-connection'
+import { activationCodes } from '@/lib/activation-codes-schema'
 import { eq, desc, and, lt, gt } from 'drizzle-orm'
 import { v4 as uuidv4 } from 'uuid'
 import { corsResponse, handleOptions, validateApiKey, validateApiKeyWithExpiration, checkRateLimit } from '@/lib/cors'

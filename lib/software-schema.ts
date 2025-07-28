@@ -1,23 +1,5 @@
-// 旧的统一数据库模式定义 - 已弃用
-// 请使用 activation-codes-schema.ts 和 software-schema.ts
+// 软件管理数据库模式定义
 import { pgTable, text, timestamp, boolean, jsonb, uuid, varchar, integer } from 'drizzle-orm/pg-core'
-
-// 注意：此文件已弃用，建议使用分离的数据库模式：
-// - 激活码相关表：使用 activation-codes-schema.ts
-// - 软件管理相关表：使用 software-schema.ts
-
-// 激活码表 - 与 Stack Auth 集成
-export const activationCodes = pgTable('activation_codes', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  code: text('code').notNull().unique(),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
-  isUsed: boolean('is_used').default(false).notNull(),
-  usedAt: timestamp('used_at', { withTimezone: true }),
-  usedBy: uuid('used_by'), // 使用者 ID
-  metadata: jsonb('metadata'),
-  productInfo: jsonb('product_info'),
-})
 
 // 软件信息表
 export const software = pgTable('software', {
@@ -77,10 +59,6 @@ export const softwareVersionHistory = pgTable('software_version_history', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 })
-
-// 激活码类型定义
-export type ActivationCode = typeof activationCodes.$inferSelect
-export type NewActivationCode = typeof activationCodes.$inferInsert
 
 // 软件信息类型定义
 export type Software = typeof software.$inferSelect

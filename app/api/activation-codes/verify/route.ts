@@ -1,7 +1,7 @@
 // 验证激活码接口
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db-connection'
-import { activationCodes } from '@/lib/db-schema'
+import { activationCodesDb as db } from '@/lib/activation-codes-db-connection'
+import { activationCodes } from '@/lib/activation-codes-schema'
 import { eq, and, lt } from 'drizzle-orm'
 import { corsResponse, handleOptions, validateApiKeyWithExpiration } from '@/lib/cors'
 import { TimeUtils } from '@/lib/time-utils'
@@ -48,17 +48,8 @@ export async function POST(request: NextRequest) {
     // 在验证激活码前，先清理5分钟内未使用的激活码
     await cleanupUnusedCodes()
 
-    // API Key 验证（如果启用）
-    let apiKeyValidation = null
-    if (process.env.ENABLE_API_KEY_AUTH === 'true') {
-      apiKeyValidation = validateApiKeyWithExpiration(request)
-      if (!apiKeyValidation.isValid) {
-        return corsResponse({
-          success: false,
-          error: apiKeyValidation.error || 'Invalid or missing API Key'
-        }, { status: 401 }, origin, userAgent)
-      }
-    }
+    // 注意：激活码验证是公开接口，不需要API Key验证
+    // 这样客户端软件可以直接验证激活码而无需API Key
     const body = await request.json()
     const { code } = body
 

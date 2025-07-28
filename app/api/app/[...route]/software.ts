@@ -1,8 +1,8 @@
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { z } from 'zod'
-import { db } from '@/lib/db-connection'
-import { software, softwareAnnouncements, softwareVersionHistory } from '@/lib/db-schema'
+import { softwareDb as db } from '@/lib/software-db-connection'
+import { software, softwareAnnouncements, softwareVersionHistory } from '@/lib/software-schema'
 import { eq, and, desc, asc, like, or, isNull, gte, lte, ne, inArray } from 'drizzle-orm'
 import { handleFileUpload, FileUploadError } from '@/lib/file-upload'
 
@@ -45,11 +45,11 @@ const createSoftwareSchema = z.object({
   officialWebsite: z.string().url('Invalid website URL').optional(),
   category: z.string().max(100, 'Category too long').optional(),
   tags: z.array(z.string()).optional(),
-  systemRequirements: z.record(z.array(z.string())).optional(),
+  systemRequirements: z.record(z.string(), z.array(z.string())).optional(),
   fileSize: z.string().max(50, 'File size too long').optional(),
   isActive: z.boolean().optional().default(true),
   sortOrder: z.number().int().optional().default(0),
-  metadata: z.record(z.any()).optional()
+  metadata: z.record(z.string(), z.any()).optional()
 })
 
 // 更新软件的输入验证模式
@@ -71,7 +71,7 @@ const createAnnouncementSchema = z.object({
   version: z.string().max(50, 'Version too long').optional(),
   isPublished: z.boolean().optional().default(true),
   expiresAt: z.string().datetime().optional().transform(val => val ? new Date(val) : undefined),
-  metadata: z.record(z.any()).optional()
+  metadata: z.record(z.string(), z.any()).optional()
 })
 
 // 更新公告的输入验证模式
@@ -102,7 +102,7 @@ const createVersionHistorySchema = z.object({
   fileSize: z.string().max(50, 'File size too long').optional(),
   isStable: z.boolean().optional().default(true),
   isBeta: z.boolean().optional().default(false),
-  metadata: z.record(z.any()).optional()
+  metadata: z.record(z.string(), z.any()).optional()
 })
 
 // 工具函数：URL 解码和清理
@@ -192,7 +192,7 @@ softwareRoutes.get('/', async (c) => {
     console.error('Error fetching software list:', error)
     
     if (error instanceof z.ZodError) {
-      throw new HTTPException(400, { message: `Invalid query parameters: ${error.errors.map(e => e.message).join(', ')}` })
+      throw new HTTPException(400, { message: `Invalid query parameters: ${error.issues.map(e => e.message).join(', ')}` })
     }
     
     throw new HTTPException(500, { message: 'Failed to fetch software list' })
@@ -326,7 +326,7 @@ softwareRoutes.get('/:name/announcements', async (c) => {
     }
 
     if (error instanceof z.ZodError) {
-      throw new HTTPException(400, { message: `Invalid parameters: ${error.errors.map(e => e.message).join(', ')}` })
+      throw new HTTPException(400, { message: `Invalid parameters: ${error.issues.map(e => e.message).join(', ')}` })
     }
 
     throw new HTTPException(500, { message: 'Failed to fetch software announcements' })
@@ -440,7 +440,7 @@ softwareRoutes.post('/', async (c) => {
 
     if (error instanceof z.ZodError) {
       throw new HTTPException(400, {
-        message: `Validation error: ${error.errors.map(e => e.message).join(', ')}`
+        message: `Validation error: ${error.issues.map(e => e.message).join(', ')}`
       })
     }
 
@@ -503,7 +503,7 @@ softwareRoutes.put('/:id', async (c) => {
 
     if (error instanceof z.ZodError) {
       throw new HTTPException(400, {
-        message: `Validation error: ${error.errors.map(e => e.message).join(', ')}`
+        message: `Validation error: ${error.issues.map(e => e.message).join(', ')}`
       })
     }
 
@@ -589,7 +589,7 @@ softwareRoutes.post('/:id/announcements', async (c) => {
 
     if (error instanceof z.ZodError) {
       throw new HTTPException(400, {
-        message: `Validation error: ${error.errors.map(e => e.message).join(', ')}`
+        message: `Validation error: ${error.issues.map(e => e.message).join(', ')}`
       })
     }
 
@@ -651,7 +651,7 @@ softwareRoutes.put('/:id/announcements/:announcementId', async (c) => {
 
     if (error instanceof z.ZodError) {
       throw new HTTPException(400, {
-        message: `Validation error: ${error.errors.map(e => e.message).join(', ')}`
+        message: `Validation error: ${error.issues.map(e => e.message).join(', ')}`
       })
     }
 
@@ -747,7 +747,7 @@ softwareRoutes.post('/batch/delete', async (c) => {
 
     if (error instanceof z.ZodError) {
       throw new HTTPException(400, {
-        message: `Validation error: ${error.errors.map(e => e.message).join(', ')}`
+        message: `Validation error: ${error.issues.map(e => e.message).join(', ')}`
       })
     }
 
@@ -796,7 +796,7 @@ softwareRoutes.post('/batch/update-status', async (c) => {
 
     if (error instanceof z.ZodError) {
       throw new HTTPException(400, {
-        message: `Validation error: ${error.errors.map(e => e.message).join(', ')}`
+        message: `Validation error: ${error.issues.map(e => e.message).join(', ')}`
       })
     }
 
@@ -831,11 +831,11 @@ softwareRoutes.post('/:id/upload-image', async (c) => {
     const { url, fileName } = await handleFileUpload(file)
 
     // 更新软件记录，添加图片URL到metadata
-    const currentMetadata = existingSoftware[0].metadata || {}
+    const currentMetadata = (existingSoftware[0].metadata as any) || {}
     const updatedMetadata = {
       ...currentMetadata,
       images: {
-        ...currentMetadata.images,
+        ...(currentMetadata.images || {}),
         icon: url
       }
     }
@@ -972,7 +972,7 @@ softwareRoutes.post('/:id/versions', async (c) => {
 
     if (error instanceof z.ZodError) {
       throw new HTTPException(400, {
-        message: `Validation error: ${error.errors.map(e => e.message).join(', ')}`
+        message: `Validation error: ${error.issues.map(e => e.message).join(', ')}`
       })
     }
 

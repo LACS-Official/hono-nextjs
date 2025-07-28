@@ -38,8 +38,10 @@ function checkRequiredFiles() {
   const requiredFiles = [
     'package.json',
     'next.config.js',
-    'lib/db-connection.ts',
-    'lib/db-schema.ts',
+    'lib/activation-codes-db-connection.ts',
+    'lib/activation-codes-schema.ts',
+    'lib/software-db-connection.ts',
+    'lib/software-schema.ts',
     'lib/cors.ts'
   ];
   
@@ -103,7 +105,7 @@ function checkPackageJson() {
     });
     
     // 检查是否有不应该存在的依赖
-    const deprecatedDeps = ['hono', '@vercel/kv', 'bcryptjs', 'jsonwebtoken'];
+    const deprecatedDeps = ['@vercel/kv', 'bcryptjs', 'jsonwebtoken'];
     deprecatedDeps.forEach(dep => {
       if (packageJson.dependencies && packageJson.dependencies[dep]) {
         warning(`发现已弃用的依赖: ${dep} - 考虑移除`);

@@ -43,7 +43,7 @@ export function generateFileName(originalName: string): string {
 export async function saveFile(buffer: Buffer, fileName: string): Promise<string> {
   await ensureUploadDir()
   const filePath = path.join(UPLOAD_CONFIG.uploadDir, fileName)
-  await writeFile(filePath, buffer)
+  await writeFile(filePath, new Uint8Array(buffer))
   return `${UPLOAD_CONFIG.publicPath}/${fileName}`
 }
 

@@ -48,9 +48,9 @@ const softwareAnnouncements = pgTable('software_announcements', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 })
 
-// 创建数据库连接
-const sql = neon(process.env.DATABASE_URL)
-const db = drizzle(sql, { schema: { software, softwareAnnouncements } })
+// 创建软件管理数据库连接
+const softwareSql = neon(process.env.SOFTWARE_DATABASE_URL)
+const db = drizzle(softwareSql, { schema: { software, softwareAnnouncements } })
 
 // 测试软件数据
 const testSoftware = [

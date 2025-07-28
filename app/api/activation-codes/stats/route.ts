@@ -1,7 +1,7 @@
 // 统计信息接口
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db-connection'
-import { activationCodes } from '@/lib/db-schema'
+import { activationCodesDb as db } from '@/lib/activation-codes-db-connection'
+import { activationCodes } from '@/lib/activation-codes-schema'
 import { eq, and, lt, gt, count } from 'drizzle-orm'
 import { corsResponse, handleOptions } from '@/lib/cors'
 

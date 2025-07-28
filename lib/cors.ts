@@ -74,18 +74,56 @@ export function handleOptions(origin?: string | null, userAgent?: string | null)
   })
 }
 
-// API Key 验证函数
+// API Key 验证结果接口
+export interface ApiKeyValidationResult {
+  isValid: boolean
+  expiresAt?: Date
+  remainingTime?: number // 剩余时间（秒）
+  error?: string
+}
+
+// API Key 验证函数（带过期时间）
 export function validateApiKey(request: Request): boolean {
+  const result = validateApiKeyWithExpiration(request)
+  return result.isValid
+}
+
+// 带过期时间的 API Key 验证函数
+export function validateApiKeyWithExpiration(request: Request): ApiKeyValidationResult {
   const apiKey = request.headers.get('X-API-Key')
   const validApiKey = process.env.API_KEY
+  const apiKeyExpirationHours = parseInt(process.env.API_KEY_EXPIRATION_HOURS || '24')
 
   // 如果没有设置API Key，则跳过验证（开发模式）
   if (!validApiKey) {
     console.warn('⚠️ API_KEY 环境变量未设置，跳过API Key验证')
-    return true
+    return { isValid: true }
   }
 
-  return apiKey === validApiKey
+  if (!apiKey) {
+    return {
+      isValid: false,
+      error: 'Missing API Key'
+    }
+  }
+
+  if (apiKey !== validApiKey) {
+    return {
+      isValid: false,
+      error: 'Invalid API Key'
+    }
+  }
+
+  // 计算过期时间（从当前时间开始）
+  const now = new Date()
+  const expiresAt = new Date(now.getTime() + apiKeyExpirationHours * 60 * 60 * 1000)
+  const remainingTime = Math.floor((expiresAt.getTime() - now.getTime()) / 1000)
+
+  return {
+    isValid: true,
+    expiresAt,
+    remainingTime
+  }
 }
 
 // 速率限制检查（简单实现）

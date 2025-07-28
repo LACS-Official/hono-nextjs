@@ -140,3 +140,7 @@ SECURITY.md
 *.test.ts
 *.spec.js
 *.spec.ts
+
+# Documentation and testing directories
+docs/
+tests/

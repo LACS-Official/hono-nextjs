@@ -4,7 +4,34 @@ import { db } from '@/lib/db-connection'
 import { activationCodes } from '@/lib/db-schema'
 import { eq, desc, and, lt, gt } from 'drizzle-orm'
 import { v4 as uuidv4 } from 'uuid'
-import { corsResponse, handleOptions, validateApiKey, checkRateLimit } from '@/lib/cors'
+import { corsResponse, handleOptions, validateApiKey, validateApiKeyWithExpiration, checkRateLimit } from '@/lib/cors'
+
+// 自动清理5分钟内未使用的激活码
+async function cleanupUnusedCodes() {
+  try {
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000) // 5分钟前
+
+    // 删除5分钟前创建且未使用的激活码
+    const deletedCodes = await db
+      .delete(activationCodes)
+      .where(
+        and(
+          eq(activationCodes.isUsed, false),
+          lt(activationCodes.createdAt, fiveMinutesAgo)
+        )
+      )
+      .returning()
+
+    if (deletedCodes.length > 0) {
+      console.log(`🧹 自动清理了 ${deletedCodes.length} 个5分钟内未使用的激活码`)
+    }
+
+    return deletedCodes.length
+  } catch (error) {
+    console.error('自动清理激活码失败:', error)
+    return 0
+  }
+}
 
 // OPTIONS 方法处理 CORS 预检请求
 export async function OPTIONS(request: NextRequest) {
@@ -27,13 +54,19 @@ export async function POST(request: NextRequest) {
   const userAgent = request.headers.get('User-Agent')
 
   try {
+    // 在生成新激活码前，先清理5分钟内未使用的激活码
+    await cleanupUnusedCodes()
 
-    // API Key 验证
-    if (process.env.ENABLE_API_KEY_AUTH === 'true' && !validateApiKey(request)) {
-      return corsResponse({
-        success: false,
-        error: 'Invalid or missing API Key'
-      }, { status: 401 }, origin, userAgent)
+    // API Key 验证（带过期时间）
+    let apiKeyValidation = null
+    if (process.env.ENABLE_API_KEY_AUTH === 'true') {
+      apiKeyValidation = validateApiKeyWithExpiration(request)
+      if (!apiKeyValidation.isValid) {
+        return corsResponse({
+          success: false,
+          error: apiKeyValidation.error || 'Invalid or missing API Key'
+        }, { status: 401 }, origin, userAgent)
+      }
     }
 
     // 速率限制检查
@@ -69,15 +102,34 @@ export async function POST(request: NextRequest) {
       productInfo
     }).returning()
 
+    // 构建返回数据，包含激活码真实过期时间信息
+    const responseData: any = {
+      id: newCode.id,
+      code: newCode.code,
+      createdAt: newCode.createdAt,
+      expiresAt: newCode.expiresAt,
+      productInfo: newCode.productInfo
+    }
+
+    // 计算激活码的剩余有效时间
+    const currentTime = new Date()
+    const remainingTime = Math.max(0, Math.floor((newCode.expiresAt.getTime() - currentTime.getTime()) / 1000))
+    const remainingDays = Math.floor(remainingTime / (24 * 60 * 60))
+    const remainingHours = Math.floor((remainingTime % (24 * 60 * 60)) / 3600)
+    const remainingMinutes = Math.floor((remainingTime % 3600) / 60)
+
+    // 添加激活码验证过期时间信息（使用激活码的真实过期时间）
+    responseData.apiValidation = {
+      expiresAt: newCode.expiresAt,
+      remainingTime: remainingTime,
+      message: remainingTime > 0
+        ? `激活码将在 ${remainingDays} 天 ${remainingHours} 小时 ${remainingMinutes} 分钟后过期`
+        : '激活码已过期'
+    }
+
     return corsResponse({
       success: true,
-      data: {
-        id: newCode.id,
-        code: newCode.code,
-        createdAt: newCode.createdAt,
-        expiresAt: newCode.expiresAt,
-        productInfo: newCode.productInfo
-      }
+      data: responseData
     }, undefined, origin, userAgent)
   } catch (error) {
     console.error('Error generating activation code:', error)

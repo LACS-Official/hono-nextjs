@@ -4,6 +4,7 @@ import { db } from '@/lib/db-connection'
 import { activationCodes } from '@/lib/db-schema'
 import { eq, and, lt } from 'drizzle-orm'
 import { corsResponse, handleOptions, validateApiKeyWithExpiration } from '@/lib/cors'
+import { TimeUtils } from '@/lib/time-utils'
 
 // 自动清理5分钟内未使用的激活码
 async function cleanupUnusedCodes() {
@@ -91,8 +92,8 @@ export async function POST(request: NextRequest) {
       }, { status: 400 }, origin, userAgent)
     }
 
-    // 检查是否过期
-    const now = new Date()
+    // 检查是否过期（使用中国时区时间）
+    const now = TimeUtils.nowInChina()
     if (now > activationCode.expiresAt) {
       return corsResponse({
         success: false,
@@ -111,13 +112,13 @@ export async function POST(request: NextRequest) {
       .where(eq(activationCodes.id, activationCode.id))
       .returning()
 
-    // 构建返回数据，包含激活码真实过期时间信息
+    // 构建返回数据，包含激活码真实过期时间信息（中国时区）
     const responseData: any = {
       id: updatedCode.id,
       code: updatedCode.code,
       productInfo: updatedCode.productInfo,
       metadata: updatedCode.metadata,
-      activatedAt: updatedCode.usedAt
+      activatedAt: TimeUtils.toChineseTime(updatedCode.usedAt!)
     }
 
     // 计算激活码的剩余有效时间（基于激活码的真实过期时间）
@@ -126,9 +127,9 @@ export async function POST(request: NextRequest) {
     const remainingHours = Math.floor((remainingTime % (24 * 60 * 60)) / 3600)
     const remainingMinutes = Math.floor((remainingTime % 3600) / 60)
 
-    // 添加激活码验证过期时间信息（使用激活码的真实过期时间）
+    // 添加激活码验证过期时间信息（使用激活码的真实过期时间，中国时区）
     responseData.apiValidation = {
-      expiresAt: activationCode.expiresAt,
+      expiresAt: TimeUtils.toChineseTime(activationCode.expiresAt),
       remainingTime: remainingTime,
       message: remainingTime > 0
         ? `激活码原本将在 ${remainingDays} 天 ${remainingHours} 小时 ${remainingMinutes} 分钟后过期（现已激活）`

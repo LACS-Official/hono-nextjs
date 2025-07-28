@@ -5,10 +5,10 @@ import { pgTable, text, timestamp, boolean, jsonb, uuid } from 'drizzle-orm/pg-c
 export const activationCodes = pgTable('activation_codes', {
   id: uuid('id').primaryKey().defaultRandom(),
   code: text('code').notNull().unique(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  expiresAt: timestamp('expires_at').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
   isUsed: boolean('is_used').default(false).notNull(),
-  usedAt: timestamp('used_at'),
+  usedAt: timestamp('used_at', { withTimezone: true }),
   usedBy: uuid('used_by'), // 使用者 ID
   metadata: jsonb('metadata'),
   productInfo: jsonb('product_info'),

@@ -15,6 +15,13 @@
       "when": 1753659326247,
       "tag": "0001_careless_synch",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1753677922151,
+      "tag": "0002_luxuriant_rockslide",
+      "breakpoints": true
     }
   ]
 }

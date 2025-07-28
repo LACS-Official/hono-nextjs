@@ -5,6 +5,7 @@ import { activationCodes } from '@/lib/db-schema'
 import { eq, desc, and, lt, gt } from 'drizzle-orm'
 import { v4 as uuidv4 } from 'uuid'
 import { corsResponse, handleOptions, validateApiKey, validateApiKeyWithExpiration, checkRateLimit } from '@/lib/cors'
+import { TimeUtils } from '@/lib/time-utils'
 
 // 自动清理5分钟内未使用的激活码
 async function cleanupUnusedCodes() {
@@ -92,8 +93,8 @@ export async function POST(request: NextRequest) {
     } = body
 
     const code = generateActivationCode()
-    const now = new Date()
-    const expiresAt = new Date(now.getTime() + expirationDays * 24 * 60 * 60 * 1000)
+    const now = TimeUtils.nowInChina()
+    const expiresAt = TimeUtils.createChineseExpirationDate(expirationDays)
 
     const [newCode] = await db.insert(activationCodes).values({
       code,
@@ -102,17 +103,17 @@ export async function POST(request: NextRequest) {
       productInfo
     }).returning()
 
-    // 构建返回数据，包含激活码真实过期时间信息
+    // 构建返回数据，包含激活码真实过期时间信息（中国时区）
     const responseData: any = {
       id: newCode.id,
       code: newCode.code,
-      createdAt: newCode.createdAt,
-      expiresAt: newCode.expiresAt,
+      createdAt: TimeUtils.toChineseTime(newCode.createdAt),
+      expiresAt: TimeUtils.toChineseTime(newCode.expiresAt),
       productInfo: newCode.productInfo
     }
 
-    // 计算激活码的剩余有效时间
-    const currentTime = new Date()
+    // 计算激活码的剩余有效时间（基于中国时区）
+    const currentTime = TimeUtils.nowInChina()
     const remainingTime = Math.max(0, Math.floor((newCode.expiresAt.getTime() - currentTime.getTime()) / 1000))
     const remainingDays = Math.floor(remainingTime / (24 * 60 * 60))
     const remainingHours = Math.floor((remainingTime % (24 * 60 * 60)) / 3600)

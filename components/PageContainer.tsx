@@ -73,58 +73,17 @@ export default function PageContainer({
 
 // 响应式搜索和操作栏组件
 interface SearchAndActionBarProps {
-  searchPlaceholder?: string
-  searchValue?: string
-  onSearchChange?: (value: string) => void
-  onSearch?: (value: string) => void
-  filters?: React.ReactNode
-  actions?: React.ReactNode
+  children: React.ReactNode
   className?: string
 }
 
 export function SearchAndActionBar({
-  searchPlaceholder = '搜索...',
-  searchValue,
-  onSearchChange,
-  onSearch,
-  filters,
-  actions,
+  children,
   className = ''
 }: SearchAndActionBarProps) {
   return (
     <div className={`responsive-search-container ${className}`}>
-      <div style={{ flex: 1, minWidth: '200px' }}>
-        {/* 搜索框和筛选器容器 */}
-        <div>
-          {onSearch && (
-            <input
-              type="text"
-              placeholder={searchPlaceholder}
-              value={searchValue}
-              onChange={(e) => onSearchChange?.(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && onSearch(searchValue || '')}
-              style={{
-                width: '100%',
-                padding: '8px 12px',
-                border: '1px solid #d9d9d9',
-                borderRadius: '6px',
-                marginBottom: '12px',
-                fontSize: '14px'
-              }}
-            />
-          )}
-          {filters && (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
-              {filters}
-            </div>
-          )}
-        </div>
-      </div>
-      {actions && (
-        <div className="responsive-button-group">
-          {actions}
-        </div>
-      )}
+      {children}
     </div>
   )
 }
@@ -200,75 +159,17 @@ export function ResponsiveCard({
 
 // 响应式统计卡片网格
 interface StatisticGridProps {
-  statistics: Array<{
-    title: string
-    value: number | string
-    prefix?: React.ReactNode
-    suffix?: string
-    precision?: number
-    valueStyle?: React.CSSProperties
-  }>
-  loading?: boolean
+  children: React.ReactNode
   className?: string
 }
 
 export function StatisticGrid({
-  statistics,
-  loading = false,
+  children,
   className = ''
 }: StatisticGridProps) {
-  if (loading) {
-    return (
-      <div className={`responsive-card-spacing ${className}`}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
-          {Array.from({ length: 4 }, (_, index) => (
-            <div key={index} style={{
-              background: '#fff',
-              padding: '24px',
-              borderRadius: '8px',
-              border: '1px solid #f0f0f0',
-              textAlign: 'center'
-            }}>
-              <div style={{ height: '60px', background: '#f5f5f5', borderRadius: '4px' }} />
-            </div>
-          ))}
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className={`responsive-card-spacing ${className}`}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
-        {statistics.map((stat, index) => (
-          <div key={index} style={{
-            background: '#fff',
-            padding: '24px',
-            borderRadius: '8px',
-            border: '1px solid #f0f0f0',
-            textAlign: 'center'
-          }}>
-            <div style={{ fontSize: '14px', color: '#666', marginBottom: '8px' }}>
-              {stat.title}
-            </div>
-            <div style={{
-              fontSize: '24px',
-              fontWeight: 'bold',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              ...stat.valueStyle
-            }}>
-              {stat.prefix}
-              {typeof stat.value === 'number' && stat.precision !== undefined
-                ? stat.value.toFixed(stat.precision)
-                : stat.value}
-              {stat.suffix}
-            </div>
-          </div>
-        ))}
-      </div>
+      {children}
     </div>
   )
 }

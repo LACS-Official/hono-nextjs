@@ -34,6 +34,7 @@ import {
   BarChartOutlined
 } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
+import type { Breakpoint } from 'antd'
 import { ErrorBoundary, EmptyState, NetworkError } from '@/components/ErrorBoundary'
 import { PageLoading, StatisticLoading } from '@/components/LoadingState'
 import {
@@ -205,7 +206,7 @@ export default function ActivationCodesPage() {
           {code}
         </Text>
       ),
-      responsive: ['md'],
+      responsive: ['md'] as Breakpoint[],
     },
     {
       title: '激活码信息',
@@ -229,7 +230,7 @@ export default function ActivationCodesPage() {
           )}
         </div>
       ),
-      responsive: ['xs', 'sm'],
+      responsive: ['xs', 'sm'] as Breakpoint[],
     },
     {
       title: '状态',
@@ -240,7 +241,7 @@ export default function ActivationCodesPage() {
           {getActivationCodeStatusText(record)}
         </Tag>
       ),
-      responsive: ['md'],
+      responsive: ['md'] as Breakpoint[],
     },
     {
       title: '产品信息',
@@ -260,7 +261,7 @@ export default function ActivationCodesPage() {
           )}
         </div>
       ),
-      responsive: ['lg'],
+      responsive: ['lg'] as Breakpoint[],
     },
     {
       title: '创建时间',
@@ -268,7 +269,7 @@ export default function ActivationCodesPage() {
       key: 'createdAt',
       width: 150,
       render: (date: string) => formatDate(date),
-      responsive: ['lg'],
+      responsive: ['lg'] as Breakpoint[],
     },
     {
       title: '过期时间',
@@ -288,7 +289,7 @@ export default function ActivationCodesPage() {
           </div>
         )
       },
-      responsive: ['md'],
+      responsive: ['md'] as Breakpoint[],
     },
     {
       title: '时间信息',
@@ -311,7 +312,7 @@ export default function ActivationCodesPage() {
           </div>
         )
       },
-      responsive: ['xs', 'sm'],
+      responsive: ['xs', 'sm'] as Breakpoint[],
     },
     {
       title: '操作',

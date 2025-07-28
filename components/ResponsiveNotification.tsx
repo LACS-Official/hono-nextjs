@@ -10,28 +10,24 @@ import {
 
 // 响应式通知配置
 const getNotificationConfig = () => {
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
-  
   return {
-    placement: isMobile ? 'top' as const : 'topRight' as const,
-    duration: isMobile ? 3 : 4.5,
+    placement: 'topRight' as const,
+    duration: 4.5,
     style: {
-      width: isMobile ? '90vw' : '400px',
-      marginTop: isMobile ? '10px' : '24px',
+      width: '400px',
+      marginTop: '80px', // 避免被导航栏遮挡
     }
   }
 }
 
 // 响应式消息配置
 const getMessageConfig = () => {
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
-  
   return {
-    duration: isMobile ? 2 : 3,
-    maxCount: isMobile ? 1 : 3,
+    duration: 3,
+    maxCount: 3,
     style: {
-      marginTop: isMobile ? '10px' : '20px',
-      fontSize: isMobile ? '14px' : '16px',
+      marginTop: '80px',
+      fontSize: '14px',
     }
   }
 }
@@ -40,82 +36,80 @@ const getMessageConfig = () => {
 export class ResponsiveNotification {
   // 成功通知
   static success(title: string, description?: string) {
-    const config = getNotificationConfig()
-    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
-    
-    if (isMobile && !description) {
-      // 移动端简单消息
-      message.success({
-        content: title,
-        ...getMessageConfig()
-      })
-    } else {
-      // 桌面端或有描述的通知
+    if (description) {
+      // 有描述的通知
+      const config = getNotificationConfig()
       notification.success({
         message: title,
         description,
         icon: <CheckCircleOutlined style={{ color: '#52c41a' }} />,
         ...config
       })
+    } else {
+      // 简单消息
+      message.success({
+        content: title,
+        ...getMessageConfig()
+      })
     }
   }
 
   // 错误通知
   static error(title: string, description?: string) {
-    const config = getNotificationConfig()
-    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
-    
-    if (isMobile && !description) {
-      message.error({
-        content: title,
-        ...getMessageConfig()
-      })
-    } else {
+    if (description) {
+      // 有描述的通知
+      const config = getNotificationConfig()
       notification.error({
         message: title,
         description,
         icon: <CloseCircleOutlined style={{ color: '#ff4d4f' }} />,
         ...config
       })
+    } else {
+      // 简单消息
+      message.error({
+        content: title,
+        ...getMessageConfig()
+      })
     }
   }
 
   // 警告通知
   static warning(title: string, description?: string) {
-    const config = getNotificationConfig()
-    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
-    
-    if (isMobile && !description) {
-      message.warning({
-        content: title,
-        ...getMessageConfig()
-      })
-    } else {
+    if (description) {
+      // 有描述的通知
+      const config = getNotificationConfig()
       notification.warning({
         message: title,
         description,
         icon: <ExclamationCircleOutlined style={{ color: '#faad14' }} />,
         ...config
       })
+    } else {
+      // 简单消息
+      message.warning({
+        content: title,
+        ...getMessageConfig()
+      })
     }
   }
 
   // 信息通知
   static info(title: string, description?: string) {
-    const config = getNotificationConfig()
-    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
-    
-    if (isMobile && !description) {
-      message.info({
-        content: title,
-        ...getMessageConfig()
-      })
-    } else {
+    if (description) {
+      // 有描述的通知
+      const config = getNotificationConfig()
       notification.info({
         message: title,
         description,
         icon: <InfoCircleOutlined style={{ color: '#1890ff' }} />,
         ...config
+      })
+    } else {
+      // 简单消息
+      message.info({
+        content: title,
+        ...getMessageConfig()
       })
     }
   }

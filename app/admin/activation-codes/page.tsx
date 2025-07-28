@@ -34,7 +34,6 @@ import {
   BarChartOutlined
 } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
-import Navigation from '@/components/Navigation'
 import { ErrorBoundary, EmptyState, NetworkError } from '@/components/ErrorBoundary'
 import { PageLoading, StatisticLoading } from '@/components/LoadingState'
 import {
@@ -345,13 +344,13 @@ export default function ActivationCodesPage() {
 
   return (
     <ErrorBoundary>
-      <Layout style={{ minHeight: '100vh' }}>
-        {/* 导航栏 */}
-        <Navigation />
-
-        <Layout style={{ marginTop: 64 }}>
-          {/* 主内容区域 */}
-          <Content style={{ padding: '24px', background: '#f5f5f5' }}>
+      <div className="responsive-container"
+        style={{
+          minHeight: 'calc(100vh - 64px)',
+          paddingTop: '0',
+          paddingBottom: '24px'
+        }}
+      >
             {/* 加载状态 */}
             {loading && <PageLoading tip="正在加载激活码数据..." />}
 
@@ -370,8 +369,8 @@ export default function ActivationCodesPage() {
             {!loading && !error && (
               <>
                 {/* 页面头部 */}
-                <div style={{ marginBottom: '24px' }}>
-                  <Title level={2} style={{ margin: '0 0 8px 0' }}>
+                <div className="responsive-card-spacing">
+                  <Title level={2} className="responsive-title">
                     激活码管理
                   </Title>
                   <Paragraph style={{ color: '#666', margin: 0 }}>
@@ -381,16 +380,16 @@ export default function ActivationCodesPage() {
 
                 {/* 统计卡片 */}
                 {statsLoading ? (
-                  <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
+                  <Row gutter={[16, 16]} className="responsive-card-spacing">
                     <Col xs={24} sm={12} md={6}><StatisticLoading /></Col>
                     <Col xs={24} sm={12} md={6}><StatisticLoading /></Col>
                     <Col xs={24} sm={12} md={6}><StatisticLoading /></Col>
                     <Col xs={24} sm={12} md={6}><StatisticLoading /></Col>
                   </Row>
                 ) : stats ? (
-                  <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
+                  <Row gutter={[16, 16]} className="responsive-card-spacing">
                     <Col xs={24} sm={12} md={6}>
-                      <Card>
+                      <Card className="responsive-statistic-card">
                         <Statistic
                           title="总激活码"
                           value={stats.total}
@@ -399,7 +398,7 @@ export default function ActivationCodesPage() {
                       </Card>
                     </Col>
                     <Col xs={24} sm={12} md={6}>
-                      <Card>
+                      <Card className="responsive-statistic-card">
                         <Statistic
                           title="已使用"
                           value={stats.used}
@@ -409,7 +408,7 @@ export default function ActivationCodesPage() {
                       </Card>
                     </Col>
                     <Col xs={24} sm={12} md={6}>
-                      <Card>
+                      <Card className="responsive-statistic-card">
                         <Statistic
                           title="有效激活码"
                           value={stats.active}
@@ -419,7 +418,7 @@ export default function ActivationCodesPage() {
                       </Card>
                     </Col>
                     <Col xs={24} sm={12} md={6}>
-                      <Card>
+                      <Card className="responsive-statistic-card">
                         <Statistic
                           title="使用率"
                           value={stats.usageRate}
@@ -433,83 +432,61 @@ export default function ActivationCodesPage() {
                 ) : null}
 
           {/* 操作栏 */}
-          <Card style={{ marginBottom: '24px' }}>
-            <Row gutter={[16, 16]}>
-              <Col xs={24} lg={14}>
-                <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-                  <Search
-                    placeholder="搜索激活码、产品名称或邮箱..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    onSearch={handleSearch}
-                    style={{ width: '100%' }}
-                    allowClear
-                  />
-                  <Select
-                    value={statusFilter}
-                    onChange={setStatusFilter}
-                    style={{ width: '100%', maxWidth: 200 }}
-                    placeholder="选择状态筛选"
-                  >
-                    <Option value="all">全部状态</Option>
-                    <Option value="active">有效</Option>
-                    <Option value="used">已使用</Option>
-                    <Option value="expired">已过期</Option>
-                    <Option value="unused">未使用</Option>
-                  </Select>
-                </Space>
-              </Col>
-              <Col xs={24} lg={10}>
-                <Space
-                  direction="vertical"
-                  size="middle"
-                  style={{ width: '100%' }}
+          <Card className="responsive-card-spacing">
+            <div className="responsive-search-container">
+              <div style={{ flex: 1, minWidth: '200px' }}>
+                <Search
+                  placeholder="搜索激活码、产品名称或邮箱..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onSearch={handleSearch}
+                  style={{ width: '100%', marginBottom: '12px' }}
+                  allowClear
+                />
+                <Select
+                  value={statusFilter}
+                  onChange={setStatusFilter}
+                  style={{ width: '100%', maxWidth: '200px' }}
+                  placeholder="选择状态筛选"
                 >
-                  <Row gutter={[8, 8]}>
-                    <Col xs={12} sm={6}>
-                      <Button
-                        block
-                        icon={<BarChartOutlined />}
-                        onClick={() => router.push('/admin/activation-codes/stats')}
-                      >
-                        统计
-                      </Button>
-                    </Col>
-                    <Col xs={12} sm={6}>
-                      <Button
-                        block
-                        icon={<ReloadOutlined />}
-                        onClick={() => {
-                          loadActivationCodes()
-                          loadStats()
-                        }}
-                      >
-                        刷新
-                      </Button>
-                    </Col>
-                    <Col xs={12} sm={6}>
-                      <Button
-                        block
-                        icon={<ClearOutlined />}
-                        onClick={handleCleanupExpired}
-                      >
-                        清理
-                      </Button>
-                    </Col>
-                    <Col xs={12} sm={6}>
-                      <Button
-                        block
-                        type="primary"
-                        icon={<PlusOutlined />}
-                        onClick={() => router.push('/admin/activation-codes/new')}
-                      >
-                        新增
-                      </Button>
-                    </Col>
-                  </Row>
-                </Space>
-              </Col>
-            </Row>
+                  <Option value="all">全部状态</Option>
+                  <Option value="active">有效</Option>
+                  <Option value="used">已使用</Option>
+                  <Option value="expired">已过期</Option>
+                  <Option value="unused">未使用</Option>
+                </Select>
+              </div>
+              <div className="responsive-button-group">
+                <Button
+                  icon={<BarChartOutlined />}
+                  onClick={() => router.push('/admin/activation-codes/stats')}
+                >
+                  统计
+                </Button>
+                <Button
+                  icon={<ReloadOutlined />}
+                  onClick={() => {
+                    loadActivationCodes()
+                    loadStats()
+                  }}
+                >
+                  刷新
+                </Button>
+                <Button
+                  icon={<ClearOutlined />}
+                  onClick={handleCleanupExpired}
+                >
+                  清理
+                </Button>
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={() => router.push('/admin/activation-codes/new')}
+                >
+                  新增
+                </Button>
+              </div>
+            </div>
           </Card>
 
                 {/* 激活码表格 */}
@@ -530,18 +507,20 @@ export default function ActivationCodesPage() {
                     />
                   ) : (
                     <>
-                      <Table
-                        columns={columns}
-                        dataSource={filteredCodes}
-                        rowKey="id"
-                        loading={loading}
-                        pagination={false}
-                        scroll={{ x: 800 }}
-                        size="middle"
-                      />
+                      <div className="responsive-table-container">
+                        <Table
+                          columns={columns}
+                          dataSource={filteredCodes}
+                          rowKey="id"
+                          loading={loading}
+                          pagination={false}
+                          scroll={{ x: 800 }}
+                          size="middle"
+                        />
+                      </div>
 
                       {/* 分页 */}
-                      <div style={{ marginTop: '16px', textAlign: 'right' }}>
+                      <div style={{ marginTop: '16px', textAlign: 'center' }}>
                         <Pagination
                           current={currentPage}
                           pageSize={pageSize}
@@ -559,6 +538,7 @@ export default function ActivationCodesPage() {
                             setCurrentPage(1)
                             loadActivationCodes(1, size, statusFilter)
                           }}
+                          responsive
                         />
                       </div>
                     </>
@@ -566,9 +546,7 @@ export default function ActivationCodesPage() {
                 </Card>
               </>
             )}
-          </Content>
-        </Layout>
-      </Layout>
+      </div>
     </ErrorBoundary>
   )
 }

@@ -28,7 +28,6 @@ import {
   EyeOutlined
 } from '@ant-design/icons'
 import Link from 'next/link'
-import Navigation from '@/components/Navigation'
 
 const { Search } = Input
 const { Option } = Select
@@ -236,93 +235,92 @@ export default function SoftwareManagement() {
   }
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
-      <Navigation />
-      
-      <Content style={{ padding: '24px', marginTop: '64px', background: '#f5f5f5' }}>
-        {/* 页面标题 */}
-        <div style={{ marginBottom: '24px' }}>
-          <Title level={2}>软件管理</Title>
-          <p>管理系统中的所有软件信息，包括版本、分类、状态等。</p>
-        </div>
+    <div className="responsive-container" style={{ paddingTop: '0', paddingBottom: '24px' }}>
+      {/* 页面标题 */}
+      <div className="responsive-card-spacing">
+        <Title level={2} className="responsive-title">软件管理</Title>
+        <p>管理系统中的所有软件信息，包括版本、分类、状态等。</p>
+      </div>
 
         {/* 操作栏 */}
-        <Card style={{ marginBottom: '16px' }}>
-          <Row gutter={[16, 16]} align="middle">
-            <Col xs={24} sm={12} md={8}>
+        <Card className="responsive-card-spacing">
+          <div className="responsive-search-container">
+            <div style={{ flex: 1, minWidth: '200px' }}>
               <Search
                 placeholder="搜索软件名称或描述"
                 allowClear
                 onSearch={handleSearch}
-                style={{ width: '100%' }}
+                style={{ width: '100%', marginBottom: '12px' }}
               />
-            </Col>
-            <Col xs={12} sm={6} md={4}>
-              <Select
-                placeholder="选择分类"
-                allowClear
-                style={{ width: '100%' }}
-                onChange={(value) => handleFilterChange('category', value || '')}
-              >
-                <Option value="开发工具">开发工具</Option>
-                <Option value="浏览器">浏览器</Option>
-                <Option value="图像处理">图像处理</Option>
-                <Option value="社交通讯">社交通讯</Option>
-              </Select>
-            </Col>
-            <Col xs={12} sm={6} md={4}>
-              <Select
-                placeholder="选择状态"
-                allowClear
-                style={{ width: '100%' }}
-                onChange={(value) => handleFilterChange('isActive', value || '')}
-              >
-                <Option value="true">启用</Option>
-                <Option value="false">禁用</Option>
-              </Select>
-            </Col>
-            <Col xs={24} sm={12} md={8}>
-              <Space>
-                <Link href="/admin/software/new">
-                  <Button type="primary" icon={<PlusOutlined />}>
-                    添加软件
-                  </Button>
-                </Link>
-                <Button 
-                  icon={<ReloadOutlined />} 
-                  onClick={() => fetchSoftware(pagination.current, pagination.pageSize)}
-                >
-                  刷新
+              <Row gutter={[12, 12]}>
+                <Col xs={24} sm={12}>
+                  <Select
+                    placeholder="选择分类"
+                    allowClear
+                    style={{ width: '100%' }}
+                    onChange={(value) => handleFilterChange('category', value || '')}
+                  >
+                    <Option value="开发工具">开发工具</Option>
+                    <Option value="浏览器">浏览器</Option>
+                    <Option value="图像处理">图像处理</Option>
+                    <Option value="社交通讯">社交通讯</Option>
+                  </Select>
+                </Col>
+                <Col xs={24} sm={12}>
+                  <Select
+                    placeholder="选择状态"
+                    allowClear
+                    style={{ width: '100%' }}
+                    onChange={(value) => handleFilterChange('isActive', value || '')}
+                  >
+                    <Option value="true">启用</Option>
+                    <Option value="false">禁用</Option>
+                  </Select>
+                </Col>
+              </Row>
+            </div>
+            <div className="responsive-button-group">
+              <Link href="/admin/software/new">
+                <Button type="primary" icon={<PlusOutlined />}>
+                  添加软件
                 </Button>
-                <Button icon={<ExportOutlined />}>
-                  导出
-                </Button>
-              </Space>
-            </Col>
-          </Row>
+              </Link>
+              <Button
+                icon={<ReloadOutlined />}
+                onClick={() => fetchSoftware(pagination.current, pagination.pageSize)}
+              >
+                刷新
+              </Button>
+              <Button icon={<ExportOutlined />}>
+                导出
+              </Button>
+            </div>
+          </div>
         </Card>
 
         {/* 软件列表表格 */}
         <Card>
-          <Table
-            columns={columns}
-            dataSource={software}
-            rowKey="id"
-            loading={loading}
-            pagination={{
-              ...pagination,
-              showSizeChanger: true,
-              showQuickJumper: true,
-              showTotal: (total, range) => 
-                `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
-              onChange: (page, pageSize) => {
-                fetchSoftware(page, pageSize)
-              }
-            }}
-            scroll={{ x: 1000 }}
-          />
+          <div className="responsive-table-container">
+            <Table
+              columns={columns}
+              dataSource={software}
+              rowKey="id"
+              loading={loading}
+              pagination={{
+                ...pagination,
+                showSizeChanger: true,
+                showQuickJumper: true,
+                showTotal: (total, range) =>
+                  `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
+                onChange: (page, pageSize) => {
+                  fetchSoftware(page, pageSize)
+                },
+                responsive: true
+              }}
+              scroll={{ x: 1000 }}
+            />
+          </div>
         </Card>
-      </Content>
-    </Layout>
+    </div>
   )
 }

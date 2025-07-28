@@ -30,19 +30,6 @@ export default function Navigation({ className }: NavigationProps) {
   const pathname = usePathname()
   const { user, logout } = useAuth()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [isMobile, setIsMobile] = useState(false)
-
-  // 检测屏幕尺寸
-  useEffect(() => {
-    const checkScreenSize = () => {
-      setIsMobile(window.innerWidth < 768)
-    }
-
-    checkScreenSize()
-    window.addEventListener('resize', checkScreenSize)
-
-    return () => window.removeEventListener('resize', checkScreenSize)
-  }, [])
 
   const handleLogout = async () => {
     await logout()
@@ -146,9 +133,10 @@ export default function Navigation({ className }: NavigationProps) {
           justifyContent: 'space-between',
           background: '#fff',
           borderBottom: '1px solid #f0f0f0',
-          padding: isMobile ? '0 16px' : '0 24px',
+          padding: '0 16px',
           height: '64px',
         }}
+        className="responsive-header"
         className={className}
       >
         {/* Logo区域 */}
@@ -162,47 +150,43 @@ export default function Navigation({ className }: NavigationProps) {
               gap: '8px',
               padding: '4px 8px',
               height: 'auto',
-              fontSize: isMobile ? '16px' : '18px',
+              fontSize: '16px',
               fontWeight: 600,
               color: '#1890ff',
             }}
+            className="responsive-logo"
           >
-            <GithubOutlined style={{ fontSize: isMobile ? '20px' : '24px' }} />
-            {!isMobile && (
-              <Text strong style={{ fontSize: '18px', color: '#1890ff' }}>
-                LACS Admin
-              </Text>
-            )}
+            <GithubOutlined style={{ fontSize: '20px' }} className="responsive-icon" />
+            <Text strong style={{ fontSize: '18px', color: '#1890ff' }} className="desktop-only">
+              LACS Admin
+            </Text>
           </Button>
         </div>
 
         {/* 桌面端导航菜单 */}
-        {!isMobile && (
-          <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
-            <Menu
-              mode="horizontal"
-              selectedKeys={getSelectedKeys()}
-              items={menuItems}
-              style={{
-                border: 'none',
-                background: 'transparent',
-                minWidth: '200px',
-              }}
-            />
-          </div>
-        )}
+        <div className="desktop-only" style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+          <Menu
+            mode="horizontal"
+            selectedKeys={getSelectedKeys()}
+            items={menuItems}
+            style={{
+              border: 'none',
+              background: 'transparent',
+              minWidth: '200px',
+            }}
+          />
+        </div>
 
         {/* 用户操作区域 */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {/* 移动端菜单按钮 */}
-          {isMobile && (
-            <Button
-              type="text"
-              icon={<MenuOutlined />}
-              onClick={() => setMobileMenuOpen(true)}
-              style={{ fontSize: '18px' }}
-            />
-          )}
+          <Button
+            type="text"
+            icon={<MenuOutlined />}
+            onClick={() => setMobileMenuOpen(true)}
+            style={{ fontSize: '18px' }}
+            className="mobile-only"
+          />
 
           <Dropdown
             menu={{ items: userMenuItems }}
@@ -213,11 +197,9 @@ export default function Navigation({ className }: NavigationProps) {
               <Avatar
                 src={user?.avatar_url}
                 icon={!user?.avatar_url && <UserOutlined />}
-                size={isMobile ? 'small' : 'default'}
+                size="default"
               />
-              {!isMobile && (
-                <Text>{user?.name || user?.login || '管理员'}</Text>
-              )}
+              <Text className="desktop-only">{user?.name || user?.login || '管理员'}</Text>
             </Space>
           </Dropdown>
         </div>

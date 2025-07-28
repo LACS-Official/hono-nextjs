@@ -144,3 +144,4 @@ SECURITY.md
 # Documentation and testing directories
 docs/
 tests/
+.augment/

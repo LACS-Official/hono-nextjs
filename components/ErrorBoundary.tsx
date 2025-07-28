@@ -43,8 +43,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
       }
 
       return (
-        <div style={{
-          padding: window.innerWidth < 768 ? '16px' : '24px',
+        <div className="responsive-container" style={{
           minHeight: '400px',
           display: 'flex',
           alignItems: 'center',
@@ -53,10 +52,10 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
           <Card style={{
             maxWidth: '500px',
             width: '100%',
-            margin: window.innerWidth < 768 ? '0' : '0 auto'
+            margin: '0 auto'
           }}>
             <div style={{ textAlign: 'center' }}>
-              <Title level={window.innerWidth < 768 ? 4 : 3} type="danger">
+              <Title level={3} type="danger" className="responsive-title">
                 页面出现错误
               </Title>
               <Paragraph type="secondary">

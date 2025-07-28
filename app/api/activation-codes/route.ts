@@ -4,6 +4,13 @@ import { db } from '@/lib/db-connection'
 import { activationCodes } from '@/lib/db-schema'
 import { eq, desc, and, lt, gt } from 'drizzle-orm'
 import { v4 as uuidv4 } from 'uuid'
+import { corsResponse, handleOptions, validateApiKey, checkRateLimit } from '@/lib/cors'
+
+// OPTIONS 方法处理 CORS 预检请求
+export async function OPTIONS(request: NextRequest) {
+  const origin = request.headers.get('Origin')
+  return handleOptions(origin)
+}
 
 // 生成激活码
 function generateActivationCode(): string {
@@ -16,6 +23,27 @@ function generateActivationCode(): string {
 // POST - 生成激活码
 export async function POST(request: NextRequest) {
   try {
+    const origin = request.headers.get('Origin')
+
+    // API Key 验证
+    if (process.env.ENABLE_API_KEY_AUTH === 'true' && !validateApiKey(request)) {
+      return corsResponse({
+        success: false,
+        error: 'Invalid or missing API Key'
+      }, { status: 401 }, origin)
+    }
+
+    // 速率限制检查
+    const clientId = request.headers.get('X-Forwarded-For') ||
+                    request.headers.get('X-Real-IP') ||
+                    request.ip || 'unknown'
+
+    if (process.env.ENABLE_RATE_LIMITING === 'true' && !checkRateLimit(clientId)) {
+      return corsResponse({
+        success: false,
+        error: 'Rate limit exceeded. Please try again later.'
+      }, { status: 429 }, origin)
+    }
     const body = await request.json()
     const { 
       expirationDays = 365, 
@@ -38,7 +66,7 @@ export async function POST(request: NextRequest) {
       productInfo
     }).returning()
 
-    return NextResponse.json({
+    return corsResponse({
       success: true,
       data: {
         id: newCode.id,
@@ -47,10 +75,10 @@ export async function POST(request: NextRequest) {
         expiresAt: newCode.expiresAt,
         productInfo: newCode.productInfo
       }
-    })
+    }, undefined, origin)
   } catch (error) {
     console.error('Error generating activation code:', error)
-    return NextResponse.json({
+    return corsResponse({
       success: false,
       error: 'Failed to generate activation code'
     }, { status: 500 })
@@ -108,7 +136,7 @@ export async function GET(request: NextRequest) {
 
     const total = totalResult.length
 
-    return NextResponse.json({
+    return corsResponse({
       success: true,
       data: {
         codes: codes.map(code => ({
@@ -130,7 +158,7 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     console.error('Error fetching activation codes:', error)
-    return NextResponse.json({
+    return corsResponse({
       success: false,
       error: 'Failed to fetch activation codes'
     }, { status: 500 })

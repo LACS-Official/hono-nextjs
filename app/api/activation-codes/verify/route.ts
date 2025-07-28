@@ -3,6 +3,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db-connection'
 import { activationCodes } from '@/lib/db-schema'
 import { eq } from 'drizzle-orm'
+import { corsResponse, handleOptions } from '@/lib/cors'
+
+// OPTIONS 方法处理 CORS 预检请求
+export async function OPTIONS(request: NextRequest) {
+  return handleOptions()
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,7 +16,7 @@ export async function POST(request: NextRequest) {
     const { code } = body
 
     if (!code) {
-      return NextResponse.json({
+      return corsResponse({
         success: false,
         error: 'Activation code is required'
       }, { status: 400 })
@@ -24,7 +30,7 @@ export async function POST(request: NextRequest) {
       .limit(1)
 
     if (!activationCode) {
-      return NextResponse.json({
+      return corsResponse({
         success: false,
         error: 'Invalid activation code'
       }, { status: 404 })
@@ -32,7 +38,7 @@ export async function POST(request: NextRequest) {
 
     // 检查是否已使用
     if (activationCode.isUsed) {
-      return NextResponse.json({
+      return corsResponse({
         success: false,
         error: 'Activation code has already been used',
         usedAt: activationCode.usedAt
@@ -42,7 +48,7 @@ export async function POST(request: NextRequest) {
     // 检查是否过期
     const now = new Date()
     if (now > activationCode.expiresAt) {
-      return NextResponse.json({
+      return corsResponse({
         success: false,
         error: 'Activation code has expired',
         expiresAt: activationCode.expiresAt
@@ -59,7 +65,7 @@ export async function POST(request: NextRequest) {
       .where(eq(activationCodes.id, activationCode.id))
       .returning()
 
-    return NextResponse.json({
+    return corsResponse({
       success: true,
       data: {
         id: updatedCode.id,
@@ -71,7 +77,7 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('Error verifying activation code:', error)
-    return NextResponse.json({
+    return corsResponse({
       success: false,
       error: 'Failed to verify activation code'
     }, { status: 500 })

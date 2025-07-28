@@ -8,6 +8,7 @@ import { db } from '@/lib/db-connection'
 import { activationCodes, type ActivationCode } from '@/lib/db-schema'
 import { eq, desc, and, lt, gt, count } from 'drizzle-orm'
 import { v4 as uuidv4 } from 'uuid'
+import { createHonoCorsMiddleware } from '@/lib/cors'
 
 export const dynamic = 'force-dynamic'
 
@@ -27,6 +28,9 @@ interface KVActivationCode {
 type UnifiedActivationCode = ActivationCode | KVActivationCode
 
 const app = new Hono().basePath('/api/activation-codes-hybrid')
+
+// 应用 CORS 中间件
+app.use('*', createHonoCorsMiddleware())
 
 // 生成激活码
 function generateActivationCode(): string {

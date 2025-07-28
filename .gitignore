@@ -115,6 +115,28 @@ jspm_packages/
 # Debug and test files
 debug/
 test-*.js
+test-*.html
 storage-analysis.js
 app/activation-test/
 app/oauth-test/
+app/cors-test/
+app/security-test/
+
+# Security and configuration files
+SECURITY.md
+.env.example
+
+# Temporary and backup files
+*.tmp
+*.bak
+*.backup
+*~
+
+# Development and testing
+/debug/
+/test/
+/tests/
+*.test.js
+*.test.ts
+*.spec.js
+*.spec.ts

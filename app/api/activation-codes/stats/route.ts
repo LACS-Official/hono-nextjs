@@ -3,6 +3,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db-connection'
 import { activationCodes } from '@/lib/db-schema'
 import { eq, and, lt, gt, count } from 'drizzle-orm'
+import { corsResponse, handleOptions } from '@/lib/cors'
+
+// OPTIONS 方法处理 CORS 预检请求
+export async function OPTIONS(request: NextRequest) {
+  return handleOptions()
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -50,7 +56,7 @@ export async function GET(request: NextRequest) {
     const usageRate = total > 0 ? (used / total) * 100 : 0
     const expirationRate = total > 0 ? (expired / total) * 100 : 0
 
-    return NextResponse.json({
+    return corsResponse({
       success: true,
       data: {
         total,
@@ -64,7 +70,7 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     console.error('Error getting stats:', error)
-    return NextResponse.json({
+    return corsResponse({
       success: false,
       error: 'Failed to get statistics'
     }, { status: 500 })

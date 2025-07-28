@@ -6,14 +6,72 @@ const ALLOWED_ORIGINS = [
   'https://admin.lacs.cc',
   'http://localhost:3000', // 开发环境
   'http://localhost:3001', // 开发环境备用端口
+  // API 测试工具支持
+  'https://app.apifox.com', // Apifox Web 版
+  'https://web.postman.co', // Postman Web 版
+  'https://hoppscotch.io', // Hoppscotch
+  'https://insomnia.rest', // Insomnia
 ]
 
+// 检查是否为 API 测试工具的请求
+function isApiTestingTool(origin?: string | null, userAgent?: string | null): boolean {
+  if (!origin && !userAgent) return false;
+
+  // 检查常见的 API 测试工具 User-Agent
+  const testingToolPatterns = [
+    /apifox/i,
+    /postman/i,
+    /insomnia/i,
+    /hoppscotch/i,
+    /curl/i,
+    /httpie/i,
+    /thunder client/i,
+    /rest client/i
+  ];
+
+  if (userAgent) {
+    return testingToolPatterns.some(pattern => pattern.test(userAgent));
+  }
+
+  return false;
+}
+
 // 根据请求来源动态设置CORS头部
-function getCorsHeaders(origin?: string | null) {
-  const allowedOrigin = ALLOWED_ORIGINS.includes(origin || '') ? origin : ALLOWED_ORIGINS[0]
+function getCorsHeaders(origin?: string | null, userAgent?: string | null) {
+  // 检查是否为允许的域名
+  const isAllowedOrigin = ALLOWED_ORIGINS.includes(origin || '');
+
+  // 检查是否为 API 测试工具
+  const isTestingTool = isApiTestingTool(origin, userAgent);
+
+  // 开发模式：允许所有 localhost 和 127.0.0.1
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  const isLocalhost = origin?.includes('localhost') || origin?.includes('127.0.0.1');
+
+  // 检查是否启用了 API 工具支持
+  const enableApiToolsSupport = process.env.ENABLE_CORS_FOR_API_TOOLS === 'true';
+
+  // 决定是否允许该来源
+  let allowedOrigin: string;
+
+  if (isAllowedOrigin) {
+    allowedOrigin = origin!;
+  } else if (enableApiToolsSupport && isTestingTool) {
+    // 如果启用了 API 工具支持且检测到是测试工具，则允许
+    allowedOrigin = origin || '*';
+  } else if (isDevelopment && isLocalhost) {
+    // 开发环境允许 localhost
+    allowedOrigin = origin || '*';
+  } else if (isDevelopment) {
+    // 开发环境下更宽松的策略
+    allowedOrigin = origin || '*';
+  } else {
+    // 生产环境默认使用第一个允许的域名
+    allowedOrigin = ALLOWED_ORIGINS[0];
+  }
 
   return {
-    'Access-Control-Allow-Origin': allowedOrigin || ALLOWED_ORIGINS[0],
+    'Access-Control-Allow-Origin': allowedOrigin,
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', // 移除了 PUT, DELETE
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-API-Key', // 添加了 API Key 支持
     'Access-Control-Allow-Credentials': 'false', // 禁用凭据传输以提高安全性
@@ -25,8 +83,8 @@ function getCorsHeaders(origin?: string | null) {
 export const corsHeaders = getCorsHeaders('https://admin.lacs.cc')
 
 // 创建带有 CORS 头部的 JSON 响应
-export function corsResponse(data: any, init?: ResponseInit, origin?: string | null) {
-  const headers = getCorsHeaders(origin)
+export function corsResponse(data: any, init?: ResponseInit, origin?: string | null, userAgent?: string | null) {
+  const headers = getCorsHeaders(origin, userAgent)
   return NextResponse.json(data, {
     ...init,
     headers: {
@@ -37,8 +95,8 @@ export function corsResponse(data: any, init?: ResponseInit, origin?: string | n
 }
 
 // 处理 OPTIONS 预检请求
-export function handleOptions(origin?: string | null) {
-  const headers = getCorsHeaders(origin)
+export function handleOptions(origin?: string | null, userAgent?: string | null) {
+  const headers = getCorsHeaders(origin, userAgent)
   return new NextResponse(null, {
     status: 200,
     headers,

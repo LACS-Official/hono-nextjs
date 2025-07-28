@@ -9,7 +9,8 @@ import { corsResponse, handleOptions, validateApiKey, checkRateLimit } from '@/l
 // OPTIONS 方法处理 CORS 预检请求
 export async function OPTIONS(request: NextRequest) {
   const origin = request.headers.get('Origin')
-  return handleOptions(origin)
+  const userAgent = request.headers.get('User-Agent')
+  return handleOptions(origin, userAgent)
 }
 
 // 生成激活码
@@ -24,13 +25,14 @@ function generateActivationCode(): string {
 export async function POST(request: NextRequest) {
   try {
     const origin = request.headers.get('Origin')
+    const userAgent = request.headers.get('User-Agent')
 
     // API Key 验证
     if (process.env.ENABLE_API_KEY_AUTH === 'true' && !validateApiKey(request)) {
       return corsResponse({
         success: false,
         error: 'Invalid or missing API Key'
-      }, { status: 401 }, origin)
+      }, { status: 401 }, origin, userAgent)
     }
 
     // 速率限制检查
@@ -42,7 +44,7 @@ export async function POST(request: NextRequest) {
       return corsResponse({
         success: false,
         error: 'Rate limit exceeded. Please try again later.'
-      }, { status: 429 }, origin)
+      }, { status: 429 }, origin, userAgent)
     }
     const body = await request.json()
     const { 
@@ -75,13 +77,13 @@ export async function POST(request: NextRequest) {
         expiresAt: newCode.expiresAt,
         productInfo: newCode.productInfo
       }
-    }, undefined, origin)
+    }, undefined, origin, userAgent)
   } catch (error) {
     console.error('Error generating activation code:', error)
     return corsResponse({
       success: false,
       error: 'Failed to generate activation code'
-    }, { status: 500 })
+    }, { status: 500 }, origin, userAgent)
   }
 }
 

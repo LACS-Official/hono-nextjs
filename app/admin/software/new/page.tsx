@@ -49,7 +49,7 @@ export default function SoftwareNew() {
   const [form] = Form.useForm()
   const [saving, setSaving] = useState(false)
 
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/app'
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/app'
 
   // 保存软件
   const handleSave = async (values: SoftwareFormData) => {

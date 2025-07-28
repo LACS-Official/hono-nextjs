@@ -65,7 +65,7 @@ export default function SoftwareManagement() {
   })
 
   // API 基础 URL
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/app'
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/app'
 
   // 获取软件列表
   const fetchSoftware = async (page = 1, pageSize = 10) => {

@@ -37,6 +37,9 @@ ALLOWED_GITHUB_EMAIL=2935278133@qq.com
 
 # 前端配置
 FRONTEND_URL=http://localhost:3000/admin
+
+# API 端点配置
+NEXT_PUBLIC_API_URL=http://localhost:3000/app
 ```
 
 ### 3. 生产环境配置
@@ -46,6 +49,7 @@ FRONTEND_URL=http://localhost:3000/admin
 ```env
 REDIRECT_URI=https://your-domain.com/api/auth/github/callback
 FRONTEND_URL=https://your-domain.com/admin
+NEXT_PUBLIC_API_URL=https://your-domain.com/app
 JWT_SECRET=your-strong-production-secret
 ```
 
@@ -172,6 +176,7 @@ function MyComponent() {
 - ✅ 用户界面：登录页面和用户信息显示
 - ✅ 安全优化：HttpOnly Cookie 和权限验证
 - ✅ 访问逻辑优化：只有访问 `/admin` 路由才需要登录
+- ✅ API 端点修复：修复软件管理 API 路由，从 `/api/app/software` 迁移到 `/app/software`
 
 ## 🚀 部署建议
 

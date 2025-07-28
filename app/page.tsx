@@ -6,10 +6,10 @@ export default function Home() {
       <div className="container mx-auto px-4 py-16">
         <div className="text-center">
           <h1 className="text-4xl font-bold text-gray-900 mb-6">
-            Neon API Server
+            LACS API Server
           </h1>
           <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-            基于 Neon Postgres 构建的 API 服务器，提供激活码管理和 GitHub OAuth 功能
+            基于 Neon Postgres 构建的 API 服务器，提供激活码管理、软件信息管理和 GitHub OAuth 功能
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">

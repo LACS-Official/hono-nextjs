@@ -13,7 +13,7 @@ const nextConfig = {
           },
           {
             key: "Access-Control-Allow-Methods",
-            value: "GET, POST, OPTIONS", // 移除了危险的 PUT, DELETE
+            value: "GET, POST, PUT, DELETE, OPTIONS", // 添加 PUT, DELETE 支持软件管理
           },
           {
             key: "Access-Control-Allow-Headers",

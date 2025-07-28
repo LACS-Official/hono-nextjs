@@ -1,8 +1,8 @@
 import '../styles/globals.css';
 
 export const metadata = {
-  title: 'Neon API Server',
-  description: 'API server with Neon Postgres and activation codes',
+  title: 'LACS API Server',
+  description: 'API server with Neon Postgres, activation codes and software management',
 }
 
 export default function RootLayout({

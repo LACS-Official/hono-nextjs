@@ -136,8 +136,7 @@ export default function Navigation({ className }: NavigationProps) {
           padding: '0 16px',
           height: '64px',
         }}
-        className="responsive-header"
-        className={className}
+        className={`responsive-header ${className || ''}`}
       >
         {/* Logo区域 */}
         <div style={{ display: 'flex', alignItems: 'center' }}>

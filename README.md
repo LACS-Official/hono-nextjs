@@ -196,6 +196,10 @@ npm run lint
 npm run db:generate  # 生成迁移
 npm run db:push      # 推送到数据库
 npm run db:studio    # 打开数据库管理界面
+
+# 部署相关
+npm run deploy:check  # 部署前检查
+npm run deploy:build  # 检查并构建
 ```
 
 ## 🤝 贡献指南

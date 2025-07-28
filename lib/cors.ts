@@ -9,11 +9,11 @@ const ALLOWED_ORIGINS = [
 ]
 
 // 根据请求来源动态设置CORS头部
-function getCorsHeaders(origin?: string) {
+function getCorsHeaders(origin?: string | null) {
   const allowedOrigin = ALLOWED_ORIGINS.includes(origin || '') ? origin : ALLOWED_ORIGINS[0]
 
   return {
-    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Origin': allowedOrigin || ALLOWED_ORIGINS[0],
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', // 移除了 PUT, DELETE
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-API-Key', // 添加了 API Key 支持
     'Access-Control-Allow-Credentials': 'false', // 禁用凭据传输以提高安全性
@@ -25,7 +25,7 @@ function getCorsHeaders(origin?: string) {
 export const corsHeaders = getCorsHeaders('https://admin.lacs.cc')
 
 // 创建带有 CORS 头部的 JSON 响应
-export function corsResponse(data: any, init?: ResponseInit, origin?: string) {
+export function corsResponse(data: any, init?: ResponseInit, origin?: string | null) {
   const headers = getCorsHeaders(origin)
   return NextResponse.json(data, {
     ...init,
@@ -37,7 +37,7 @@ export function corsResponse(data: any, init?: ResponseInit, origin?: string) {
 }
 
 // 处理 OPTIONS 预检请求
-export function handleOptions(origin?: string) {
+export function handleOptions(origin?: string | null) {
   const headers = getCorsHeaders(origin)
   return new NextResponse(null, {
     status: 200,
@@ -79,33 +79,5 @@ export function checkRateLimit(clientId: string, maxRequests = 100, windowMs = 6
   return true
 }
 
-// Hono CORS 中间件
-export function createHonoCorsMiddleware() {
-  return async (c: any, next: any) => {
-    const origin = c.req.header('Origin')
-    const headers = getCorsHeaders(origin)
-
-    // 设置 CORS 头部
-    Object.entries(headers).forEach(([key, value]) => {
-      c.header(key, value)
-    })
-
-    // 处理预检请求
-    if (c.req.method === 'OPTIONS') {
-      return c.text('', 200)
-    }
-
-    // API Key 验证（可选）
-    if (process.env.API_KEY && !validateApiKey(c.req.raw)) {
-      return c.json({ error: 'Invalid API Key' }, 401)
-    }
-
-    // 速率限制检查
-    const clientId = c.req.header('X-Forwarded-For') || c.req.header('X-Real-IP') || 'unknown'
-    if (!checkRateLimit(clientId)) {
-      return c.json({ error: 'Rate limit exceeded' }, 429)
-    }
-
-    await next()
-  }
-}
+// 注意：Hono 相关功能已移除，因为项目已简化为纯 Next.js API
+// 如果需要 Hono 支持，请重新安装相关依赖

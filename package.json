@@ -6,25 +6,19 @@
     "lint": "next lint",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "deploy:check": "node scripts/deploy-check.js",
+    "deploy:build": "npm run deploy:check && npm run build"
   },
   "dependencies": {
-    "@hono/node-server": "^1.16.0",
     "@neondatabase/serverless": "^1.0.1",
-    "@types/bcryptjs": "^2.4.6",
-    "@types/jsonwebtoken": "^9.0.10",
-    "@vercel/kv": "^3.0.0",
-    "bcryptjs": "^3.0.2",
     "crypto-js": "^4.2.0",
     "dotenv": "^17.2.1",
     "drizzle-kit": "^0.31.4",
     "drizzle-orm": "^0.44.3",
-    "hono": "^4.4.2",
-    "jsonwebtoken": "^9.0.2",
     "next": "^14.2.3",
     "react": "18.3.1",
     "react-dom": "18.3.1",
-    "undici": "^7.12.0",
     "uuid": "^11.1.0",
     "zod": "^4.0.10"
   },

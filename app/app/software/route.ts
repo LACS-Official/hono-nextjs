@@ -98,14 +98,16 @@ export async function GET(request: NextRequest) {
     
     return corsResponse({
       success: true,
-      data: softwareList,
-      pagination: {
-        page,
-        limit,
-        totalCount,
-        totalPages,
-        hasNext: page < totalPages,
-        hasPrev: page > 1
+      data: {
+        software: softwareList,
+        pagination: {
+          page,
+          limit,
+          total: totalCount,
+          totalPages,
+          hasNext: page < totalPages,
+          hasPrev: page > 1
+        }
       }
     }, undefined, origin, userAgent)
     

@@ -4,10 +4,15 @@ import { corsResponse, handleOptions } from '@/lib/cors'
 
 // OPTIONS 方法处理 CORS 预检请求
 export async function OPTIONS(request: NextRequest) {
-  return handleOptions()
+  const origin = request.headers.get('Origin')
+  const userAgent = request.headers.get('User-Agent')
+  return handleOptions(origin, userAgent)
 }
 
 export async function GET(request: NextRequest) {
+  const origin = request.headers.get('Origin')
+  const userAgent = request.headers.get('User-Agent')
+
   try {
     // 测试数据库连接
     await db.execute('SELECT 1')
@@ -17,7 +22,7 @@ export async function GET(request: NextRequest) {
       timestamp: new Date().toISOString(),
       database: 'connected',
       version: '1.0.0'
-    })
+    }, undefined, origin, userAgent)
   } catch (error) {
     console.error('Health check failed:', error)
     
@@ -26,6 +31,6 @@ export async function GET(request: NextRequest) {
       timestamp: new Date().toISOString(),
       database: 'disconnected',
       error: 'Database connection failed'
-    }, { status: 503 })
+    }, { status: 503 }, origin, userAgent)
   }
 }

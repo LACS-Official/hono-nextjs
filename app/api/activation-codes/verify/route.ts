@@ -7,10 +7,15 @@ import { corsResponse, handleOptions } from '@/lib/cors'
 
 // OPTIONS 方法处理 CORS 预检请求
 export async function OPTIONS(request: NextRequest) {
-  return handleOptions()
+  const origin = request.headers.get('Origin')
+  const userAgent = request.headers.get('User-Agent')
+  return handleOptions(origin, userAgent)
 }
 
 export async function POST(request: NextRequest) {
+  const origin = request.headers.get('Origin')
+  const userAgent = request.headers.get('User-Agent')
+
   try {
     const body = await request.json()
     const { code } = body
@@ -19,7 +24,7 @@ export async function POST(request: NextRequest) {
       return corsResponse({
         success: false,
         error: 'Activation code is required'
-      }, { status: 400 })
+      }, { status: 400 }, origin, userAgent)
     }
 
     // 查找激活码
@@ -33,7 +38,7 @@ export async function POST(request: NextRequest) {
       return corsResponse({
         success: false,
         error: 'Invalid activation code'
-      }, { status: 404 })
+      }, { status: 404 }, origin, userAgent)
     }
 
     // 检查是否已使用
@@ -42,7 +47,7 @@ export async function POST(request: NextRequest) {
         success: false,
         error: 'Activation code has already been used',
         usedAt: activationCode.usedAt
-      }, { status: 400 })
+      }, { status: 400 }, origin, userAgent)
     }
 
     // 检查是否过期
@@ -52,7 +57,7 @@ export async function POST(request: NextRequest) {
         success: false,
         error: 'Activation code has expired',
         expiresAt: activationCode.expiresAt
-      }, { status: 400 })
+      }, { status: 400 }, origin, userAgent)
     }
 
     // 标记为已使用
@@ -74,12 +79,12 @@ export async function POST(request: NextRequest) {
         metadata: updatedCode.metadata,
         activatedAt: updatedCode.usedAt
       }
-    })
+    }, undefined, origin, userAgent)
   } catch (error) {
     console.error('Error verifying activation code:', error)
     return corsResponse({
       success: false,
       error: 'Failed to verify activation code'
-    }, { status: 500 })
+    }, { status: 500 }, origin, userAgent)
   }
 }

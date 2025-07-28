@@ -23,9 +23,10 @@ function generateActivationCode(): string {
 
 // POST - 生成激活码
 export async function POST(request: NextRequest) {
+  const origin = request.headers.get('Origin')
+  const userAgent = request.headers.get('User-Agent')
+
   try {
-    const origin = request.headers.get('Origin')
-    const userAgent = request.headers.get('User-Agent')
 
     // API Key 验证
     if (process.env.ENABLE_API_KEY_AUTH === 'true' && !validateApiKey(request)) {
@@ -89,6 +90,9 @@ export async function POST(request: NextRequest) {
 
 // GET - 获取激活码列表
 export async function GET(request: NextRequest) {
+  const origin = request.headers.get('Origin')
+  const userAgent = request.headers.get('User-Agent')
+
   try {
     const { searchParams } = new URL(request.url)
     const page = parseInt(searchParams.get('page') || '1')
@@ -157,12 +161,12 @@ export async function GET(request: NextRequest) {
           totalPages: Math.ceil(total / limit)
         }
       }
-    })
+    }, undefined, origin, userAgent)
   } catch (error) {
     console.error('Error fetching activation codes:', error)
     return corsResponse({
       success: false,
       error: 'Failed to fetch activation codes'
-    }, { status: 500 })
+    }, { status: 500 }, origin, userAgent)
   }
 }

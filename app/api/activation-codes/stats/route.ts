@@ -7,10 +7,15 @@ import { corsResponse, handleOptions } from '@/lib/cors'
 
 // OPTIONS 方法处理 CORS 预检请求
 export async function OPTIONS(request: NextRequest) {
-  return handleOptions()
+  const origin = request.headers.get('Origin')
+  const userAgent = request.headers.get('User-Agent')
+  return handleOptions(origin, userAgent)
 }
 
 export async function GET(request: NextRequest) {
+  const origin = request.headers.get('Origin')
+  const userAgent = request.headers.get('User-Agent')
+
   try {
     const now = new Date()
 
@@ -67,12 +72,12 @@ export async function GET(request: NextRequest) {
         usageRate: parseFloat(usageRate.toFixed(2)),
         expirationRate: parseFloat(expirationRate.toFixed(2))
       }
-    })
+    }, undefined, origin, userAgent)
   } catch (error) {
     console.error('Error getting stats:', error)
     return corsResponse({
       success: false,
       error: 'Failed to get statistics'
-    }, { status: 500 })
+    }, { status: 500 }, origin, userAgent)
   }
 }

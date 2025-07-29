@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createLogoutHeaders } from '@/lib/auth'
 
+// 标记为动态路由，避免静态生成
+export const dynamic = 'force-dynamic'
+
 export async function POST(_request: NextRequest) {
   try {
     // 创建登出响应头

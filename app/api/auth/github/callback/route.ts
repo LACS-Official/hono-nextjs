@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { generateToken, isAuthorizedAdmin, createAuthHeaders, type User } from '@/lib/auth'
 
+// 标记为动态路由，避免静态生成
+export const dynamic = 'force-dynamic'
+
 // GitHub OAuth 配置
 const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID || ''
 const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET || ''

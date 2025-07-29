@@ -7,6 +7,9 @@ import { v4 as uuidv4 } from 'uuid'
 import { corsResponse, handleOptions, validateApiKeyWithExpiration, checkRateLimit } from '@/lib/cors'
 import { TimeUtils } from '@/lib/time-utils'
 
+// 标记为动态路由，避免静态生成
+export const dynamic = 'force-dynamic'
+
 // 自动清理5分钟内未使用的激活码
 async function cleanupUnusedCodes() {
   try {

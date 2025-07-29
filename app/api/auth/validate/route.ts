@@ -2,6 +2,9 @@
 import { NextRequest } from 'next/server'
 import { corsResponse, handleOptions, validateApiKeyWithExpiration } from '@/lib/cors'
 
+// 标记为动态路由，避免静态生成
+export const dynamic = 'force-dynamic'
+
 // OPTIONS 方法处理 CORS 预检请求
 export async function OPTIONS(request: NextRequest) {
   const origin = request.headers.get('Origin')

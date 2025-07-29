@@ -345,7 +345,7 @@ export default function SoftwareManagement() {
         <div>
           {tags && tags.length > 0 ? (
             tags.slice(0, 2).map(tag => (
-              <Tag key={tag} size="small" style={{ marginBottom: 2 }}>
+              <Tag key={tag} style={{ marginBottom: 2, fontSize: '12px' }}>
                 {tag}
               </Tag>
             ))
@@ -354,7 +354,7 @@ export default function SoftwareManagement() {
           )}
           {tags && tags.length > 2 && (
             <Tooltip title={tags.slice(2).join(', ')}>
-              <Tag size="small">+{tags.length - 2}</Tag>
+              <Tag style={{ fontSize: '12px' }}>+{tags.length - 2}</Tag>
             </Tooltip>
           )}
         </div>

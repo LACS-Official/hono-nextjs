@@ -32,7 +32,7 @@ import {
   BugOutlined,
   SafetyOutlined,
   ThunderboltOutlined,
-  CompareOutlined,
+  SwapOutlined,
   ReloadOutlined,
   SyncOutlined
 } from '@ant-design/icons'
@@ -350,9 +350,9 @@ export default function EnhancedVersionManager({
             {version}
           </Tag>
           <div style={{ marginTop: 4 }}>
-            {record.isStable && <Tag color="green" size="small">稳定</Tag>}
-            {record.isBeta && <Tag color="orange" size="small">测试</Tag>}
-            {record.isPrerelease && <Tag color="red" size="small">预发布</Tag>}
+            {record.isStable && <Tag color="green" style={{ fontSize: '12px' }}>稳定</Tag>}
+            {record.isBeta && <Tag color="orange" style={{ fontSize: '12px' }}>测试</Tag>}
+            {record.isPrerelease && <Tag color="red" style={{ fontSize: '12px' }}>预发布</Tag>}
           </div>
         </div>
       )
@@ -395,7 +395,7 @@ export default function EnhancedVersionManager({
                 key={cat}
                 color={colors[cat as keyof typeof colors]}
                 icon={icons[cat as keyof typeof icons]}
-                size="small"
+                style={{ fontSize: '12px' }}
               >
                 {labels[cat as keyof typeof labels] || cat}
               </Tag>
@@ -546,7 +546,7 @@ export default function EnhancedVersionManager({
                   <span>已选择 {selectedVersions.length}/2 个版本</span>
                   <Button
                     type="primary"
-                    icon={<CompareOutlined />}
+                    icon={<SwapOutlined />}
                     onClick={showVersionComparison}
                     disabled={selectedVersions.length !== 2}
                   >

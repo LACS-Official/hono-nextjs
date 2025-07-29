@@ -21,19 +21,27 @@ export async function GET(
 
   try {
     const { id } = params
-    
+
     if (!id) {
       return corsResponse({
         success: false,
         error: '软件ID参数缺失'
       }, { status: 400 }, origin, userAgent)
     }
-    
+
+    const softwareId = parseInt(id)
+    if (isNaN(softwareId)) {
+      return corsResponse({
+        success: false,
+        error: '无效的软件ID格式'
+      }, { status: 400 }, origin, userAgent)
+    }
+
     // 查询软件信息
     const [softwareInfo] = await db
       .select()
       .from(software)
-      .where(eq(software.id, id))
+      .where(eq(software.id, softwareId))
       .limit(1)
     
     if (!softwareInfo) {
@@ -79,19 +87,27 @@ export async function PUT(
 
     const { id } = params
     const body = await request.json()
-    
+
     if (!id) {
       return corsResponse({
         success: false,
         error: '软件ID参数缺失'
       }, { status: 400 }, origin, userAgent)
     }
-    
+
+    const softwareId = parseInt(id)
+    if (isNaN(softwareId)) {
+      return corsResponse({
+        success: false,
+        error: '无效的软件ID格式'
+      }, { status: 400 }, origin, userAgent)
+    }
+
     // 查找要更新的软件
     const [existingSoftware] = await db
       .select()
       .from(software)
-      .where(eq(software.id, id))
+      .where(eq(software.id, softwareId))
       .limit(1)
     
     if (!existingSoftware) {
@@ -142,7 +158,7 @@ export async function PUT(
         metadata,
         updatedAt: new Date()
       })
-      .where(eq(software.id, id))
+      .where(eq(software.id, softwareId))
       .returning()
     
     return corsResponse({
@@ -180,19 +196,27 @@ export async function DELETE(
     }
 
     const { id } = params
-    
+
     if (!id) {
       return corsResponse({
         success: false,
         error: '软件ID参数缺失'
       }, { status: 400 }, origin, userAgent)
     }
-    
+
+    const softwareId = parseInt(id)
+    if (isNaN(softwareId)) {
+      return corsResponse({
+        success: false,
+        error: '无效的软件ID格式'
+      }, { status: 400 }, origin, userAgent)
+    }
+
     // 查找要删除的软件
     const [existingSoftware] = await db
       .select()
       .from(software)
-      .where(eq(software.id, id))
+      .where(eq(software.id, softwareId))
       .limit(1)
     
     if (!existingSoftware) {
@@ -205,7 +229,7 @@ export async function DELETE(
     // 删除软件
     await db
       .delete(software)
-      .where(eq(software.id, id))
+      .where(eq(software.id, softwareId))
     
     return corsResponse({
       success: true,

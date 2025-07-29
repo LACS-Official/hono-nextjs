@@ -21,19 +21,27 @@ export async function GET(
 
   try {
     const { id } = params
-    
+
     if (!id) {
       return corsResponse({
         success: false,
         error: '软件ID参数缺失'
       }, { status: 400 }, origin, userAgent)
     }
-    
+
+    const softwareId = parseInt(id)
+    if (isNaN(softwareId)) {
+      return corsResponse({
+        success: false,
+        error: '无效的软件ID格式'
+      }, { status: 400 }, origin, userAgent)
+    }
+
     // 首先验证软件是否存在
     const [softwareInfo] = await db
       .select()
       .from(software)
-      .where(eq(software.id, id))
+      .where(eq(software.id, softwareId))
       .limit(1)
     
     if (!softwareInfo) {
@@ -49,7 +57,7 @@ export async function GET(
       .from(softwareAnnouncements)
       .where(
         and(
-          eq(softwareAnnouncements.softwareId, id),
+          eq(softwareAnnouncements.softwareId, softwareId),
           eq(softwareAnnouncements.isPublished, true)
         )
       )

@@ -35,18 +35,18 @@ const { Title } = Typography
 const { Content } = Layout
 
 interface Software {
-  id: string
+  id: number  // 改为数字ID
   name: string
   nameEn?: string
   description?: string
   currentVersion: string
-  latestVersion: string
+  latestVersion?: string  // 自动计算的最新版本
   category?: string
   isActive: boolean
   createdAt: string
   updatedAt: string
   tags?: string[]
-  downloadUrl?: string
+  // 移除单一下载链接，版本历史中包含多下载源
 }
 
 export default function SoftwareManagement() {
@@ -100,7 +100,7 @@ export default function SoftwareManagement() {
   }
 
   // 删除软件
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: number) => {
     try {
       const response = await fetch(`${API_BASE_URL}/software/${id}`, {
         method: 'DELETE',
@@ -125,6 +125,15 @@ export default function SoftwareManagement() {
 
   // 表格列定义
   const columns = [
+    {
+      title: 'ID',
+      dataIndex: 'id',
+      key: 'id',
+      width: 60,
+      render: (id: number) => (
+        <Tag color="blue">#{id}</Tag>
+      )
+    },
     {
       title: '软件名称',
       dataIndex: 'name',
@@ -154,11 +163,22 @@ export default function SoftwareManagement() {
       title: '最新版本',
       dataIndex: 'latestVersion',
       key: 'latestVersion',
-      render: (text: string, record: Software) => (
-        <Tag color={text !== record.currentVersion ? 'orange' : 'green'}>
-          {text}
-        </Tag>
-      )
+      render: (text: string, record: Software) => {
+        const latestVersion = text || record.currentVersion
+        const isUpToDate = latestVersion === record.currentVersion
+        return (
+          <div>
+            <Tag color={isUpToDate ? 'green' : 'orange'}>
+              {latestVersion}
+            </Tag>
+            {!isUpToDate && (
+              <div style={{ fontSize: '11px', color: '#ff4d4f' }}>
+                有新版本可用
+              </div>
+            )}
+          </div>
+        )
+      }
     },
     {
       title: '分类',

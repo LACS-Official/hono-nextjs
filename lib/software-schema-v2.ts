@@ -29,7 +29,7 @@ export const softwareVersionHistory = pgTable('software_version_history', {
   releaseDate: timestamp('release_date', { withTimezone: true }).notNull(),
   releaseNotes: text('release_notes'), // 中文更新日志
   releaseNotesEn: text('release_notes_en'), // 英文更新日志
-
+  
   // 多下载源支持
   downloadLinks: jsonb('download_links').$type<{
     official?: string;      // 官方下载链接
@@ -39,19 +39,19 @@ export const softwareVersionHistory = pgTable('software_version_history', {
     thunder?: string;      // 迅雷下载链接
     backup?: string[];     // 其他备用链接
   }>(),
-
+  
   fileSize: varchar('file_size', { length: 50 }),
   fileSizeBytes: integer('file_size_bytes'), // 文件大小（字节）
   fileHash: varchar('file_hash', { length: 128 }), // 文件哈希值
-
+  
   isStable: boolean('is_stable').default(true).notNull(),
   isBeta: boolean('is_beta').default(false).notNull(),
   isPrerelease: boolean('is_prerelease').default(false).notNull(),
-
+  
   // 版本标签和分类
   versionType: varchar('version_type', { length: 20 }).default('release').notNull(), // release, beta, alpha, rc
   changelogCategory: jsonb('changelog_category').$type<string[]>(), // 更新类型：feature, bugfix, security, performance
-
+  
   metadata: jsonb('metadata'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { softwareDb as db } from '@/lib/software-db-connection'
-import { software } from '@/lib/software-schema'
+import { software, softwareVersionHistory } from '@/lib/software-schema'
 import { eq, like, and, desc, asc } from 'drizzle-orm'
 import { corsResponse, handleOptions, validateApiKeyWithExpiration } from '@/lib/cors'
+import { getLatestVersion, updateLatestVersion } from '@/lib/version-manager'
 
 // OPTIONS 处理
 export async function OPTIONS(request: NextRequest) {
@@ -86,20 +87,39 @@ export async function GET(request: NextRequest) {
       .orderBy(orderBy)
       .limit(limit)
       .offset(offset)
-    
+
+    // 为每个软件添加最新版本信息
+    const enhancedSoftwareList = await Promise.all(
+      softwareList.map(async (sw) => {
+        try {
+          const latestVersion = await getLatestVersion(sw.id)
+          return {
+            ...sw,
+            latestVersion: latestVersion || sw.currentVersion
+          }
+        } catch (error) {
+          console.warn(`获取软件 ${sw.id} 最新版本失败:`, error)
+          return {
+            ...sw,
+            latestVersion: sw.currentVersion
+          }
+        }
+      })
+    )
+
     // 查询总数
     const totalCountResult = await db
       .select({ count: software.id })
       .from(software)
       .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
-    
+
     const totalCount = totalCountResult.length
     const totalPages = Math.ceil(totalCount / limit)
-    
+
     return corsResponse({
       success: true,
       data: {
-        software: softwareList,
+        software: enhancedSoftwareList,
         pagination: {
           page,
           limit,
@@ -146,24 +166,20 @@ export async function POST(request: NextRequest) {
       description,
       descriptionEn,
       currentVersion,
-      latestVersion,
-      downloadUrl,
-      downloadUrlBackup,
       officialWebsite,
       category,
       tags,
       systemRequirements,
-      fileSize,
       isActive = true,
       sortOrder = 0,
       metadata = {}
     } = body
-    
+
     // 必填字段验证
-    if (!name || !currentVersion || !latestVersion) {
+    if (!name || !currentVersion) {
       return corsResponse({
         success: false,
-        error: '软件名称、当前版本和最新版本为必填字段'
+        error: '软件名称和当前版本为必填字段'
       }, { status: 400 }, origin, userAgent)
     }
     
@@ -190,18 +206,13 @@ export async function POST(request: NextRequest) {
         description,
         descriptionEn,
         currentVersion,
-        latestVersion,
-        downloadUrl,
-        downloadUrlBackup,
         officialWebsite,
         category,
         tags,
         systemRequirements,
-        fileSize,
         isActive,
         sortOrder,
-        metadata,
-        updatedAt: new Date()
+        metadata
       })
       .returning()
     

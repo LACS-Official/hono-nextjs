@@ -3,6 +3,7 @@ import { softwareDb as db } from '@/lib/software-db-connection'
 import { software, softwareVersionHistory } from '@/lib/software-schema'
 import { eq, desc } from 'drizzle-orm'
 import { corsResponse, handleOptions, validateApiKeyWithExpiration } from '@/lib/cors'
+import { updateLatestVersion, isValidVersion, getVersionType } from '@/lib/version-manager'
 
 // OPTIONS 处理
 export async function OPTIONS(request: NextRequest) {
@@ -21,19 +22,27 @@ export async function GET(
 
   try {
     const { id } = params
-    
+
     if (!id) {
       return corsResponse({
         success: false,
         error: '软件ID参数缺失'
       }, { status: 400 }, origin, userAgent)
     }
-    
+
+    const softwareId = parseInt(id)
+    if (isNaN(softwareId)) {
+      return corsResponse({
+        success: false,
+        error: '无效的软件ID格式'
+      }, { status: 400 }, origin, userAgent)
+    }
+
     // 首先验证软件是否存在
     const [softwareInfo] = await db
       .select()
       .from(software)
-      .where(eq(software.id, id))
+      .where(eq(software.id, softwareId))
       .limit(1)
     
     if (!softwareInfo) {
@@ -51,20 +60,21 @@ export async function GET(
       versions = await db
         .select()
         .from(softwareVersionHistory)
-        .where(eq(softwareVersionHistory.softwareId, id))
+        .where(eq(softwareVersionHistory.softwareId, softwareId))
         .orderBy(desc(softwareVersionHistory.releaseDate))
     } catch (error) {
       // 如果表不存在，创建一个基于当前软件信息的临时版本记录
       console.warn('版本历史表不存在，返回基于当前软件信息的临时数据:', error instanceof Error ? error.message : String(error))
       versions = [{
-        id: `temp-${id}`,
-        softwareId: id,
+        id: `temp-${softwareId}`,
+        softwareId: softwareId,
         version: softwareInfo.currentVersion,
         releaseDate: softwareInfo.createdAt,
         releaseNotes: '当前版本',
         releaseNotesEn: 'Current version',
-        downloadUrl: softwareInfo.downloadUrl,
-        fileSize: softwareInfo.fileSize,
+        downloadLinks: {
+          official: softwareInfo.officialWebsite
+        },
         isStable: true,
         isBeta: false,
         metadata: {},
@@ -112,11 +122,19 @@ export async function POST(
 
     const { id } = params
     const body = await request.json()
-    
+
     if (!id) {
       return corsResponse({
         success: false,
         error: '软件ID参数缺失'
+      }, { status: 400 }, origin, userAgent)
+    }
+
+    const softwareId = parseInt(id)
+    if (isNaN(softwareId)) {
+      return corsResponse({
+        success: false,
+        error: '无效的软件ID格式'
       }, { status: 400 }, origin, userAgent)
     }
     
@@ -124,7 +142,7 @@ export async function POST(
     const [softwareInfo] = await db
       .select()
       .from(software)
-      .where(eq(software.id, id))
+      .where(eq(software.id, softwareId))
       .limit(1)
     
     if (!softwareInfo) {
@@ -140,17 +158,29 @@ export async function POST(
       releaseDate,
       releaseNotes,
       releaseNotesEn,
-      downloadUrl,
+      downloadLinks,
       fileSize,
+      fileSizeBytes,
+      fileHash,
       isStable = true,
       isBeta = false,
+      isPrerelease = false,
+      changelogCategory = [],
       metadata = {}
     } = body
-    
+
     if (!version || !releaseDate) {
       return corsResponse({
         success: false,
         error: '版本号和发布日期为必填字段'
+      }, { status: 400 }, origin, userAgent)
+    }
+
+    // 验证版本号格式
+    if (!isValidVersion(version)) {
+      return corsResponse({
+        success: false,
+        error: '版本号格式无效，请使用语义化版本号格式 (如: 1.0.0)'
       }, { status: 400 }, origin, userAgent)
     }
     
@@ -160,15 +190,20 @@ export async function POST(
       [newVersion] = await db
         .insert(softwareVersionHistory)
         .values({
-          softwareId: id,
+          softwareId: softwareId,
           version,
           releaseDate: new Date(releaseDate),
           releaseNotes,
           releaseNotesEn,
-          downloadUrl,
+          downloadLinks,
           fileSize,
+          fileSizeBytes,
+          fileHash,
           isStable,
           isBeta,
+          isPrerelease,
+          versionType: getVersionType(version),
+          changelogCategory,
           metadata
         })
         .returning()
@@ -179,7 +214,15 @@ export async function POST(
         error: '版本历史功能暂时不可用，请联系管理员'
       }, { status: 503 }, origin, userAgent)
     }
-    
+
+    // 自动更新软件的最新版本号
+    try {
+      await updateLatestVersion(softwareId)
+    } catch (error) {
+      console.warn('自动更新最新版本失败:', error)
+      // 不影响版本添加的成功响应
+    }
+
     return corsResponse({
       success: true,
       data: newVersion,
@@ -217,11 +260,19 @@ export async function PUT(
 
     const { id } = params
     const body = await request.json()
-    
+
     if (!id) {
       return corsResponse({
         success: false,
         error: '软件ID参数缺失'
+      }, { status: 400 }, origin, userAgent)
+    }
+
+    const softwareId = parseInt(id)
+    if (isNaN(softwareId)) {
+      return corsResponse({
+        success: false,
+        error: '无效的软件ID格式'
       }, { status: 400 }, origin, userAgent)
     }
     
@@ -251,7 +302,7 @@ export async function PUT(
     const [updatedSoftware] = await db
       .update(software)
       .set(updateData)
-      .where(eq(software.id, id))
+      .where(eq(software.id, softwareId))
       .returning()
     
     if (!updatedSoftware) {

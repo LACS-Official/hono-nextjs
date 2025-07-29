@@ -1,9 +1,9 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { 
+import {
   Layout,
-  Card, 
+  Card,
   Typography,
   Space,
   Tag,
@@ -11,35 +11,35 @@ import {
   Descriptions,
   Table,
   message,
-  Spin
+  Spin,
+  Tabs
 } from 'antd'
-import { 
+import {
   ArrowLeftOutlined,
   EditOutlined,
   NotificationOutlined,
-  HistoryOutlined
+  HistoryOutlined,
+  InfoCircleOutlined
 } from '@ant-design/icons'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import Navigation from '@/components/Navigation'
+import VersionManager from '@/components/VersionManager'
 
 const { Content } = Layout
 const { Title, Text } = Typography
 
 interface Software {
-  id: string
+  id: number  // 改为数字ID
   name: string
   nameEn?: string
   description?: string
   descriptionEn?: string
   currentVersion: string
-  latestVersion: string
-  downloadUrl?: string
-  downloadUrlBackup?: string
+  latestVersion?: string  // 自动计算的最新版本
   officialWebsite?: string
   category?: string
   tags?: string[]
-  fileSize?: string
   isActive: boolean
   sortOrder: number
   createdAt: string
@@ -62,7 +62,14 @@ interface VersionHistory {
   releaseDate: string
   releaseNotes?: string
   releaseNotesEn?: string
-  downloadUrl?: string
+  downloadLinks?: {
+    official?: string
+    quark?: string
+    pan123?: string
+    baidu?: string
+    thunder?: string
+    backup?: string[]
+  }
   fileSize?: string
   isStable: boolean
   isBeta: boolean
@@ -122,8 +129,9 @@ export default function SoftwareDetail() {
       releaseDate: software.updatedAt || software.createdAt,
       releaseNotes: '当前版本',
       releaseNotesEn: 'Current version',
-      downloadUrl: software.downloadUrl,
-      fileSize: software.fileSize,
+      downloadLinks: {
+        official: software.officialWebsite || undefined
+      },
       isStable: true,
       isBeta: false
     }
@@ -138,8 +146,9 @@ export default function SoftwareDetail() {
         releaseDate: software.updatedAt || software.createdAt,
         releaseNotes: '最新版本',
         releaseNotesEn: 'Latest version',
-        downloadUrl: software.downloadUrl,
-        fileSize: software.fileSize,
+        downloadLinks: {
+          official: software.officialWebsite || undefined
+        },
         isStable: true,
         isBeta: false
       })
@@ -231,53 +240,94 @@ export default function SoftwareDetail() {
           </div>
         </div>
 
-        {/* 软件详情 */}
-        <Card title="软件信息" style={{ marginBottom: '24px' }}>
-          <Descriptions column={2} bordered>
-            <Descriptions.Item label="软件名称">{software.name}</Descriptions.Item>
-            <Descriptions.Item label="英文名称">{software.nameEn || '-'}</Descriptions.Item>
-            <Descriptions.Item label="当前版本">{software.currentVersion}</Descriptions.Item>
-            <Descriptions.Item label="最新版本">{software.latestVersion}</Descriptions.Item>
-            <Descriptions.Item label="分类">{software.category || '-'}</Descriptions.Item>
-            <Descriptions.Item label="文件大小">{software.fileSize || '-'}</Descriptions.Item>
-            <Descriptions.Item label="状态">
-              <Tag color={software.isActive ? 'green' : 'red'}>
-                {software.isActive ? '启用' : '禁用'}
-              </Tag>
-            </Descriptions.Item>
-            <Descriptions.Item label="排序">{software.sortOrder}</Descriptions.Item>
-            <Descriptions.Item label="创建时间" span={2}>
-              {new Date(software.createdAt).toLocaleString()}
-            </Descriptions.Item>
-            <Descriptions.Item label="更新时间" span={2}>
-              {new Date(software.updatedAt).toLocaleString()}
-            </Descriptions.Item>
-            {software.description && (
-              <Descriptions.Item label="描述" span={2}>
-                {software.description}
-              </Descriptions.Item>
-            )}
-            {software.descriptionEn && (
-              <Descriptions.Item label="英文描述" span={2}>
-                {software.descriptionEn}
-              </Descriptions.Item>
-            )}
-            {software.downloadUrl && (
-              <Descriptions.Item label="下载链接" span={2}>
-                <a href={software.downloadUrl} target="_blank" rel="noopener noreferrer">
-                  {software.downloadUrl}
-                </a>
-              </Descriptions.Item>
-            )}
-            {software.officialWebsite && (
-              <Descriptions.Item label="官方网站" span={2}>
-                <a href={software.officialWebsite} target="_blank" rel="noopener noreferrer">
-                  {software.officialWebsite}
-                </a>
-              </Descriptions.Item>
-            )}
-          </Descriptions>
-        </Card>
+        {/* 主要内容区域 */}
+        <Tabs
+          defaultActiveKey="info"
+          items={[
+            {
+              key: 'info',
+              label: (
+                <span>
+                  <InfoCircleOutlined />
+                  软件信息
+                </span>
+              ),
+              children: (
+                <Card title="软件详情">
+                  <Descriptions column={2} bordered>
+                    <Descriptions.Item label="ID">
+                      <Tag color="blue">#{software.id}</Tag>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="软件名称">{software.name}</Descriptions.Item>
+                    <Descriptions.Item label="英文名称">{software.nameEn || '-'}</Descriptions.Item>
+                    <Descriptions.Item label="当前版本">
+                      <Tag color="green">{software.currentVersion}</Tag>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="最新版本">
+                      <Tag color={software.latestVersion !== software.currentVersion ? 'orange' : 'green'}>
+                        {software.latestVersion || software.currentVersion}
+                      </Tag>
+                      {software.latestVersion && software.latestVersion !== software.currentVersion && (
+                        <div style={{ fontSize: '11px', color: '#ff4d4f', marginTop: '4px' }}>
+                          有新版本可用
+                        </div>
+                      )}
+                    </Descriptions.Item>
+                    <Descriptions.Item label="分类">{software.category || '-'}</Descriptions.Item>
+                    <Descriptions.Item label="状态">
+                      <Tag color={software.isActive ? 'green' : 'red'}>
+                        {software.isActive ? '启用' : '禁用'}
+                      </Tag>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="排序">{software.sortOrder}</Descriptions.Item>
+                    <Descriptions.Item label="创建时间" span={2}>
+                      {new Date(software.createdAt).toLocaleString()}
+                    </Descriptions.Item>
+                    <Descriptions.Item label="更新时间" span={2}>
+                      {new Date(software.updatedAt).toLocaleString()}
+                    </Descriptions.Item>
+                    {software.description && (
+                      <Descriptions.Item label="描述" span={2}>
+                        {software.description}
+                      </Descriptions.Item>
+                    )}
+                    {software.descriptionEn && (
+                      <Descriptions.Item label="英文描述" span={2}>
+                        {software.descriptionEn}
+                      </Descriptions.Item>
+                    )}
+                    {software.officialWebsite && (
+                      <Descriptions.Item label="官方网站" span={2}>
+                        <a href={software.officialWebsite} target="_blank" rel="noopener noreferrer">
+                          {software.officialWebsite}
+                        </a>
+                      </Descriptions.Item>
+                    )}
+                  </Descriptions>
+                </Card>
+              )
+            },
+            {
+              key: 'versions',
+              label: (
+                <span>
+                  <HistoryOutlined />
+                  版本管理
+                </span>
+              ),
+              children: (
+                <VersionManager
+                  softwareId={software.id}
+                  softwareName={software.name}
+                  onVersionAdded={() => {
+                    // 版本添加后可以刷新软件信息
+                    fetchSoftwareDetail()
+                  }}
+                />
+              )
+            }
+          ]}
+        />
       </Content>
     </Layout>
   )

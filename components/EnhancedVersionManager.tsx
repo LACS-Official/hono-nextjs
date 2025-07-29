@@ -1,18 +1,19 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { 
-  Card, 
-  Table, 
-  Button, 
-  Tag, 
-  Space, 
-  Modal, 
-  Form, 
-  Input, 
-  DatePicker, 
-  Switch, 
-  Select, 
+import dayjs from 'dayjs'
+import {
+  Card,
+  Table,
+  Button,
+  Tag,
+  Space,
+  Modal,
+  Form,
+  Input,
+  DatePicker,
+  Switch,
+  Select,
   message,
   Tooltip,
   Divider,
@@ -22,6 +23,9 @@ import {
   Alert,
   Checkbox
 } from 'antd'
+
+const { TextArea } = Input
+const { Option } = Select
 import {
   PlusOutlined,
   EditOutlined,
@@ -274,7 +278,8 @@ export default function EnhancedVersionManager({
     setEditingVersion(version)
     form.setFieldsValue({
       ...version,
-      releaseDate: version.releaseDate ? new Date(version.releaseDate) : null
+      releaseDate: version.releaseDate ? dayjs(version.releaseDate) : null,
+      downloadLinks: version.downloadLinks || {}
     })
     setModalVisible(true)
   }
@@ -286,11 +291,24 @@ export default function EnhancedVersionManager({
       content: '确定要删除这个版本吗？此操作不可撤销。',
       onOk: async () => {
         try {
-          // 这里需要实现删除API
-          message.success('版本删除成功')
-          fetchVersions()
-          fetchStats()
+          const response = await fetch(`${API_BASE_URL}/software/id/${softwareId}/versions/${versionId}`, {
+            method: 'DELETE',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          })
+
+          const data = await response.json()
+
+          if (data.success) {
+            message.success('版本删除成功')
+            fetchVersions()
+            fetchStats()
+          } else {
+            message.error(data.error || '删除失败')
+          }
         } catch (error) {
+          console.error('删除版本失败:', error)
           message.error('删除失败')
         }
       }
@@ -300,28 +318,51 @@ export default function EnhancedVersionManager({
   // 处理提交
   const handleSubmit = async (values: any) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/software/id/${softwareId}/versions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(values)
-      })
+      // 处理日期格式
+      const submitData = {
+        ...values,
+        softwareId,
+        releaseDate: values.releaseDate ? values.releaseDate.toISOString() : new Date().toISOString(),
+        downloadLinks: values.downloadLinks || {}
+      }
+
+      let response
+      if (editingVersion) {
+        // 编辑模式
+        response = await fetch(`${API_BASE_URL}/software/id/${softwareId}/versions/${editingVersion.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(submitData)
+        })
+      } else {
+        // 新增模式
+        response = await fetch(`${API_BASE_URL}/software/id/${softwareId}/versions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(submitData)
+        })
+      }
 
       const data = await response.json()
 
       if (data.success) {
-        message.success('版本添加成功')
+        message.success(editingVersion ? '版本更新成功' : '版本添加成功')
         setModalVisible(false)
+        setEditingVersion(null)
         form.resetFields()
         fetchVersions()
         fetchStats()
         onVersionAdded?.()
       } else {
-        message.error(data.error || '添加失败')
+        message.error(data.error || (editingVersion ? '更新失败' : '添加失败'))
       }
     } catch (error) {
-      message.error('添加失败')
+      console.error('提交版本失败:', error)
+      message.error(editingVersion ? '更新失败' : '添加失败')
     }
   }
 
@@ -616,6 +657,187 @@ export default function EnhancedVersionManager({
         versions={versions}
         selectedVersions={selectedVersions}
       />
+
+      {/* 新增/编辑版本模态框 */}
+      <Modal
+        title={editingVersion ? '编辑版本' : '新增版本'}
+        open={modalVisible}
+        onCancel={() => {
+          setModalVisible(false)
+          setEditingVersion(null)
+          form.resetFields()
+        }}
+        footer={null}
+        width={800}
+        destroyOnClose
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleSubmit}
+          initialValues={{
+            isStable: true,
+            isBeta: false,
+            isPrerelease: false,
+            versionType: 'release'
+          }}
+        >
+          <Form.Item
+            label="版本号"
+            name="version"
+            rules={[
+              { required: true, message: '请输入版本号' },
+              { pattern: /^\d+\.\d+\.\d+(-[a-zA-Z0-9.-]+)?$/, message: '请输入有效的语义化版本号 (如: 1.0.0)' }
+            ]}
+          >
+            <Input placeholder="请输入版本号 (如: 1.0.0)" />
+          </Form.Item>
+
+          <Form.Item
+            label="发布日期"
+            name="releaseDate"
+            rules={[{ required: true, message: '请选择发布日期' }]}
+          >
+            <DatePicker
+              showTime
+              style={{ width: '100%' }}
+              placeholder="选择发布日期"
+            />
+          </Form.Item>
+
+          <Form.Item
+            label="更新日志"
+            name="releaseNotes"
+            rules={[{ required: true, message: '请输入更新日志' }]}
+          >
+            <TextArea
+              rows={4}
+              placeholder="请输入更新日志"
+              showCount
+              maxLength={1000}
+            />
+          </Form.Item>
+
+          <Form.Item
+            label="英文更新日志"
+            name="releaseNotesEn"
+          >
+            <TextArea
+              rows={4}
+              placeholder="请输入英文更新日志（可选）"
+              showCount
+              maxLength={1000}
+            />
+          </Form.Item>
+
+          <Form.Item
+            label="文件大小"
+            name="fileSize"
+          >
+            <Input placeholder="请输入文件大小 (如: 100MB)" />
+          </Form.Item>
+
+          <Form.Item
+            label="版本类型"
+            name="versionType"
+            rules={[{ required: true, message: '请选择版本类型' }]}
+          >
+            <Select placeholder="请选择版本类型">
+              <Option value="release">正式版</Option>
+              <Option value="beta">测试版</Option>
+              <Option value="alpha">内测版</Option>
+              <Option value="rc">候选版</Option>
+            </Select>
+          </Form.Item>
+
+          <Row gutter={16}>
+            <Col span={8}>
+              <Form.Item
+                label="稳定版本"
+                name="isStable"
+                valuePropName="checked"
+              >
+                <Switch />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item
+                label="测试版本"
+                name="isBeta"
+                valuePropName="checked"
+              >
+                <Switch />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item
+                label="预发布版本"
+                name="isPrerelease"
+                valuePropName="checked"
+              >
+                <Switch />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Form.Item
+            label="下载链接"
+            name="downloadLinks"
+          >
+            <Input.Group>
+              <Row gutter={8}>
+                <Col span={12}>
+                  <Form.Item
+                    name={['downloadLinks', 'official']}
+                    style={{ marginBottom: 8 }}
+                  >
+                    <Input placeholder="官方下载链接" />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item
+                    name={['downloadLinks', 'quark']}
+                    style={{ marginBottom: 8 }}
+                  >
+                    <Input placeholder="夸克网盘链接" />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item
+                    name={['downloadLinks', 'pan123']}
+                    style={{ marginBottom: 8 }}
+                  >
+                    <Input placeholder="123网盘链接" />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item
+                    name={['downloadLinks', 'baidu']}
+                    style={{ marginBottom: 8 }}
+                  >
+                    <Input placeholder="百度网盘链接" />
+                  </Form.Item>
+                </Col>
+              </Row>
+            </Input.Group>
+          </Form.Item>
+
+          <Form.Item style={{ marginTop: 24, textAlign: 'right' }}>
+            <Space>
+              <Button onClick={() => {
+                setModalVisible(false)
+                setEditingVersion(null)
+                form.resetFields()
+              }}>
+                取消
+              </Button>
+              <Button type="primary" htmlType="submit">
+                {editingVersion ? '更新版本' : '添加版本'}
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   )
 }

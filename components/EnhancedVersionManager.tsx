@@ -43,8 +43,7 @@ import {
 import type { ColumnsType } from 'antd/es/table'
 import VersionComparison from './VersionComparison'
 
-const { TextArea } = Input
-const { Option } = Select
+
 
 interface DownloadLinks {
   official?: string

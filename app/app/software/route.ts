@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     const sortOrder = searchParams.get('sortOrder') || 'asc'
     
     // 验证分页参数
-    if (page < 1 || limit < 1 || limit > 100) {
+    if (page < 1 || limit < 1 || limit > 10000) {
       return corsResponse({
         success: false,
         error: '无效的分页参数'

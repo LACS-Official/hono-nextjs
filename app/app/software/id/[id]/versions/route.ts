@@ -85,9 +85,10 @@ export async function GET(
     
     return corsResponse({
       success: true,
-      data: {
+      data: versions,
+      meta: {
         software: softwareInfo,
-        versions
+        total: versions.length
       }
     }, undefined, origin, userAgent)
     

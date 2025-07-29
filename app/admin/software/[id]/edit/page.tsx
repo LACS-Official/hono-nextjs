@@ -201,36 +201,26 @@ export default function SoftwareEdit() {
                       label="当前版本"
                       name="currentVersion"
                       rules={[{ required: true, message: '请输入当前版本' }]}
+                      help="最新版本将根据版本历史自动计算"
                     >
                       <Input placeholder="例如：1.0.0" />
                     </Form.Item>
                   </Col>
                   <Col xs={24} md={12}>
                     <Form.Item
-                      label="最新版本"
-                      name="latestVersion"
-                      rules={[{ required: true, message: '请输入最新版本' }]}
+                      label="软件分类"
+                      name="category"
                     >
-                      <Input placeholder="例如：1.0.1" />
-                    </Form.Item>
-                  </Col>
-                </Row>
-
-                <Row gutter={16}>
-                  <Col xs={24} md={12}>
-                    <Form.Item
-                      label="下载链接"
-                      name="downloadUrl"
-                    >
-                      <Input placeholder="请输入下载链接" />
-                    </Form.Item>
-                  </Col>
-                  <Col xs={24} md={12}>
-                    <Form.Item
-                      label="备用下载链接"
-                      name="downloadUrlBackup"
-                    >
-                      <Input placeholder="请输入备用下载链接" />
+                      <Select placeholder="请选择分类">
+                        <Option value="开发工具">开发工具</Option>
+                        <Option value="浏览器">浏览器</Option>
+                        <Option value="图像处理">图像处理</Option>
+                        <Option value="社交通讯">社交通讯</Option>
+                        <Option value="办公软件">办公软件</Option>
+                        <Option value="系统工具">系统工具</Option>
+                        <Option value="多媒体">多媒体</Option>
+                        <Option value="游戏">游戏</Option>
+                      </Select>
                     </Form.Item>
                   </Col>
                 </Row>
@@ -246,8 +236,8 @@ export default function SoftwareEdit() {
                   </Col>
                   <Col xs={24} md={12}>
                     <Form.Item
-                      label="分类"
-                      name="category"
+                      label="文件大小"
+                      name="fileSize"
                     >
                       <Input placeholder="请输入软件分类" />
                     </Form.Item>

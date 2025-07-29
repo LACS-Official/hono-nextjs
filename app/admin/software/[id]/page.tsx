@@ -22,7 +22,7 @@ import {
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import Navigation from '@/components/Navigation'
-import VersionManager from '@/components/VersionManager'
+import EnhancedVersionManager from '@/components/EnhancedVersionManager'
 
 const { Content } = Layout
 const { Title, Text } = Typography
@@ -314,7 +314,7 @@ export default function SoftwareDetail() {
                 </span>
               ),
               children: (
-                <VersionManager
+                <EnhancedVersionManager
                   softwareId={software.id}
                   softwareName={software.name}
                   onVersionAdded={() => {

@@ -11,7 +11,7 @@ export async function OPTIONS(request: NextRequest) {
   return handleOptions(origin, userAgent)
 }
 
-// GET /app/software/[id]/versions - 获取软件版本历史
+// GET /app/software/id/[id]/versions - 获取软件版本历史
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -45,7 +45,7 @@ export async function GET(
     
     // 获取该软件的版本历史
     let versions = []
-
+    
     try {
       // 尝试查询版本历史表，如果表不存在则返回空数组
       versions = await db
@@ -55,7 +55,7 @@ export async function GET(
         .orderBy(desc(softwareVersionHistory.releaseDate))
     } catch (error) {
       // 如果表不存在，创建一个基于当前软件信息的临时版本记录
-      console.warn('版本历史表不存在，返回基于当前软件信息的临时数据:', error.message)
+      console.warn('版本历史表不存在，返回基于当前软件信息的临时数据:', error instanceof Error ? error.message : String(error))
       versions = [{
         id: `temp-${id}`,
         softwareId: id,
@@ -90,7 +90,7 @@ export async function GET(
   }
 }
 
-// POST /app/software/[id]/versions - 添加新版本
+// POST /app/software/id/[id]/versions - 添加新版本
 export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -173,7 +173,7 @@ export async function POST(
         })
         .returning()
     } catch (error) {
-      console.error('版本历史表不存在，无法添加版本记录:', error.message)
+      console.error('版本历史表不存在，无法添加版本记录:', error instanceof Error ? error.message : String(error))
       return corsResponse({
         success: false,
         error: '版本历史功能暂时不可用，请联系管理员'
@@ -195,7 +195,7 @@ export async function POST(
   }
 }
 
-// PUT /app/software/[id]/versions - 更新软件的当前版本
+// PUT /app/software/id/[id]/versions - 更新软件的当前版本
 export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }

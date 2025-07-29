@@ -79,6 +79,8 @@ export default function SoftwareDetail() {
   const softwareId = params.id as string
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/app'
 
+  // 注意：版本历史API路径为 /app/software/id/[id]/versions
+
   // 获取软件详情
   const fetchSoftwareDetail = async () => {
     try {

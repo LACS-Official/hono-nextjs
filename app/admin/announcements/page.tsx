@@ -1,15 +1,14 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { 
+import {
   Layout,
-  Table, 
-  Button, 
-  Space, 
-  Input, 
-  Select, 
-  Tag, 
-  Modal, 
+  Table,
+  Button,
+  Space,
+  Input,
+  Select,
+  Tag,
   message,
   Popconfirm,
   Typography,
@@ -18,13 +17,11 @@ import {
   Col,
   Badge
 } from 'antd'
-import { 
-  PlusOutlined, 
-  EditOutlined, 
-  DeleteOutlined, 
-  SearchOutlined,
-  ReloadOutlined,
-  NotificationOutlined
+import {
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  ReloadOutlined
 } from '@ant-design/icons'
 import Link from 'next/link'
 import Navigation from '@/components/Navigation'
@@ -88,7 +85,7 @@ export default function AnnouncementManagement() {
   }
 
   // 获取公告列表
-  const fetchAnnouncements = async (page = 1, pageSize = 10) => {
+  const fetchAnnouncements = async (_page = 1, _pageSize = 10) => {
     setLoading(true)
     try {
       // 这里需要实现一个获取所有公告的API端点

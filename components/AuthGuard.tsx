@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+// import { useEffect } from 'react' // 暂时不使用
+// import { useRouter } from 'next/navigation' // 暂时不使用
 import { Layout, Spin, Result, Button } from 'antd'
 import { LoginOutlined } from '@ant-design/icons'
 import { useAuth } from '@/contexts/AuthContext'

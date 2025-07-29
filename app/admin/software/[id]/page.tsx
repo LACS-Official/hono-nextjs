@@ -9,7 +9,6 @@ import {
   Tag,
   Button,
   Descriptions,
-  Table,
   message,
   Spin,
   Tabs
@@ -17,11 +16,10 @@ import {
 import {
   ArrowLeftOutlined,
   EditOutlined,
-  NotificationOutlined,
   HistoryOutlined,
   InfoCircleOutlined
 } from '@ant-design/icons'
-import { useRouter, useParams } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import Navigation from '@/components/Navigation'
 import VersionManager from '@/components/VersionManager'
@@ -79,9 +77,9 @@ export default function SoftwareDetail() {
   const params = useParams()
   const [loading, setLoading] = useState(true)
   const [software, setSoftware] = useState<Software | null>(null)
-  const [announcements, setAnnouncements] = useState<Announcement[]>([])
-  const [versions, setVersions] = useState<VersionHistory[]>([])
-  const [activeTab, setActiveTab] = useState('info')
+  const [, setAnnouncements] = useState<Announcement[]>([])
+  const [, setVersions] = useState<VersionHistory[]>([])
+  // const [activeTab, setActiveTab] = useState('info') // 暂时不使用
 
   const softwareId = params.id as string
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/app'
@@ -129,9 +127,9 @@ export default function SoftwareDetail() {
       releaseDate: software.updatedAt || software.createdAt,
       releaseNotes: '当前版本',
       releaseNotesEn: 'Current version',
-      downloadLinks: {
-        official: software.officialWebsite || undefined
-      },
+      downloadLinks: software.officialWebsite ? {
+        official: software.officialWebsite
+      } : {},
       isStable: true,
       isBeta: false
     }
@@ -146,9 +144,9 @@ export default function SoftwareDetail() {
         releaseDate: software.updatedAt || software.createdAt,
         releaseNotes: '最新版本',
         releaseNotesEn: 'Latest version',
-        downloadLinks: {
-          official: software.officialWebsite || undefined
-        },
+        downloadLinks: software.officialWebsite ? {
+          official: software.officialWebsite
+        } : {},
         isStable: true,
         isBeta: false
       })

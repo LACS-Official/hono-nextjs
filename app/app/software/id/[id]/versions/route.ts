@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { softwareDb as db } from '@/lib/software-db-connection'
 import { software, softwareVersionHistory } from '@/lib/software-schema'
 import { eq, desc } from 'drizzle-orm'

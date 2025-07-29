@@ -1,5 +1,5 @@
 // API验证状态检查接口
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { corsResponse, handleOptions, validateApiKeyWithExpiration } from '@/lib/cors'
 
 // OPTIONS 方法处理 CORS 预检请求

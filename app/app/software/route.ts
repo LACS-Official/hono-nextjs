@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { softwareDb as db } from '@/lib/software-db-connection'
-import { software, softwareVersionHistory } from '@/lib/software-schema'
+import { software } from '@/lib/software-schema'
 import { eq, like, and, desc, asc } from 'drizzle-orm'
 import { corsResponse, handleOptions, validateApiKeyWithExpiration } from '@/lib/cors'
-import { getLatestVersion, updateLatestVersion } from '@/lib/version-manager'
+import { getLatestVersion } from '@/lib/version-manager'
 
 // OPTIONS 处理
 export async function OPTIONS(request: NextRequest) {

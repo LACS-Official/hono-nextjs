@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  Layout,
   Card,
   Button,
   Input,
@@ -49,7 +48,7 @@ import {
   type ActivationCodeApiError
 } from '@/utils/activation-codes-api'
 
-const { Content } = Layout
+// const { Content } = Layout // 暂时不使用
 const { Title, Paragraph, Text } = Typography
 const { Search } = Input
 const { Option } = Select
@@ -534,7 +533,7 @@ export default function ActivationCodesPage() {
                             setPageSize(size || 10)
                             loadActivationCodes(page, size || 10, statusFilter)
                           }}
-                          onShowSizeChange={(current, size) => {
+                          onShowSizeChange={(_, size) => {
                             setPageSize(size)
                             setCurrentPage(1)
                             loadActivationCodes(1, size, statusFilter)

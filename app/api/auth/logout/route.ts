@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createLogoutHeaders } from '@/lib/auth'
 
-export async function POST(request: NextRequest) {
+export async function POST(_request: NextRequest) {
   try {
     // 创建登出响应头
     const logoutHeaders = createLogoutHeaders()

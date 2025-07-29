@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+// import { useEffect } from 'react' // 暂时不使用
 import { useRouter } from 'next/navigation'
 import { Layout, Card, Button, Typography, Space, Spin } from 'antd'
 import { GithubOutlined, LoginOutlined, CheckCircleOutlined, RocketOutlined } from '@ant-design/icons'

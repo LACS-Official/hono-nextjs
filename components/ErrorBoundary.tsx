@@ -32,7 +32,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   }
 
   handleReset = () => {
-    this.setState({ hasError: false, error: undefined })
+    this.setState({ hasError: false })
     this.props.onReset?.()
   }
 

@@ -1,9 +1,9 @@
 // 验证激活码接口
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { activationCodesDb as db } from '@/lib/activation-codes-db-connection'
 import { activationCodes } from '@/lib/activation-codes-schema'
 import { eq, and, lt } from 'drizzle-orm'
-import { corsResponse, handleOptions, validateApiKeyWithExpiration } from '@/lib/cors'
+import { corsResponse, handleOptions } from '@/lib/cors'
 import { TimeUtils } from '@/lib/time-utils'
 
 // 自动清理5分钟内未使用的激活码
@@ -102,6 +102,10 @@ export async function POST(request: NextRequest) {
       })
       .where(eq(activationCodes.id, activationCode.id))
       .returning()
+
+    if (!updatedCode) {
+      throw new Error('Failed to update activation code')
+    }
 
     // 构建返回数据，包含激活码真实过期时间信息（中国时区）
     const responseData: any = {

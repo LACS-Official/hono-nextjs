@@ -6,7 +6,7 @@ import { eq } from 'drizzle-orm'
 
 // GET - 获取单个激活码详情
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
@@ -54,7 +54,7 @@ export async function GET(
 
 // DELETE - 删除激活码
 export async function DELETE(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { corsResponse, handleOptions } from '@/lib/cors'
 
 // OPTIONS 处理
@@ -123,7 +123,7 @@ export async function GET(request: NextRequest) {
         const publishDate = new Date(article.publishedAt!)
         const monthKey = `${publishDate.getFullYear()}-${String(publishDate.getMonth() + 1).padStart(2, '0')}`
         if (monthlyStats.hasOwnProperty(monthKey)) {
-          monthlyStats[monthKey]++
+          monthlyStats[monthKey] = (monthlyStats[monthKey] || 0) + 1
         }
       })
 

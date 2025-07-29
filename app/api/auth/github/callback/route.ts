@@ -12,7 +12,7 @@ const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000/admin'
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const code = searchParams.get('code')
-  const state = searchParams.get('state')
+  // const state = searchParams.get('state') // 暂时不使用
   const error = searchParams.get('error')
   
   if (error) {

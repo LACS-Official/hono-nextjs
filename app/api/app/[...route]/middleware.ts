@@ -184,11 +184,12 @@ export function sanitizeInput() {
   return async (c: Context, next: Next) => {
     // 清理 URL 参数
     const params = c.req.param()
-    for (const [key, value] of Object.entries(params)) {
+    for (const [, value] of Object.entries(params)) {
       if (typeof value === 'string') {
         // 移除潜在的危险字符
         const sanitized = value.replace(/[<>'"&]/g, '').trim()
         // 这里我们不能直接修改 params，但可以在路由中使用 sanitizeInput 函数
+        console.log('Sanitized value:', sanitized) // 临时日志，实际使用中可以移除
       }
     }
 

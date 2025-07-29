@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { corsResponse, handleOptions, validateApiKeyWithExpiration } from '@/lib/cors'
 import { v4 as uuidv4 } from 'uuid'
 

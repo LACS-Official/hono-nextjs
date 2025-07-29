@@ -1,15 +1,13 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { 
-  Layout, 
-  Table, 
-  Button, 
-  Space, 
-  Input, 
-  Select, 
-  Tag, 
-  Modal, 
+import {
+  Table,
+  Button,
+  Space,
+  Input,
+  Select,
+  Tag,
   message,
   Popconfirm,
   Typography,
@@ -18,11 +16,10 @@ import {
   Col,
   Tooltip
 } from 'antd'
-import { 
-  PlusOutlined, 
-  EditOutlined, 
-  DeleteOutlined, 
-  SearchOutlined,
+import {
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
   ReloadOutlined,
   ExportOutlined,
   EyeOutlined
@@ -32,7 +29,7 @@ import Link from 'next/link'
 const { Search } = Input
 const { Option } = Select
 const { Title } = Typography
-const { Content } = Layout
+// const { Content } = Layout // 暂时不使用
 
 interface Software {
   id: number  // 改为数字ID

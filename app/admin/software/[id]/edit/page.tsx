@@ -3,12 +3,11 @@
 import React, { useState, useEffect } from 'react'
 import { 
   Layout,
-  Form, 
-  Input, 
-  Button, 
-  Card, 
-  Switch, 
-  Select, 
+  Form,
+  Input,
+  Button,
+  Card,
+  Switch,
   InputNumber,
   message,
   Typography,
@@ -25,7 +24,7 @@ import Link from 'next/link'
 import Navigation from '@/components/Navigation'
 
 const { TextArea } = Input
-const { Option } = Select
+// const { Option } = Select // 暂时不使用
 const { Title } = Typography
 const { Content } = Layout
 

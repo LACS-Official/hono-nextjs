@@ -30,7 +30,7 @@ import { useRouter, useParams } from 'next/navigation'
 // 暂时不使用 ReactMarkdown
 
 const { Content } = Layout
-const { Title, Text, Paragraph } = Typography
+const { Title, Text } = Typography
 
 // Hugo 文章接口
 interface HugoArticle {

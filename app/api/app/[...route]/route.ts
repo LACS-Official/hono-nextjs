@@ -3,7 +3,7 @@ import { handle } from 'hono/vercel'
 import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
 import { prettyJSON } from 'hono/pretty-json'
-import { HTTPException } from 'hono/http-exception'
+// import { HTTPException } from 'hono/http-exception' // 暂时不使用
 
 // 软件管理路由已移至独立的 API 路由
 // 导入中间件
@@ -13,8 +13,7 @@ import {
   securityHeaders,
   sanitizeInput,
   formatErrorResponse,
-  healthCheck,
-  writeOperationAuth
+  healthCheck
 } from './middleware'
 
 // 创建 Hono 应用实例

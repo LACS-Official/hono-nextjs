@@ -16,14 +16,12 @@ import {
   Typography,
   Spin,
   Alert,
-  Upload,
   Tag
 } from 'antd'
 import {
   SaveOutlined,
   ArrowLeftOutlined,
   EyeOutlined,
-  UploadOutlined,
   PlusOutlined
 } from '@ant-design/icons'
 import { useRouter, useParams } from 'next/navigation'

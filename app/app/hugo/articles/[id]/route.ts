@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { corsResponse, handleOptions, validateApiKeyWithExpiration } from '@/lib/cors'
 
 // OPTIONS 处理
@@ -141,6 +141,12 @@ export async function PUT(
     }
 
     const existingArticle = articles[articleIndex]
+    if (!existingArticle) {
+      return corsResponse({
+        success: false,
+        error: '文章不存在'
+      }, { status: 404 }, origin, userAgent)
+    }
     const {
       title,
       slug,
@@ -176,6 +182,9 @@ export async function PUT(
     // 更新文章
     const updatedArticle: HugoArticle = {
       ...existingArticle,
+      id: existingArticle.id, // 确保id字段存在
+      createdAt: existingArticle.createdAt, // 确保createdAt字段存在
+      viewCount: existingArticle.viewCount || 0, // 确保viewCount字段存在
       title,
       slug,
       content: content || existingArticle.content,
@@ -188,8 +197,8 @@ export async function PUT(
       metadata: metadata || existingArticle.metadata,
       updatedAt: new Date().toISOString(),
       // 如果状态从非发布改为发布，设置发布时间
-      publishedAt: status === 'published' && existingArticle.status !== 'published' 
-        ? new Date().toISOString() 
+      publishedAt: status === 'published' && existingArticle.status !== 'published'
+        ? new Date().toISOString()
         : existingArticle.publishedAt
     }
 

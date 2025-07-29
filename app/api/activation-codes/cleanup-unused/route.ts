@@ -1,5 +1,5 @@
 // 清理未使用激活码接口
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { activationCodesDb as db } from '@/lib/activation-codes-db-connection'
 import { activationCodes } from '@/lib/activation-codes-schema'
 import { eq, and, lt } from 'drizzle-orm'

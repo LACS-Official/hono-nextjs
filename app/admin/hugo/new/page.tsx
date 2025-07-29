@@ -19,7 +19,6 @@ import {
 import {
   SaveOutlined,
   ArrowLeftOutlined,
-  EyeOutlined,
   PlusOutlined
 } from '@ant-design/icons'
 import { useRouter } from 'next/navigation'

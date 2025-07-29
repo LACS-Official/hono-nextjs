@@ -1,10 +1,10 @@
 // 激活码 API - 主路由
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { activationCodesDb as db } from '@/lib/activation-codes-db-connection'
 import { activationCodes } from '@/lib/activation-codes-schema'
 import { eq, desc, and, lt, gt } from 'drizzle-orm'
 import { v4 as uuidv4 } from 'uuid'
-import { corsResponse, handleOptions, validateApiKey, validateApiKeyWithExpiration, checkRateLimit } from '@/lib/cors'
+import { corsResponse, handleOptions, validateApiKeyWithExpiration, checkRateLimit } from '@/lib/cors'
 import { TimeUtils } from '@/lib/time-utils'
 
 // 自动清理5分钟内未使用的激活码
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
     } = body
 
     const code = generateActivationCode()
-    const now = TimeUtils.nowInChina()
+    // const now = TimeUtils.nowInChina() // 暂时不使用
     const expiresAt = TimeUtils.createChineseExpirationDate(expirationDays)
 
     const [newCode] = await db.insert(activationCodes).values({
@@ -102,6 +102,10 @@ export async function POST(request: NextRequest) {
       metadata,
       productInfo
     }).returning()
+
+    if (!newCode) {
+      throw new Error('Failed to create activation code')
+    }
 
     // 构建返回数据，包含激活码真实过期时间信息（中国时区）
     const responseData: any = {

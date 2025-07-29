@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { activationCodesDb, checkActivationCodesDbHealth } from '@/lib/activation-codes-db-connection'
-import { softwareDb, checkSoftwareDbHealth } from '@/lib/software-db-connection'
+import { NextRequest } from 'next/server'
+import { checkActivationCodesDbHealth } from '@/lib/activation-codes-db-connection'
+import { checkSoftwareDbHealth } from '@/lib/software-db-connection'
 import { corsResponse, handleOptions } from '@/lib/cors'
 
 // OPTIONS 方法处理 CORS 预检请求

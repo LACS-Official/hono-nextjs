@@ -16,7 +16,7 @@ import {
 } from '@ant-design/icons'
 import type { MenuProps } from 'antd'
 import { useAuth } from '@/contexts/AuthContext'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 
 const { Header } = Layout
 const { Text } = Typography

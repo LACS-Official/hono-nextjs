@@ -1,9 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Layout, Menu, Card, Row, Col, Statistic, Typography, Space, Button, message } from 'antd'
+import { useState } from 'react'
+import { Card, Row, Col, Statistic, Typography, Button } from 'antd'
 import {
-  HomeOutlined,
   GithubOutlined,
   FileTextOutlined,
   AppstoreOutlined,
@@ -11,11 +10,11 @@ import {
   KeyOutlined
 } from '@ant-design/icons'
 
-const { Sider, Content } = Layout
+// const { Sider, Content } = Layout // 暂时不使用
 const { Title, Paragraph } = Typography
 
 export default function AdminDashboard() {
-  const [selectedMenuKey, setSelectedMenuKey] = useState('overview')
+  const [, setSelectedMenuKey] = useState('overview')
 
   // 处理菜单点击
   const handleMenuClick = (key: string) => {

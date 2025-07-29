@@ -46,7 +46,7 @@ export default function PageContainer({
               },
               ...breadcrumb.map(item => ({
                 title: item.title,
-                href: item.href
+                ...(item.href && { href: item.href })
               }))
             ]}
           />

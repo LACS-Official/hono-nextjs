@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Layout, Card, Row, Col, Typography, Space, Button, Statistic, Divider, Tag, Alert } from 'antd'
+import { Layout, Card, Row, Col, Typography, Button, Statistic, Tag, Alert } from 'antd'
 import {
   GithubOutlined,
   ApiOutlined,
@@ -9,13 +9,12 @@ import {
   SafetyOutlined,
   RocketOutlined,
   CheckCircleOutlined,
-  ClockCircleOutlined,
   WarningOutlined
 } from '@ant-design/icons'
 import Link from 'next/link'
 
 const { Content } = Layout
-const { Title, Paragraph, Text } = Typography
+const { Title, Paragraph } = Typography
 
 export default function HomePage() {
   const [stats, setStats] = useState({

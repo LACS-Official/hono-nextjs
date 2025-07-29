@@ -1,14 +1,13 @@
 'use client'
 
 import React, { useState } from 'react'
-import { 
-  Modal, 
-  Table, 
-  Tag, 
-  Button, 
-  Space, 
-  Divider, 
-  Typography, 
+import {
+  Modal,
+  Tag,
+  Button,
+  Space,
+  Divider,
+  Typography,
   Card,
   Row,
   Col,
@@ -24,7 +23,7 @@ import {
   ExclamationCircleOutlined
 } from '@ant-design/icons'
 
-const { Text, Title } = Typography
+const { Text } = Typography
 const { Panel } = Collapse
 
 interface VersionHistory {

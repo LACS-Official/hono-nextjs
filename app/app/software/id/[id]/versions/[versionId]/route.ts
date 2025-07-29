@@ -62,7 +62,12 @@ export async function GET(
     }, undefined, origin, userAgent)
     
   } catch (error) {
-    console.error('获取版本详情失败:', error)
+    console.error('获取版本详情失败:', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      softwareId: params.id,
+      versionId: params.versionId
+    })
     return corsResponse({
       success: false,
       error: '服务器内部错误'

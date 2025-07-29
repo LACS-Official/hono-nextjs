@@ -328,7 +328,7 @@ html, body {
   outline-offset: 2px;
 }
 
-/* 高对比度模式支持 */
+/* 高对比度模式支持 - 使用现代标准替代 -ms-high-contrast */
 @media (prefers-contrast: high) {
   .ant-btn {
     border-width: 2px;
@@ -336,6 +336,27 @@ html, body {
 
   .ant-card {
     border-width: 2px;
+  }
+}
+
+/* 强制颜色模式支持 - 替代已弃用的 -ms-high-contrast */
+@media (forced-colors: active) {
+  .ant-btn {
+    border-width: 2px;
+    forced-color-adjust: none;
+  }
+
+  .ant-card {
+    border-width: 2px;
+    forced-color-adjust: none;
+  }
+
+  .ant-table {
+    forced-color-adjust: none;
+  }
+
+  .ant-modal {
+    forced-color-adjust: none;
   }
 }
 

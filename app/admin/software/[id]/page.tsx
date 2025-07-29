@@ -35,12 +35,14 @@ import {
   ExclamationCircleOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
-  CalendarOutlined
+  CalendarOutlined,
+  BellOutlined
 } from '@ant-design/icons'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Navigation from '@/components/Navigation'
 import EnhancedVersionManager from '@/components/EnhancedVersionManager'
+import AnnouncementManager from '@/components/AnnouncementManager'
 
 const { Title, Text, Paragraph } = Typography
 const { Content } = Layout
@@ -414,6 +416,25 @@ export default function SoftwareDetail() {
                   softwareName={software.name}
                   onVersionAdded={() => {
                     // 版本添加后可以刷新软件信息
+                    fetchSoftwareDetail()
+                  }}
+                />
+              )
+            },
+            {
+              key: 'announcements',
+              label: (
+                <span>
+                  <BellOutlined />
+                  公告管理
+                </span>
+              ),
+              children: (
+                <AnnouncementManager
+                  softwareId={software.id}
+                  softwareName={software.name}
+                  onAnnouncementAdded={() => {
+                    // 公告添加后可以刷新软件信息
                     fetchSoftwareDetail()
                   }}
                 />

@@ -1,17 +1,25 @@
 // CORS 配置和中间件
 import { NextResponse } from 'next/server'
 
-// 允许的域名列表 - 生产环境中应该从环境变量读取
-const ALLOWED_ORIGINS = [
-  'https://admin.lacs.cc',
-  'http://localhost:3000', // 开发环境
-  'http://localhost:3001', // 开发环境备用端口
-  // API 测试工具支持
-  'https://app.apifox.com', // Apifox Web 版
-  'https://web.postman.co', // Postman Web 版
-  'https://hoppscotch.io', // Hoppscotch
-  'https://insomnia.rest', // Insomnia
-]
+// 允许的域名列表 - 从环境变量读取，提供默认值
+const getAllowedOrigins = (): string[] => {
+  const envOrigins = process.env.ALLOWED_ORIGINS
+  if (envOrigins) {
+    return envOrigins.split(',').map(origin => origin.trim())
+  }
+
+  // 默认允许的域名列表
+  return [
+    'https://admin.lacs.cc',
+    'http://localhost:3000', // 开发环境
+    'http://localhost:3001', // 开发环境备用端口
+    // API 测试工具支持
+    'https://app.apifox.com', // Apifox Web 版
+    'https://web.postman.co', // Postman Web 版
+    'https://hoppscotch.io', // Hoppscotch
+    'https://insomnia.rest', // Insomnia
+  ]
+}
 
 // 检查是否为 API 测试工具的请求
 function isApiTestingTool(origin?: string | null, userAgent?: string | null): boolean {
@@ -38,15 +46,25 @@ function isApiTestingTool(origin?: string | null, userAgent?: string | null): bo
 
 // 根据请求来源动态设置CORS头部
 function getCorsHeaders(origin?: string | null, userAgent?: string | null) {
-  // 允许所有来源访问
-  const allowedOrigin = '*';
+  const allowedOrigins = getAllowedOrigins()
+  const isDevelopment = process.env.NODE_ENV === 'development'
+
+  // 在开发环境或API测试工具中允许所有来源
+  let allowedOrigin = '*'
+
+  // 在生产环境中进行严格的来源检查
+  if (!isDevelopment && origin) {
+    const isAllowed = allowedOrigins.includes(origin) || isApiTestingTool(origin, userAgent)
+    allowedOrigin = isAllowed ? origin : 'null'
+  }
 
   return {
     'Access-Control-Allow-Origin': allowedOrigin,
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', // 移除了 PUT, DELETE
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-API-Key', // 添加了 API Key 支持
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-API-Key, X-Request-ID',
     'Access-Control-Allow-Credentials': 'false', // 禁用凭据传输以提高安全性
     'Access-Control-Max-Age': '86400', // 预检请求缓存24小时
+    'Vary': 'Origin', // 告诉缓存根据Origin头部变化
   }
 }
 
@@ -126,10 +144,25 @@ export function validateApiKeyWithExpiration(request: Request): ApiKeyValidation
   }
 }
 
-// 速率限制检查（简单实现）
+// 速率限制检查（改进的实现，包含清理机制）
 const requestCounts = new Map<string, { count: number; resetTime: number }>()
 
+// 定期清理过期的速率限制记录
+setInterval(() => {
+  const now = Date.now()
+  for (const [clientId, data] of requestCounts.entries()) {
+    if (now > data.resetTime) {
+      requestCounts.delete(clientId)
+    }
+  }
+}, 60000) // 每分钟清理一次
+
 export function checkRateLimit(clientId: string, maxRequests = 100, windowMs = 60000): boolean {
+  if (!clientId) {
+    console.warn('Rate limit check: clientId is empty')
+    return true // 允许通过，但记录警告
+  }
+
   const now = Date.now()
   const clientData = requestCounts.get(clientId)
 
@@ -139,6 +172,7 @@ export function checkRateLimit(clientId: string, maxRequests = 100, windowMs = 6
   }
 
   if (clientData.count >= maxRequests) {
+    console.warn(`Rate limit exceeded for client: ${clientId}`)
     return false
   }
 

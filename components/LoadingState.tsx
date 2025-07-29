@@ -14,20 +14,25 @@ interface LoadingStateProps {
 }
 
 // 通用加载状态组件
-export function LoadingState({ 
-  loading = false, 
-  children, 
-  tip = '加载中...', 
+export function LoadingState({
+  loading = false,
+  children,
+  tip = '加载中...',
   size = 'default',
-  style 
+  style
 }: LoadingStateProps) {
   if (loading) {
     return (
-      <div style={{ 
-        textAlign: 'center', 
-        padding: '48px 24px',
-        ...style 
-      }}>
+      <div
+        style={{
+          textAlign: 'center',
+          padding: '48px 24px',
+          ...style
+        }}
+        role="status"
+        aria-live="polite"
+        aria-label={tip}
+      >
         <Spin size={size} />
         <div style={{ marginTop: '16px', color: '#666' }}>
           {tip}
@@ -42,15 +47,20 @@ export function LoadingState({
 // 页面级加载状态
 export function PageLoading({ tip = '页面加载中...' }: { tip?: string }) {
   return (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      minHeight: '400px',
-      flexDirection: 'column'
-    }}>
-      <Spin 
-        size="large" 
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '400px',
+        flexDirection: 'column'
+      }}
+      role="status"
+      aria-live="polite"
+      aria-label={tip}
+    >
+      <Spin
+        size="large"
         indicator={<LoadingOutlined style={{ fontSize: 24 }} spin />}
       />
       <Text type="secondary" style={{ marginTop: '16px' }}>

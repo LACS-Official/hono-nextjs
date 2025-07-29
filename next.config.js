@@ -1,6 +1,22 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  poweredByHeader: false, // 隐藏 X-Powered-By 头部
+  compress: true, // 启用 gzip 压缩
+
+  // 实验性功能
+  experimental: {
+    optimizeCss: true, // CSS 优化
+    scrollRestoration: true, // 滚动位置恢复
+  },
+
+  // 图片优化配置
+  images: {
+    domains: ['via.placeholder.com', 'avatars.githubusercontent.com'],
+    formats: ['image/webp', 'image/avif'],
+    minimumCacheTTL: 60,
+  },
+
   async headers() {
     return [
       {
@@ -9,25 +25,30 @@ const nextConfig = {
         headers: [
           {
             key: "Access-Control-Allow-Origin",
-            value: "*",
+            value: process.env.NODE_ENV === 'production' ?
+              (process.env.ALLOWED_ORIGINS || "https://admin.lacs.cc") : "*",
           },
           {
             key: "Access-Control-Allow-Methods",
-            value: "GET, POST, PUT, DELETE, OPTIONS", // 添加 PUT, DELETE 支持软件管理
+            value: "GET, POST, PUT, DELETE, OPTIONS",
           },
           {
             key: "Access-Control-Allow-Headers",
-            value: "Content-Type, Authorization, X-API-Key", // 添加了 API Key 支持
+            value: "Content-Type, Authorization, X-API-Key, X-Request-ID",
           },
           {
             key: "Access-Control-Allow-Credentials",
-            value: "false", // 禁用凭据传输
+            value: "false",
           },
           {
             key: "Access-Control-Max-Age",
-            value: "86400", // 预检请求缓存24小时
+            value: "86400",
           },
-          // 添加安全头部
+          {
+            key: "Vary",
+            value: "Origin",
+          },
+          // 安全头部
           {
             key: "X-Content-Type-Options",
             value: "nosniff",
@@ -40,7 +61,67 @@ const nextConfig = {
             key: "X-XSS-Protection",
             value: "1; mode=block",
           },
+          {
+            key: "Referrer-Policy",
+            value: "strict-origin-when-cross-origin",
+          },
+          {
+            key: "Permissions-Policy",
+            value: "camera=(), microphone=(), geolocation=()",
+          },
+          // 性能头部
+          {
+            key: "Cache-Control",
+            value: "no-cache, no-store, must-revalidate",
+          },
         ],
+      },
+      {
+        // 匹配所有页面
+        source: "/(.*)",
+        headers: [
+          {
+            key: "X-Content-Type-Options",
+            value: "nosniff",
+          },
+          {
+            key: "X-Frame-Options",
+            value: "DENY",
+          },
+          {
+            key: "X-XSS-Protection",
+            value: "1; mode=block",
+          },
+          {
+            key: "Referrer-Policy",
+            value: "strict-origin-when-cross-origin",
+          },
+          {
+            key: "Permissions-Policy",
+            value: "camera=(), microphone=(), geolocation=()",
+          },
+        ],
+      },
+      {
+        // 静态资源缓存
+        source: "/static/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
+    ]
+  },
+
+  // 重定向配置
+  async redirects() {
+    return [
+      {
+        source: '/admin',
+        destination: '/admin/activation-codes',
+        permanent: false,
       },
     ]
   },

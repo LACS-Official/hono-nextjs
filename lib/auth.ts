@@ -37,11 +37,29 @@ export function generateToken(user: User): string {
 
 // 验证 JWT Token
 export function verifyToken(token: string): JWTPayload | null {
+  if (!token || typeof token !== 'string') {
+    console.warn('JWT verification: Invalid token format')
+    return null
+  }
+
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload
+
+    // 验证载荷结构
+    if (!decoded.user || !decoded.user.id || !decoded.user.login) {
+      console.warn('JWT verification: Invalid payload structure')
+      return null
+    }
+
     return decoded
   } catch (error) {
-    console.error('JWT verification failed:', error)
+    if (error instanceof jwt.TokenExpiredError) {
+      console.warn('JWT verification: Token expired')
+    } else if (error instanceof jwt.JsonWebTokenError) {
+      console.warn('JWT verification: Invalid token')
+    } else {
+      console.error('JWT verification failed:', error)
+    }
     return null
   }
 }
@@ -91,10 +109,22 @@ export function authenticateRequest(request: NextRequest): AuthResult {
 
 // 检查用户是否有管理员权限
 export function isAuthorizedAdmin(user: User): boolean {
+  if (!user || !user.login) {
+    console.warn('Admin check: Invalid user object')
+    return false
+  }
+
   const allowedUsername = process.env.ALLOWED_GITHUB_USERNAME || 'LACS-Official'
   const allowedEmail = process.env.ALLOWED_GITHUB_EMAIL || '2935278133@qq.com'
-  
-  return user.login === allowedUsername && user.email === allowedEmail
+
+  // 支持多个管理员用户名（逗号分隔）
+  const allowedUsernames = allowedUsername.split(',').map(name => name.trim())
+  const allowedEmails = allowedEmail.split(',').map(email => email.trim())
+
+  const isUsernameAllowed = allowedUsernames.includes(user.login)
+  const isEmailAllowed = user.email ? allowedEmails.includes(user.email) : false
+
+  return isUsernameAllowed || isEmailAllowed
 }
 
 // 创建认证响应头

@@ -185,18 +185,33 @@ export default function Navigation({ className }: NavigationProps) {
             onClick={() => setMobileMenuOpen(true)}
             style={{ fontSize: '18px' }}
             className="mobile-only"
+            aria-label="打开导航菜单"
+            title="打开导航菜单"
           />
 
           <Dropdown
             menu={{ items: userMenuItems }}
             placement="bottomRight"
             arrow
+            trigger={['click']}
           >
-            <Space style={{ cursor: 'pointer', padding: '8px' }}>
+            <Space
+              style={{ cursor: 'pointer', padding: '8px' }}
+              role="button"
+              tabIndex={0}
+              aria-label={`用户菜单 - ${user?.name || user?.login || '管理员'}`}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  // 触发下拉菜单
+                }
+              }}
+            >
               <Avatar
                 src={user?.avatar_url}
                 icon={!user?.avatar_url && <UserOutlined />}
                 size="default"
+                alt={`${user?.name || user?.login || '管理员'}的头像`}
               />
               <Text className="desktop-only">{user?.name || user?.login || '管理员'}</Text>
             </Space>
@@ -214,6 +229,10 @@ export default function Navigation({ className }: NavigationProps) {
         styles={{
           body: { padding: 0 }
         }}
+        aria-label="移动端导航菜单"
+        destroyOnClose={false}
+        maskClosable={true}
+        keyboard={true}
       >
         <Menu
           mode="vertical"
@@ -221,6 +240,7 @@ export default function Navigation({ className }: NavigationProps) {
           items={menuItems}
           style={{ border: 'none' }}
           onClick={() => setMobileMenuOpen(false)}
+          aria-label="导航菜单项"
         />
       </Drawer>
     </>

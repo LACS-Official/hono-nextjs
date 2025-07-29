@@ -110,18 +110,40 @@ export default function SoftwareDetail() {
     }
   }
 
-  // 获取版本历史
-  const fetchVersionHistory = async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/software/${softwareId}/versions`)
-      const data = await response.json()
+  // 生成基于当前软件信息的版本历史
+  const generateVersionHistory = () => {
+    if (!software) return
 
-      if (data.success) {
-        setVersions(data.data.versions)
-      }
-    } catch (error) {
-      console.error('Error fetching version history:', error)
+    const currentVersionHistory: VersionHistory = {
+      id: `current-${software.id}`,
+      version: software.currentVersion,
+      releaseDate: software.updatedAt || software.createdAt,
+      releaseNotes: '当前版本',
+      releaseNotesEn: 'Current version',
+      downloadUrl: software.downloadUrl,
+      fileSize: software.fileSize,
+      isStable: true,
+      isBeta: false
     }
+
+    // 如果最新版本与当前版本不同，也添加最新版本
+    const versionHistory = [currentVersionHistory]
+
+    if (software.latestVersion && software.latestVersion !== software.currentVersion) {
+      versionHistory.unshift({
+        id: `latest-${software.id}`,
+        version: software.latestVersion,
+        releaseDate: software.updatedAt || software.createdAt,
+        releaseNotes: '最新版本',
+        releaseNotesEn: 'Latest version',
+        downloadUrl: software.downloadUrl,
+        fileSize: software.fileSize,
+        isStable: true,
+        isBeta: false
+      })
+    }
+
+    setVersions(versionHistory)
   }
 
   useEffect(() => {
@@ -129,8 +151,7 @@ export default function SoftwareDetail() {
       setLoading(true)
       await Promise.all([
         fetchSoftwareDetail(),
-        fetchAnnouncements(),
-        fetchVersionHistory()
+        fetchAnnouncements()
       ])
       setLoading(false)
     }
@@ -139,6 +160,13 @@ export default function SoftwareDetail() {
       loadData()
     }
   }, [softwareId])
+
+  // 当软件信息加载完成后，生成版本历史
+  useEffect(() => {
+    if (software) {
+      generateVersionHistory()
+    }
+  }, [software])
 
   if (loading) {
     return (

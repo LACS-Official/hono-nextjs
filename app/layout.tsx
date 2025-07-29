@@ -16,6 +16,18 @@ export default function RootLayout({
 }) {
   return (
     <html lang="zh-CN">
+      <head>
+        <style dangerouslySetInnerHTML={{
+          __html: `
+            /* 抑制 Ant Design 的 -ms-high-contrast 弃用警告 */
+            @media (forced-colors: active) {
+              * {
+                forced-color-adjust: auto;
+              }
+            }
+          `
+        }} />
+      </head>
       <body>
         <AntdRegistry>
           <ConfigProvider locale={zhCN}>

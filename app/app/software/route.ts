@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { softwareDb as db } from '@/lib/software-db-connection'
 import { software } from '@/lib/software-schema'
-import { eq, like, and, desc, asc } from 'drizzle-orm'
+import { eq, like, and, desc, asc, sql } from 'drizzle-orm'
 import { corsResponse, handleOptions, validateApiKeyWithExpiration } from '@/lib/cors'
 import { getLatestVersion } from '@/lib/version-manager'
 
@@ -25,6 +25,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '20')
     const search = searchParams.get('search') || ''
     const category = searchParams.get('category') || ''
+    const tags = searchParams.get('tags') || '' // 新增：标签筛选
     const isActive = searchParams.get('active')
     const sortBy = searchParams.get('sortBy') || 'sortOrder'
     const sortOrder = searchParams.get('sortOrder') || 'asc'
@@ -61,6 +62,25 @@ export async function GET(request: NextRequest) {
       whereConditions.push(
         like(software.name, `%${search}%`)
       )
+    }
+
+    // 标签过滤
+    if (tags) {
+      const tagList = tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0)
+      if (tagList.length > 0) {
+        // 使用 PostgreSQL 的 jsonb 操作符来检查标签
+        // 支持多个标签的 OR 查询：任何一个标签匹配即可
+        const tagConditions = tagList.map(tag =>
+          sql`${software.tags} @> ${JSON.stringify([tag])}`
+        )
+
+        if (tagConditions.length === 1) {
+          whereConditions.push(tagConditions[0])
+        } else {
+          // 多个标签使用 OR 连接
+          whereConditions.push(sql`(${tagConditions.join(' OR ')})`)
+        }
+      }
     }
     
     // 构建排序

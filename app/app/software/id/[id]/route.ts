@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { unifiedDb as db, software } from '@/lib/unified-db-connection'
 import { eq } from 'drizzle-orm'
 import { corsResponse, handleOptions, validateApiKeyWithExpiration } from '@/lib/cors'
+import { getLatestVersionWithId } from '@/lib/version-manager'
 
 // OPTIONS 处理
 export async function OPTIONS(request: NextRequest) {
@@ -42,17 +43,29 @@ export async function GET(
       .from(software)
       .where(eq(software.id, softwareId))
       .limit(1)
-    
+
     if (!softwareInfo) {
       return corsResponse({
         success: false,
         error: '未找到指定的软件'
       }, { status: 404 }, origin, userAgent)
     }
-    
+
+    // 获取最新版本ID
+    let currentVersionId = null
+    try {
+      const latestVersionInfo = await getLatestVersionWithId(softwareId)
+      currentVersionId = latestVersionInfo?.id || null
+    } catch (error) {
+      console.warn(`获取软件 ${softwareId} 最新版本ID失败:`, error)
+    }
+
     return corsResponse({
       success: true,
-      data: softwareInfo
+      data: {
+        ...softwareInfo,
+        currentVersionId
+      }
     }, undefined, origin, userAgent)
     
   } catch (error) {

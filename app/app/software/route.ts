@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 import { unifiedDb as db, software } from '@/lib/unified-db-connection'
 import { eq, like, and, desc, asc, sql } from 'drizzle-orm'
 import { corsResponse, handleOptions, validateApiKeyWithExpiration } from '@/lib/cors'
-import { getLatestVersion } from '@/lib/version-manager'
+import { getLatestVersion, getLatestVersionWithId } from '@/lib/version-manager'
 
 // OPTIONS 处理
 export async function OPTIONS(request: NextRequest) {
@@ -107,19 +107,21 @@ export async function GET(request: NextRequest) {
       .limit(limit)
       .offset(offset)
 
-    // 为每个软件添加最新版本信息
+    // 为每个软件添加最新版本信息和版本ID
     const enhancedSoftwareList = await Promise.all(
       softwareList.map(async (sw) => {
         try {
-          const latestVersion = await getLatestVersion(sw.id)
+          const latestVersionInfo = await getLatestVersionWithId(sw.id)
           return {
             ...sw,
-            latestVersion: latestVersion || sw.currentVersion
+            currentVersionId: latestVersionInfo?.id || null,
+            latestVersion: latestVersionInfo?.version || sw.currentVersion
           }
         } catch (error) {
           console.warn(`获取软件 ${sw.id} 最新版本失败:`, error)
           return {
             ...sw,
+            currentVersionId: null,
             latestVersion: sw.currentVersion
           }
         }

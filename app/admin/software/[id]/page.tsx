@@ -53,6 +53,7 @@ interface Software {
   nameEn?: string
   description?: string
   descriptionEn?: string
+  currentVersionId?: number | null
   currentVersion: string
   latestVersion?: string
   officialWebsite?: string

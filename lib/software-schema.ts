@@ -124,5 +124,6 @@ export interface VersionWithStats extends SoftwareVersionHistory {
 export interface SoftwareWithVersions extends Software {
   versions?: VersionWithStats[];
   latestVersion?: string;
+  currentVersionId?: number | null;
   totalDownloads?: number;
 }

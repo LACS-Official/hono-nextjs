@@ -9,10 +9,11 @@
 | 功能模块 | 描述 |
 |---------|------|
 | 🔑 **激活码管理** | 生成、验证、统计激活码，支持批量操作和过期管理 |
-| 📦 **软件管理** | 软件信息管理、版本历史追踪、公告发布 |
+| 📦 **软件管理** | 软件信息管理、版本历史追踪、公告发布、智能版本关联 |
 | 📊 **用户行为统计** | 软件激活统计、设备连接追踪、使用分析 |
 | 🛡️ **安全认证** | API Key认证、CORS控制、请求限流 |
 | 💾 **统一数据库** | 简化的单数据库架构，降低维护复杂度 |
+| 🆕 **版本关联** | currentVersionId字段，智能关联最新稳定版本 |
 
 ## 🛠️ 技术架构
 
@@ -87,10 +88,12 @@ POST   /api/activation-codes/verify   # 验证激活码
 GET    /api/activation-codes/stats    # 获取统计信息
 
 # 软件管理
-GET    /app/software                  # 获取软件列表
-GET    /app/software/id/{id}          # 获取软件详情
+GET    /app/software                  # 获取软件列表（支持分页、搜索）
+GET    /app/software/id/{id}          # 根据ID获取软件详情
+GET    /app/software/{name}           # 根据名称获取软件详情
 POST   /app/software                  # 添加新软件
 PUT    /app/software/id/{id}          # 更新软件信息
+DELETE /app/software/id/{id}          # 删除软件
 
 # 版本管理
 GET    /app/software/id/{id}/versions           # 获取版本历史
@@ -155,6 +158,6 @@ npm run db:studio        # 数据库管理界面
 
 <div align="center">
 
-**版本**: 2.0.0 | **最后更新**: 2025-08-01
+**版本**: 2.1.0 | **最后更新**: 2025-08-01
 
 </div>

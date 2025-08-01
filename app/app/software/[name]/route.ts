@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { unifiedDb as db, software, softwareAnnouncements } from '@/lib/unified-db-connection'
 import { eq, and, desc, or } from 'drizzle-orm'
 import { corsResponse, handleOptions, validateApiKeyWithExpiration } from '@/lib/cors'
+import { getLatestVersionWithId } from '@/lib/version-manager'
 
 // OPTIONS 处理
 export async function OPTIONS(request: NextRequest) {
@@ -65,11 +66,21 @@ export async function GET(
       )
       .orderBy(desc(softwareAnnouncements.publishedAt))
       .limit(5)
-    
+
+    // 获取最新版本ID
+    let currentVersionId = null
+    try {
+      const latestVersionInfo = await getLatestVersionWithId(softwareInfo.id)
+      currentVersionId = latestVersionInfo?.id || null
+    } catch (error) {
+      console.warn(`获取软件 ${softwareInfo.id} 最新版本ID失败:`, error)
+    }
+
     return corsResponse({
       success: true,
       data: {
         ...softwareInfo,
+        currentVersionId,
         latestAnnouncements
       }
     }, undefined, origin, userAgent)

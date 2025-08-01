@@ -58,6 +58,41 @@ export async function getLatestVersion(softwareId: number): Promise<string | nul
 }
 
 /**
+ * 获取软件的最新版本ID和版本号
+ */
+export async function getLatestVersionWithId(softwareId: number): Promise<{ id: number; version: string } | null> {
+  try {
+    const versions = await db
+      .select({
+        id: softwareVersionHistory.id,
+        version: softwareVersionHistory.version,
+        releaseDate: softwareVersionHistory.releaseDate
+      })
+      .from(softwareVersionHistory)
+      .where(
+        and(
+          eq(softwareVersionHistory.softwareId, softwareId),
+          eq(softwareVersionHistory.isStable, true)
+        )
+      )
+      .orderBy(desc(softwareVersionHistory.releaseDate))
+
+    if (versions.length === 0) return null
+
+    // 按版本号排序，获取最新版本
+    const sortedVersions = versions.sort((a, b) => compareVersions(b.version, a.version))
+
+    return {
+      id: sortedVersions[0].id,
+      version: sortedVersions[0].version
+    }
+  } catch (error) {
+    console.error('获取最新版本ID失败:', error)
+    return null
+  }
+}
+
+/**
  * 自动更新软件的最新版本号
  */
 export async function updateLatestVersion(softwareId: number): Promise<boolean> {

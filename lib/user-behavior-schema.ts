@@ -57,7 +57,6 @@ export const deviceConnections = pgTable('device_connections', {
 
   // 软件信息
   softwareId: integer('software_id').notNull(), // 软件ID
-  softwareVersion: text('software_version'), // 软件版本
 
   // 用户设备指纹（关联到激活记录）
   userDeviceFingerprint: text('user_device_fingerprint'), // 用户设备指纹

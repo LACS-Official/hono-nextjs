@@ -26,7 +26,6 @@ const deviceConnectionRequestSchema = z.object({
   deviceBrand: z.string().optional(),
   deviceModel: z.string().optional(),
   softwareId: z.number().int().positive(),
-  softwareVersion: z.string().optional(),
   userDeviceFingerprint: z.string().optional(),
 })
 

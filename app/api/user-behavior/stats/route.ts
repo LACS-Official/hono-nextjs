@@ -37,11 +37,11 @@ export async function GET(request: NextRequest) {
     }
     if (startDate) {
       activationConditions.push(gte(softwareActivations.activatedAt, new Date(startDate)))
-      connectionConditions.push(gte(deviceConnections.connectedAt, new Date(startDate)))
+      connectionConditions.push(gte(deviceConnections.createdAt, new Date(startDate)))
     }
     if (endDate) {
       activationConditions.push(lte(softwareActivations.activatedAt, new Date(endDate)))
-      connectionConditions.push(lte(deviceConnections.connectedAt, new Date(endDate)))
+      connectionConditions.push(lte(deviceConnections.createdAt, new Date(endDate)))
     }
 
     // 并行查询各种统计数据
@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
       
       // 唯一连接设备数
       userBehaviorDb
-        .selectDistinct({ deviceUniqueId: deviceConnections.deviceUniqueId })
+        .selectDistinct({ deviceSerial: deviceConnections.deviceSerial })
         .from(deviceConnections)
         .where(connectionConditions.length > 0 ? and(...connectionConditions) : undefined),
       
@@ -109,18 +109,18 @@ export async function GET(request: NextRequest) {
       // 最近7天连接趋势
       userBehaviorDb
         .select({
-          date: sql<string>`DATE(${deviceConnections.connectedAt})`,
+          date: sql<string>`DATE(${deviceConnections.createdAt})`,
           count: count()
         })
         .from(deviceConnections)
         .where(
           and(
-            gte(deviceConnections.connectedAt, new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)),
+            gte(deviceConnections.createdAt, new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)),
             ...(connectionConditions.length > 0 ? connectionConditions : [])
           )
         )
-        .groupBy(sql`DATE(${deviceConnections.connectedAt})`)
-        .orderBy(sql`DATE(${deviceConnections.connectedAt})`),
+        .groupBy(sql`DATE(${deviceConnections.createdAt})`)
+        .orderBy(sql`DATE(${deviceConnections.createdAt})`),
       
       // 地理分布统计（基于激活数据）
       userBehaviorDb

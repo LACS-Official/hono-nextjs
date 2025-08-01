@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
       return corsResponse({
         success: false,
         error: '请求数据格式错误',
-        details: error.errors
+        details: error.issues
       }, { status: 400 }, origin, userAgent)
     }
 

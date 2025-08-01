@@ -24,7 +24,7 @@ export class RequestSignature {
    */
   private static getSecret(): string {
     if (!this.secret) {
-      this.secret = process.env.REQUEST_SIGNATURE_SECRET
+      this.secret = process.env.REQUEST_SIGNATURE_SECRET || null
       if (!this.secret) {
         throw new Error('REQUEST_SIGNATURE_SECRET environment variable is not set')
       }
@@ -105,10 +105,9 @@ export class RequestSignature {
       const expectedSignature = this.generateSignature(method, path, body, timestamp, nonce)
 
       // 使用安全的字符串比较
-      const isValid = crypto.timingSafeEqual(
-        Buffer.from(expectedSignature, 'hex'),
-        Buffer.from(providedSignature, 'hex')
-      )
+      const expectedBuffer = new Uint8Array(Buffer.from(expectedSignature, 'hex'))
+      const providedBuffer = new Uint8Array(Buffer.from(providedSignature, 'hex'))
+      const isValid = crypto.timingSafeEqual(expectedBuffer, providedBuffer)
 
       if (!isValid) {
         return {

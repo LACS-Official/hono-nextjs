@@ -6,18 +6,19 @@
 import { SignJWT, jwtVerify } from 'jose'
 
 // JWT 载荷接口
-export interface JWTPayload {
+export interface CustomJWTPayload {
   appId: string
   appSecret: string
   userDeviceFingerprint?: string
   iat: number
   exp: number
+  [key: string]: any // 添加索引签名以兼容 jose 库
 }
 
 // JWT 验证结果接口
 export interface JWTVerifyResult {
   valid: boolean
-  payload?: JWTPayload
+  payload?: CustomJWTPayload
   error?: string
 }
 
@@ -54,7 +55,7 @@ export class JWTUtils {
       const now = Math.floor(Date.now() / 1000)
       const exp = now + (expirationHours * 60 * 60)
 
-      const payload: JWTPayload = {
+      const payload: CustomJWTPayload = {
         appId,
         appSecret,
         userDeviceFingerprint,
@@ -103,7 +104,7 @@ export class JWTUtils {
 
       return {
         valid: true,
-        payload: payload as JWTPayload
+        payload: payload as CustomJWTPayload
       }
     } catch (error) {
       console.error('JWT verification error:', error)

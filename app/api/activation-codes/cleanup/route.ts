@@ -1,7 +1,6 @@
 // 清理过期激活码接口
 import { NextRequest, NextResponse } from 'next/server'
-import { activationCodesDb as db } from '@/lib/activation-codes-db-connection'
-import { activationCodes } from '@/lib/activation-codes-schema'
+import { unifiedDb as db, activationCodes } from '@/lib/unified-db-connection'
 import { and, eq, lt } from 'drizzle-orm'
 
 export async function POST(request: NextRequest) {

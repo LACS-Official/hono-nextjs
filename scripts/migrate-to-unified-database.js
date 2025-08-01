@@ -190,7 +190,7 @@ async function migrateTable(sourceSql, targetSql, tableName, columns) {
     }
     
     // 获取源数据
-    const sourceData = await sourceSql`SELECT * FROM ${sourceSql(tableName)}`
+    const sourceData = await sourceSql.query(`SELECT * FROM ${tableName}`)
     
     if (sourceData.length === 0) {
       console.log(`⚠️ 表 ${tableName} 无数据，跳过`)
@@ -212,19 +212,26 @@ async function migrateTable(sourceSql, targetSql, tableName, columns) {
       const batch = sourceData.slice(i, i + CONFIG.batchSize)
       
       try {
-        // 构建插入语句
-        const columnNames = columns.join(', ')
-        const placeholders = batch.map((_, index) => 
-          `(${columns.map((_, colIndex) => `$${index * columns.length + colIndex + 1}`).join(', ')})`
-        ).join(', ')
-        
-        const values = batch.flatMap(row => columns.map(col => row[col]))
-        
-        await targetSql`
-          INSERT INTO ${targetSql(tableName)} (${targetSql.unsafe(columnNames)})
-          VALUES ${targetSql.unsafe(placeholders)}
-          ON CONFLICT DO NOTHING
-        `.execute(values)
+        // 使用Drizzle风格的批量插入
+        for (const row of batch) {
+          try {
+            const insertData = {}
+            columns.forEach(col => {
+              if (row[col] !== undefined) {
+                insertData[col] = row[col]
+              }
+            })
+
+            await targetSql.query(
+              `INSERT INTO ${tableName} (${columns.join(', ')})
+               VALUES (${columns.map((_, i) => `$${i + 1}`).join(', ')})
+               ON CONFLICT DO NOTHING`,
+              columns.map(col => row[col])
+            )
+          } catch (insertError) {
+            console.error(`    ⚠️ 插入记录失败:`, insertError.message)
+          }
+        }
         
         migrated += batch.length
         console.log(`  ✅ 批次 ${Math.floor(i / CONFIG.batchSize) + 1}: ${batch.length} 条记录`)

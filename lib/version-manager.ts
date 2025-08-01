@@ -3,8 +3,7 @@
  * 自动化版本检测和管理功能
  */
 
-import { softwareDb as db } from '@/lib/software-db-connection'
-import { software, softwareVersionHistory } from '@/lib/software-schema'
+import { unifiedDb as db, software, softwareVersionHistory } from '@/lib/unified-db-connection'
 import { eq, desc, and } from 'drizzle-orm'
 
 /**

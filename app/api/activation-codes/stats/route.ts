@@ -1,7 +1,6 @@
 // 统计信息接口
 import { NextRequest } from 'next/server'
-import { activationCodesDb as db } from '@/lib/activation-codes-db-connection'
-import { activationCodes } from '@/lib/activation-codes-schema'
+import { unifiedDb as db, activationCodes } from '@/lib/unified-db-connection'
 import { eq, and, lt, gt, count } from 'drizzle-orm'
 import { corsResponse, handleOptions } from '@/lib/cors'
 

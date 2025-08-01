@@ -1,7 +1,6 @@
 // 单个激活码操作接口
 import { NextRequest, NextResponse } from 'next/server'
-import { activationCodesDb as db } from '@/lib/activation-codes-db-connection'
-import { activationCodes } from '@/lib/activation-codes-schema'
+import { unifiedDb as db, activationCodes } from '@/lib/unified-db-connection'
 import { eq } from 'drizzle-orm'
 
 // GET - 获取单个激活码详情

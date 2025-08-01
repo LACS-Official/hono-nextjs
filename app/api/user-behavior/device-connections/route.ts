@@ -5,8 +5,7 @@
  */
 
 import { NextRequest } from 'next/server'
-import { userBehaviorDb } from '@/lib/user-behavior-db-connection'
-import { deviceConnections } from '@/lib/user-behavior-schema'
+import { unifiedDb as userBehaviorDb, deviceConnections } from '@/lib/unified-db-connection'
 import { eq, count, desc, and, gte, lte, sql } from 'drizzle-orm'
 import { corsResponse, handleOptions } from '@/lib/cors'
 import { z } from 'zod'
@@ -158,7 +157,7 @@ export async function GET(request: NextRequest) {
         deviceSerial: deviceConnections.deviceSerial,
         deviceBrand: deviceConnections.deviceBrand,
         deviceModel: deviceConnections.deviceModel,
-        softwareVersion: deviceConnections.softwareVersion,
+        softwareId: deviceConnections.softwareId,
         createdAt: deviceConnections.createdAt,
       })
       .from(deviceConnections)

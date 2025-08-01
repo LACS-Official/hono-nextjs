@@ -5,6 +5,8 @@
 
 import { drizzle } from 'drizzle-orm/neon-http'
 import { neon } from '@neondatabase/serverless'
+import { sql } from 'drizzle-orm'
+import { lt } from 'drizzle-orm'
 
 // 导入所有数据库模式
 import * as activationCodesSchema from './activation-codes-schema'
@@ -29,21 +31,20 @@ if (!connectionString) {
 }
 
 // 创建统一数据库连接
-const sql = neon(connectionString)
-export const unifiedDb = drizzle(sql, { schema: unifiedSchema })
+const neonSql = neon(connectionString)
+export const unifiedDb = drizzle(neonSql, { schema: unifiedSchema })
 
 // 导出具体的表引用 (向后兼容)
 export const {
   // 激活码相关表
   activationCodes,
-  refreshTokens,
-  
+
   // 软件管理相关表
   software,
   softwareVersionHistory,
   softwareAnnouncements,
   downloadStats,
-  
+
   // 用户行为相关表
   softwareActivations,
   deviceConnections,
@@ -53,7 +54,7 @@ export const {
 // 数据库健康检查函数
 export async function checkUnifiedDbHealth(): Promise<boolean> {
   try {
-    await sql`SELECT 1`
+    await neonSql`SELECT 1`
     return true
   } catch (error) {
     console.error('Unified database health check failed:', error)
@@ -95,7 +96,7 @@ export const dbConfig = {
 
 // 事务辅助函数
 export async function withTransaction<T>(
-  callback: (tx: typeof unifiedDb) => Promise<T>
+  callback: (tx: any) => Promise<T>
 ): Promise<T> {
   return await unifiedDb.transaction(callback)
 }
@@ -106,14 +107,16 @@ export async function batchInsert<T extends Record<string, any>>(
   data: T[],
   batchSize: number = 100
 ) {
-  const results = []
-  
+  const results: any[] = []
+
   for (let i = 0; i < data.length; i += batchSize) {
     const batch = data.slice(i, i + batchSize)
     const result = await unifiedDb.insert(table).values(batch).returning()
-    results.push(...result)
+    if (Array.isArray(result)) {
+      results.push(...result)
+    }
   }
-  
+
   return results
 }
 
@@ -121,12 +124,12 @@ export async function batchInsert<T extends Record<string, any>>(
 export async function checkMigrationStatus() {
   try {
     // 检查所有必要的表是否存在
-    const tables = await sql`
-      SELECT table_name 
-      FROM information_schema.tables 
-      WHERE table_schema = 'public' 
+    const tables = await neonSql`
+      SELECT table_name
+      FROM information_schema.tables
+      WHERE table_schema = 'public'
       AND table_name IN (
-        'activation_codes', 'refresh_tokens',
+        'activation_codes',
         'software', 'software_version_history', 'software_announcements', 'download_stats',
         'software_activations', 'device_connections', 'behavior_stats'
       )
@@ -134,7 +137,7 @@ export async function checkMigrationStatus() {
     `
     
     const expectedTables = [
-      'activation_codes', 'refresh_tokens',
+      'activation_codes',
       'software', 'software_version_history', 'software_announcements', 'download_stats',
       'software_activations', 'device_connections', 'behavior_stats'
     ]
@@ -155,7 +158,7 @@ export async function checkMigrationStatus() {
       existingTables: [],
       missingTables: [],
       totalTables: 0,
-      error: error.message
+      error: error instanceof Error ? error.message : 'Unknown error'
     }
   }
 }
@@ -171,16 +174,19 @@ export async function cleanupDatabase(options: {
   const results = {
     expiredCodes: 0,
     oldStats: 0,
-    errors: []
+    errors: [] as string[]
   }
   
   try {
     if (cleanExpiredCodes) {
+      const cutoffDate = new Date()
+      cutoffDate.setDate(cutoffDate.getDate() - daysOld)
+
       const expiredResult = await unifiedDb
         .delete(activationCodes)
-        .where(sql`expires_at < NOW() - INTERVAL '${daysOld} days'`)
+        .where(lt(activationCodes.expiresAt, cutoffDate))
         .returning()
-      
+
       results.expiredCodes = expiredResult.length
     }
     
@@ -193,7 +199,7 @@ export async function cleanupDatabase(options: {
       results.oldStats = oldStatsResult.length
     }
   } catch (error) {
-    results.errors.push(error.message)
+    results.errors.push(error instanceof Error ? error.message : 'Unknown error')
   }
   
   return results

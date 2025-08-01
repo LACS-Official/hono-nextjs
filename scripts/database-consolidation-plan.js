@@ -77,18 +77,18 @@ async function analyzeCurrentDatabases() {
         
         // 获取记录数
         const countResult = await sql`
-          SELECT COUNT(*) as count 
+          SELECT COUNT(*) as count
           FROM ${sql(tableName)}
         `
         const recordCount = parseInt(countResult[0].count)
-        
+
         // 获取表大小
         const sizeResult = await sql`
-          SELECT 
-            pg_size_pretty(pg_total_relation_size('${tableName}')) as size,
-            pg_total_relation_size('${tableName}') as size_bytes
-          FROM information_schema.tables 
-          WHERE table_name = '${tableName}'
+          SELECT
+            pg_size_pretty(pg_total_relation_size(${tableName})) as size,
+            pg_total_relation_size(${tableName}) as size_bytes
+          FROM information_schema.tables
+          WHERE table_name = ${tableName}
         `
         
         const tableInfo = {

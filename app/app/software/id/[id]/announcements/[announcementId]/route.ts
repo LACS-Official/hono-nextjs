@@ -1,6 +1,5 @@
 import { NextRequest } from 'next/server'
-import { softwareDb as db } from '@/lib/software-db-connection'
-import { software, softwareAnnouncements } from '@/lib/software-schema'
+import { unifiedDb as db, software, softwareAnnouncements } from '@/lib/unified-db-connection'
 import { eq, and } from 'drizzle-orm'
 import { corsResponse, handleOptions, validateApiKeyWithExpiration } from '@/lib/cors'
 

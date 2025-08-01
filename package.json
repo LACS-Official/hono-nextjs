@@ -7,9 +7,7 @@
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "db:user-behavior:generate": "drizzle-kit generate --config=drizzle.user-behavior.config.ts",
-    "db:user-behavior:push": "drizzle-kit push --config=drizzle.user-behavior.config.ts",
-    "db:user-behavior:studio": "drizzle-kit studio --config=drizzle.user-behavior.config.ts",
+
     "migrate:device-connections": "node scripts/migrate-device-connections-simplify.js",
     "migrate:unified": "node scripts/migrate-to-unified-database.js",
     "migrate:unified:dry-run": "node scripts/migrate-to-unified-database.js --dry-run",

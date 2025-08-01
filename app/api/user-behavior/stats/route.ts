@@ -4,8 +4,7 @@
  */
 
 import { NextRequest } from 'next/server'
-import { userBehaviorDb } from '@/lib/user-behavior-db-connection'
-import { softwareActivations, deviceConnections } from '@/lib/user-behavior-schema'
+import { unifiedDb as userBehaviorDb, softwareActivations, deviceConnections } from '@/lib/unified-db-connection'
 import { eq, count, desc, and, gte, lte, sql } from 'drizzle-orm'
 import { corsResponse, handleOptions } from '@/lib/cors'
 

@@ -125,8 +125,13 @@ export type ActivationCodeStatus = 'all' | 'used' | 'unused' | 'expired' | 'acti
 export class ActivationCodeApiClient {
   private baseUrl: string
 
-  constructor(baseUrl = 'https://api-g.lacs.cc/api') {
-    this.baseUrl = baseUrl.replace(/\/$/, '') // 移除末尾斜杠
+  constructor(baseUrl?: string) {
+    // 优先使用传入的baseUrl，然后是环境变量，最后是默认值
+    const defaultUrl = typeof window !== 'undefined'
+      ? `${window.location.origin}/api`  // 浏览器环境使用当前域名
+      : process.env.NEXT_PUBLIC_API_URL?.replace('/app', '/api') || 'http://localhost:3000/api'
+
+    this.baseUrl = (baseUrl || defaultUrl).replace(/\/$/, '') // 移除末尾斜杠
   }
 
   private getHeaders(): HeadersInit {
@@ -337,8 +342,8 @@ export class ActivationCodeApiClient {
   }
 }
 
-// 创建全局实例
-export const activationCodeApi = new ActivationCodeApiClient('https://api-g.lacs.cc/api')
+// 创建全局实例 - 使用动态URL配置
+export const activationCodeApi = new ActivationCodeApiClient()
 
 // 工具函数：格式化激活码状态
 export function getActivationCodeStatusText(code: ActivationCode): string {

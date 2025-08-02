@@ -7,7 +7,9 @@ export const dynamic = 'force-dynamic'
 
 // 处理 OPTIONS 请求
 export async function OPTIONS(request: NextRequest) {
-  return handleOptions(request)
+  const origin = request.headers.get('origin')
+  const userAgent = request.headers.get('user-agent')
+  return handleOptions(origin, userAgent)
 }
 
 // 处理 POST 请求 - 验证激活码

@@ -56,6 +56,8 @@ interface SoftwareFormData {
     graphics?: string
     other?: string
   }
+  openname?: string
+  filetype?: string
   isActive: boolean
   sortOrder: number
   metadata?: any

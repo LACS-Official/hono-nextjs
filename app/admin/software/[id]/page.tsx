@@ -293,6 +293,16 @@ export default function SoftwareDetail() {
                         <Descriptions.Item label="当前版本" span={1}>
                           <Tag color="green">{software.currentVersion}</Tag>
                         </Descriptions.Item>
+                        <Descriptions.Item label="启动文件" span={1}>
+                          {software.openname ? (
+                            <Tag color="blue">{software.openname}</Tag>
+                          ) : '-'}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="文件类型" span={1}>
+                          {software.filetype ? (
+                            <Tag color="orange">{software.filetype}</Tag>
+                          ) : '-'}
+                        </Descriptions.Item>
                         <Descriptions.Item label="最新版本" span={1}>
                           {software.latestVersion ? (
                             <Tag color="blue">{software.latestVersion}</Tag>

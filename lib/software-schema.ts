@@ -14,6 +14,8 @@ export const software = pgTable('software', {
   category: varchar('category', { length: 100 }), // 软件分类
   tags: jsonb('tags'), // 标签数组
   systemRequirements: jsonb('system_requirements'), // 系统要求
+  openname: varchar('openname', { length: 255 }), // 软件启动文件名或命令（可选）
+  filetype: varchar('filetype', { length: 50 }), // 软件包文件格式类型（可选）
   isActive: boolean('is_active').default(true).notNull(), // 是否启用
   sortOrder: integer('sort_order').default(0), // 排序顺序
   metadata: jsonb('metadata'), // 额外元数据

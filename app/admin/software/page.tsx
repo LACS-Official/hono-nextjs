@@ -62,6 +62,8 @@ interface Software {
   category?: string
   tags?: string[]
   systemRequirements?: any
+  openname?: string
+  filetype?: string
   isActive: boolean
   sortOrder: number
   metadata?: any
@@ -335,6 +337,30 @@ export default function SoftwareManagement() {
         ) : (
           <Text type="secondary">未分类</Text>
         )
+      )
+    },
+    {
+      title: '文件信息',
+      key: 'fileInfo',
+      width: 150,
+      render: (_, record: Software) => (
+        <div>
+          {record.openname && (
+            <div style={{ marginBottom: 4 }}>
+              <Text strong style={{ fontSize: '12px' }}>启动: </Text>
+              <Tag color="blue" style={{ fontSize: '11px' }}>{record.openname}</Tag>
+            </div>
+          )}
+          {record.filetype && (
+            <div>
+              <Text strong style={{ fontSize: '12px' }}>类型: </Text>
+              <Tag color="orange" style={{ fontSize: '11px' }}>{record.filetype}</Tag>
+            </div>
+          )}
+          {!record.openname && !record.filetype && (
+            <Text type="secondary" style={{ fontSize: '12px' }}>暂无信息</Text>
+          )}
+        </div>
       )
     },
     {

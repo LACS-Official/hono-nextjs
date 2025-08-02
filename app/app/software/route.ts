@@ -191,6 +191,8 @@ export async function POST(request: NextRequest) {
       category,
       tags,
       systemRequirements,
+      openname,
+      filetype,
       isActive = true,
       sortOrder = 0,
       metadata = {}
@@ -231,6 +233,8 @@ export async function POST(request: NextRequest) {
         category,
         tags,
         systemRequirements,
+        openname,
+        filetype,
         isActive,
         sortOrder,
         metadata

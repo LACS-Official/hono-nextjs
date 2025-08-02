@@ -30,6 +30,8 @@ export interface Software {
     graphics?: string
     other?: string
   }
+  openname?: string // 软件启动文件名或命令
+  filetype?: string // 软件包文件格式类型
   isActive: boolean
   sortOrder: number
   metadata?: any
@@ -100,6 +102,8 @@ export interface CreateSoftwareRequest {
   category?: string
   tags?: string[]
   systemRequirements?: any
+  openname?: string // 软件启动文件名或命令
+  filetype?: string // 软件包文件格式类型
   isActive?: boolean
   sortOrder?: number
   metadata?: any

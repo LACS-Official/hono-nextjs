@@ -66,6 +66,8 @@ async function createUnifiedSchema(targetSql) {
         category varchar(100),
         tags jsonb,
         system_requirements jsonb,
+        openname varchar(255),
+        filetype varchar(50),
         is_active boolean DEFAULT true NOT NULL,
         sort_order integer DEFAULT 0,
         metadata jsonb,
@@ -306,9 +308,9 @@ async function runMigration() {
       // 软件表
       const softwareResult = await migrateTable(
         softwareSql, targetSql, 'software',
-        ['id', 'name', 'name_en', 'description', 'description_en', 'current_version', 
-         'official_website', 'category', 'tags', 'system_requirements', 'is_active', 
-         'sort_order', 'metadata', 'created_at', 'updated_at']
+        ['id', 'name', 'name_en', 'description', 'description_en', 'current_version',
+         'official_website', 'category', 'tags', 'system_requirements', 'openname', 'filetype',
+         'is_active', 'sort_order', 'metadata', 'created_at', 'updated_at']
       )
       results.tables.software = softwareResult
       results.totalMigrated += softwareResult.migrated

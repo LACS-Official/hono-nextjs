@@ -109,17 +109,24 @@ export async function POST(request: NextRequest) {
       throw new Error('Failed to create activation code')
     }
 
-    // 构建返回数据，包含激活码真实过期时间信息（中国时区）
+    // 检查激活码是否已过期
+    const currentTime = TimeUtils.nowInChina()
+    const isExpired = currentTime > newCode.expiresAt
+
+    // 构建返回数据，符合API文档格式
     const responseData: any = {
       id: newCode.id,
       code: newCode.code,
       createdAt: TimeUtils.toChineseTime(newCode.createdAt),
       expiresAt: TimeUtils.toChineseTime(newCode.expiresAt),
-      productInfo: newCode.productInfo
+      isUsed: newCode.isUsed || false,
+      usedAt: newCode.usedAt ? TimeUtils.toChineseTime(newCode.usedAt) : null,
+      isExpired: isExpired,
+      productInfo: newCode.productInfo,
+      metadata: newCode.metadata
     }
 
     // 计算激活码的剩余有效时间（基于中国时区）
-    const currentTime = TimeUtils.nowInChina()
     const remainingTime = Math.max(0, Math.floor((newCode.expiresAt.getTime() - currentTime.getTime()) / 1000))
     const remainingDays = Math.floor(remainingTime / (24 * 60 * 60))
     const remainingHours = Math.floor((remainingTime % (24 * 60 * 60)) / 3600)

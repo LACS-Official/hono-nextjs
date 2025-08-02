@@ -78,7 +78,17 @@ export async function POST(request: NextRequest) {
       return corsResponse({
         success: false,
         error: '激活码已被使用',
-        usedAt: activationCode.usedAt
+        data: {
+          id: activationCode.id,
+          code: activationCode.code,
+          createdAt: activationCode.createdAt.toISOString(),
+          expiresAt: activationCode.expiresAt.toISOString(),
+          isUsed: true,
+          usedAt: activationCode.usedAt?.toISOString(),
+          isExpired: false,
+          productInfo: activationCode.productInfo,
+          metadata: activationCode.metadata
+        }
       }, { status: 400 }, origin, userAgent)
     }
 
@@ -88,7 +98,17 @@ export async function POST(request: NextRequest) {
       return corsResponse({
         success: false,
         error: '激活码已过期',
-        expiresAt: activationCode.expiresAt
+        data: {
+          id: activationCode.id,
+          code: activationCode.code,
+          createdAt: activationCode.createdAt.toISOString(),
+          expiresAt: activationCode.expiresAt.toISOString(),
+          isUsed: activationCode.isUsed,
+          usedAt: activationCode.usedAt?.toISOString(),
+          isExpired: true,
+          productInfo: activationCode.productInfo,
+          metadata: activationCode.metadata
+        }
       }, { status: 400 }, origin, userAgent)
     }
 
@@ -106,13 +126,20 @@ export async function POST(request: NextRequest) {
       throw new Error('Failed to update activation code')
     }
 
-    // 构建返回数据，包含激活码真实过期时间信息（中国时区）
+    // 检查激活码是否已过期（基于真实过期时间）
+    const isExpired = now > activationCode.expiresAt
+
+    // 构建返回数据，符合API文档格式（使用UTC时间格式供Rust解析）
     const responseData: any = {
       id: updatedCode.id,
       code: updatedCode.code,
+      createdAt: activationCode.createdAt.toISOString(),
+      expiresAt: activationCode.expiresAt.toISOString(),
+      isUsed: updatedCode.isUsed,
+      usedAt: updatedCode.usedAt!.toISOString(),
+      isExpired: isExpired,
       productInfo: updatedCode.productInfo,
-      metadata: updatedCode.metadata,
-      activatedAt: TimeUtils.toChineseTime(updatedCode.usedAt!)
+      metadata: updatedCode.metadata
     }
 
     // 计算激活码的剩余有效时间（基于激活码的真实过期时间）
@@ -121,9 +148,9 @@ export async function POST(request: NextRequest) {
     const remainingHours = Math.floor((remainingTime % (24 * 60 * 60)) / 3600)
     const remainingMinutes = Math.floor((remainingTime % 3600) / 60)
 
-    // 添加激活码验证过期时间信息（使用激活码的真实过期时间，中国时区）
+    // 添加激活码验证过期时间信息（使用激活码的真实过期时间，UTC格式）
     responseData.apiValidation = {
-      expiresAt: TimeUtils.toChineseTime(activationCode.expiresAt),
+      expiresAt: activationCode.expiresAt.toISOString(),
       remainingTime: remainingTime,
       message: remainingTime > 0
         ? `激活码原本将在 ${remainingDays} 天 ${remainingHours} 小时 ${remainingMinutes} 分钟后过期（现已激活）`

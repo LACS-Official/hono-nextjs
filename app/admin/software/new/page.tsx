@@ -265,6 +265,63 @@ export default function SoftwareNew() {
                 <Row gutter={16}>
                   <Col xs={24} md={12}>
                     <Form.Item
+                      label={
+                        <Space>
+                          启动文件名
+                          <Tooltip title="软件的启动文件名或命令，例如：bypass/bypass.cmd, main.exe, start.sh">
+                            <QuestionCircleOutlined />
+                          </Tooltip>
+                        </Space>
+                      }
+                      name="openname"
+                      rules={[
+                        { max: 255, message: '启动文件名不能超过255个字符' }
+                      ]}
+                    >
+                      <Input placeholder="例如：bypass/bypass.cmd" />
+                    </Form.Item>
+                  </Col>
+                  <Col xs={24} md={12}>
+                    <Form.Item
+                      label={
+                        <Space>
+                          文件类型
+                          <Tooltip title="软件包的文件格式类型，例如：7z, zip, apk, exe, dmg">
+                            <QuestionCircleOutlined />
+                          </Tooltip>
+                        </Space>
+                      }
+                      name="filetype"
+                      rules={[
+                        { max: 50, message: '文件类型不能超过50个字符' }
+                      ]}
+                    >
+                      <Select
+                        placeholder="请选择或输入文件类型"
+                        mode="tags"
+                        maxCount={1}
+                        options={[
+                          { value: '7z', label: '7z' },
+                          { value: 'zip', label: 'zip' },
+                          { value: 'rar', label: 'rar' },
+                          { value: 'exe', label: 'exe' },
+                          { value: 'msi', label: 'msi' },
+                          { value: 'dmg', label: 'dmg' },
+                          { value: 'pkg', label: 'pkg' },
+                          { value: 'deb', label: 'deb' },
+                          { value: 'rpm', label: 'rpm' },
+                          { value: 'apk', label: 'apk' },
+                          { value: 'tar.gz', label: 'tar.gz' },
+                          { value: 'tar.xz', label: 'tar.xz' }
+                        ]}
+                      />
+                    </Form.Item>
+                  </Col>
+                </Row>
+
+                <Row gutter={16}>
+                  <Col xs={24} md={12}>
+                    <Form.Item
                       label="官方网站"
                       name="officialWebsite"
                       rules={[

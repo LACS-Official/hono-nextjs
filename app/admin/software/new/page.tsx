@@ -1,18 +1,19 @@
 'use client'
 
 import React, { useState } from 'react'
-import { 
-  Form, 
-  Input, 
-  Button, 
-  Card, 
-  message, 
-  Layout, 
-  Typography, 
-  Row, 
-  Col, 
-  Select, 
-  Switch, 
+import {
+  Form,
+  Input,
+  Button,
+  Card,
+  message,
+  Layout,
+  Typography,
+  Row,
+  Col,
+  Select,
+  AutoComplete,
+  Switch,
   InputNumber,
   Breadcrumb,
   Space,
@@ -298,10 +299,9 @@ export default function SoftwareNew() {
                         { max: 50, message: '文件类型不能超过50个字符' }
                       ]}
                     >
-                      <Select
+                      <AutoComplete
                         placeholder="请选择或输入文件类型"
-                        mode="tags"
-                        maxCount={1}
+                        allowClear
                         options={[
                           { value: '7z', label: '7z' },
                           { value: 'zip', label: 'zip' },
@@ -316,6 +316,9 @@ export default function SoftwareNew() {
                           { value: 'tar.gz', label: 'tar.gz' },
                           { value: 'tar.xz', label: 'tar.xz' }
                         ]}
+                        filterOption={(inputValue, option) =>
+                          option!.value.toUpperCase().indexOf(inputValue.toUpperCase()) !== -1
+                        }
                       />
                     </Form.Item>
                   </Col>

@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 import { unifiedDb as db, software } from '@/lib/unified-db-connection'
 import { eq } from 'drizzle-orm'
 import { corsResponse, handleOptions, validateApiKeyWithExpiration } from '@/lib/cors'
-import { getLatestVersionWithId } from '@/lib/version-manager'
+import { getLatestVersionWithId, getLatestVersionWithDownloadUrl } from '@/lib/version-manager'
 
 // OPTIONS 处理
 export async function OPTIONS(request: NextRequest) {
@@ -51,20 +51,23 @@ export async function GET(
       }, { status: 404 }, origin, userAgent)
     }
 
-    // 获取最新版本ID
+    // 获取最新版本ID和下载链接
     let currentVersionId = null
+    let latestDownloadUrl = null
     try {
-      const latestVersionInfo = await getLatestVersionWithId(softwareId)
+      const latestVersionInfo = await getLatestVersionWithDownloadUrl(softwareId)
       currentVersionId = latestVersionInfo?.id || null
+      latestDownloadUrl = latestVersionInfo?.downloadUrl || null
     } catch (error) {
-      console.warn(`获取软件 ${softwareId} 最新版本ID失败:`, error)
+      console.warn(`获取软件 ${softwareId} 最新版本信息失败:`, error)
     }
 
     return corsResponse({
       success: true,
       data: {
         ...softwareInfo,
-        currentVersionId
+        currentVersionId,
+        latestDownloadUrl
       }
     }, undefined, origin, userAgent)
     

@@ -93,6 +93,61 @@ export async function getLatestVersionWithId(softwareId: number): Promise<{ id: 
 }
 
 /**
+ * 获取软件的最新版本完整信息（包括下载链接）
+ */
+export async function getLatestVersionWithDownloadUrl(softwareId: number): Promise<{
+  id: number;
+  version: string;
+  downloadUrl: string | null
+} | null> {
+  try {
+    const versions = await db
+      .select({
+        id: softwareVersionHistory.id,
+        version: softwareVersionHistory.version,
+        releaseDate: softwareVersionHistory.releaseDate,
+        downloadLinks: softwareVersionHistory.downloadLinks
+      })
+      .from(softwareVersionHistory)
+      .where(
+        and(
+          eq(softwareVersionHistory.softwareId, softwareId),
+          eq(softwareVersionHistory.isStable, true)
+        )
+      )
+      .orderBy(desc(softwareVersionHistory.releaseDate))
+
+    if (versions.length === 0) return null
+
+    // 按版本号排序，获取最新版本
+    const sortedVersions = versions.sort((a, b) => compareVersions(b.version, a.version))
+    const latestVersion = sortedVersions[0]
+
+    // 提取最优下载链接
+    let downloadUrl: string | null = null
+    if (latestVersion.downloadLinks) {
+      const links = latestVersion.downloadLinks as any
+      // 优先级：official > quark > pan123 > baidu > thunder > backup[0]
+      downloadUrl = links.official ||
+                   links.quark ||
+                   links.pan123 ||
+                   links.baidu ||
+                   links.thunder ||
+                   (links.backup && links.backup.length > 0 ? links.backup[0] : null)
+    }
+
+    return {
+      id: latestVersion.id,
+      version: latestVersion.version,
+      downloadUrl
+    }
+  } catch (error) {
+    console.error('获取最新版本下载链接失败:', error)
+    return null
+  }
+}
+
+/**
  * 自动更新软件的最新版本号
  */
 export async function updateLatestVersion(softwareId: number): Promise<boolean> {

@@ -110,19 +110,26 @@ export async function GET(request: NextRequest) {
     // 为每个软件添加最新版本信息和版本ID
     const enhancedSoftwareList = await Promise.all(
       softwareList.map(async (sw) => {
+        // 确保日期字段是有效的Date对象
+        const processedSoftware = {
+          ...sw,
+          createdAt: sw.createdAt instanceof Date ? sw.createdAt : new Date(sw.createdAt),
+          updatedAt: sw.updatedAt instanceof Date ? sw.updatedAt : new Date(sw.updatedAt)
+        };
+        
         try {
-          const latestVersionInfo = await getLatestVersionWithId(sw.id)
+          const latestVersionInfo = await getLatestVersionWithId(processedSoftware.id)
           return {
-            ...sw,
+            ...processedSoftware,
             currentVersionId: latestVersionInfo?.id || null,
-            latestVersion: latestVersionInfo?.version || sw.currentVersion
+            latestVersion: latestVersionInfo?.version || processedSoftware.currentVersion
           }
         } catch (error) {
-          console.warn(`获取软件 ${sw.id} 最新版本失败:`, error)
+          console.warn(`获取软件 ${processedSoftware.id} 最新版本失败:`, error)
           return {
-            ...sw,
+            ...processedSoftware,
             currentVersionId: null,
-            latestVersion: sw.currentVersion
+            latestVersion: processedSoftware.currentVersion
           }
         }
       })
@@ -237,13 +244,23 @@ export async function POST(request: NextRequest) {
         filetype,
         isActive,
         sortOrder,
-        metadata
+        metadata,
+        // 确保日期字段正确处理
+        createdAt: new Date(),
+        updatedAt: new Date()
       })
       .returning()
     
+    // 确保返回的日期字段是有效的Date对象
+    const processedNewSoftware = {
+      ...newSoftware,
+      createdAt: newSoftware.createdAt instanceof Date ? newSoftware.createdAt : new Date(newSoftware.createdAt),
+      updatedAt: newSoftware.updatedAt instanceof Date ? newSoftware.updatedAt : new Date(newSoftware.updatedAt)
+    };
+    
     return corsResponse({
       success: true,
-      data: newSoftware
+      data: processedNewSoftware
     }, { status: 201 }, origin, userAgent)
     
   } catch (error) {

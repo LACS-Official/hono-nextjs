@@ -7,7 +7,7 @@
 import { NextRequest } from 'next/server'
 import { unifiedDb as userBehaviorDb, softwareActivations } from '@/lib/unified-db-connection'
 import { eq, count, desc, and, gte, lte } from 'drizzle-orm'
-import { corsResponse, handleOptions } from '@/lib/cors'
+import { corsResponse, handleOptions, validateApiKeyWithExpiration } from '@/lib/cors'
 import { z } from 'zod'
 import { UserBehaviorSecurity } from '@/lib/user-behavior-security'
 
@@ -41,6 +41,18 @@ export async function POST(request: NextRequest) {
   const userAgent = request.headers.get('User-Agent')
 
   try {
+    // API Key 验证（带过期时间）
+    let apiKeyValidation = null
+    if (process.env.ENABLE_API_KEY_AUTH === 'true') {
+      apiKeyValidation = validateApiKeyWithExpiration(request)
+      if (!apiKeyValidation.isValid) {
+        return corsResponse({
+          success: false,
+          error: apiKeyValidation.error || 'Invalid or missing API Key'
+        }, { status: 401 }, origin, userAgent)
+      }
+    }
+
     // 安全检查
     const bodyText = await request.text()
     const securityCheck = await UserBehaviorSecurity.performSecurityCheck(request, bodyText)

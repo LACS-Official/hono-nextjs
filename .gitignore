@@ -12,6 +12,7 @@ out/
 build/
 dist/
 
+
 # Production
 /build
 
@@ -134,7 +135,6 @@ SECURITY.md
 
 # Development and testing
 /debug/
-/test/
 /tests/
 *.test.js
 *.test.ts
@@ -145,3 +145,4 @@ SECURITY.md
 docs/
 tests/
 .augment/
+script/

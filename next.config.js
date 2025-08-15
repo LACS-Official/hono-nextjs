@@ -118,11 +118,8 @@ const nextConfig = {
   // 重定向配置
   async redirects() {
     return [
-      {
-        source: '/admin',
-        destination: '/admin/activation-codes',
-        permanent: false,
-      },
+      // 移除了 /admin 到 /admin/activation-codes 的重定向
+      // 现在 /admin 将显示仪表板页面
     ]
   },
 }

@@ -216,7 +216,7 @@ async function getActivationCodeActivities(startDate: Date, limit: number): Prom
             activationCodeId: code.id,
             codePreview: code.code.substring(0, 8) + '...',
             expiresAt: code.expiresAt.toISOString(),
-            customerInfo: code.metadata?.customerEmail || '未指定'
+            customerInfo: (code.metadata as any)?.customerEmail || '未指定'
           }
         })
       }
@@ -232,7 +232,7 @@ async function getActivationCodeActivities(startDate: Date, limit: number): Prom
           metadata: {
             activationCodeId: code.id,
             codePreview: code.code.substring(0, 8) + '...',
-            customerInfo: code.metadata?.customerEmail || '未指定'
+            customerInfo: (code.metadata as any)?.customerEmail || '未指定'
           }
         })
       }
@@ -255,7 +255,7 @@ async function getUserActivationActivities(startDate: Date, limit: number): Prom
         softwareVersion: softwareActivations.softwareVersion,
         deviceFingerprint: softwareActivations.deviceFingerprint,
         activatedAt: softwareActivations.activatedAt,
-        metadata: softwareActivations.metadata
+        deviceOs: softwareActivations.deviceOs
       })
       .from(softwareActivations)
       .where(gte(softwareActivations.activatedAt, startDate))
@@ -272,7 +272,7 @@ async function getUserActivationActivities(startDate: Date, limit: number): Prom
         softwareName: activation.softwareName,
         softwareVersion: activation.softwareVersion,
         deviceInfo: activation.deviceFingerprint?.substring(0, 8) + '...' || '未知设备',
-        platform: activation.metadata?.platform || '未知平台'
+        platform: activation.deviceOs || '未知平台'
       }
     }))
 

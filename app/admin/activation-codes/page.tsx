@@ -201,7 +201,12 @@ export default function ActivationCodesPage() {
       key: 'code',
       width: 200,
       render: (code: string) => (
-        <Text code copyable style={{ fontSize: '12px' }}>
+        <Text
+          code
+          copyable
+          className="activation-code-text"
+          title={code}
+        >
           {code}
         </Text>
       ),
@@ -211,19 +216,37 @@ export default function ActivationCodesPage() {
       title: '激活码信息',
       key: 'codeInfo',
       render: (_, record) => (
-        <div>
-          <div style={{ marginBottom: '4px' }}>
-            <Text code copyable style={{ fontSize: '12px' }}>
+        <div style={{ maxWidth: '300px' }}>
+          <div style={{ marginBottom: '8px' }}>
+            <Text
+              code
+              copyable
+              className="activation-code-text"
+              title={record.code}
+            >
               {record.code}
             </Text>
           </div>
-          <Tag color={getActivationCodeStatusColor(record)}>
-            {getActivationCodeStatusText(record)}
-          </Tag>
+          <div style={{ marginBottom: '6px' }}>
+            <Tag color={getActivationCodeStatusColor(record)}>
+              {getActivationCodeStatusText(record)}
+            </Tag>
+          </div>
           {record.productInfo && (
-            <div style={{ marginTop: '4px' }}>
-              <Text type="secondary" style={{ fontSize: '11px' }}>
+            <div style={{ marginBottom: '6px' }}>
+              <Text type="secondary" style={{ fontSize: '11px', display: 'block' }}>
                 {record.productInfo.name} v{record.productInfo.version}
+              </Text>
+            </div>
+          )}
+          {record.metadata?.customerEmail && (
+            <div>
+              <Text
+                type="secondary"
+                className="customer-email-text"
+                title={`客户: ${record.metadata.customerEmail}`}
+              >
+                客户: {record.metadata.customerEmail}
               </Text>
             </div>
           )}
@@ -247,10 +270,20 @@ export default function ActivationCodesPage() {
       key: 'product',
       width: 150,
       render: (_, record) => (
-        <div>
+        <div style={{ maxWidth: '140px' }}>
           {record.productInfo ? (
             <>
-              <div style={{ fontWeight: 500 }}>{record.productInfo.name}</div>
+              <div
+                style={{
+                  fontWeight: 500,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
+                }}
+                title={record.productInfo.name}
+              >
+                {record.productInfo.name}
+              </div>
               <Text type="secondary" style={{ fontSize: '12px' }}>
                 v{record.productInfo.version}
               </Text>
@@ -261,6 +294,33 @@ export default function ActivationCodesPage() {
         </div>
       ),
       responsive: ['lg'] as Breakpoint[],
+    },
+    {
+      title: '客户信息',
+      key: 'customer',
+      width: 180,
+      render: (_, record) => (
+        <div style={{ maxWidth: '170px' }}>
+          {record.metadata?.customerEmail ? (
+            <div>
+              <Text
+                className="customer-email-text"
+                title={record.metadata.customerEmail}
+              >
+                {record.metadata.customerEmail}
+              </Text>
+              {record.metadata?.licenseType && (
+                <Text type="secondary" style={{ fontSize: '11px', display: 'block' }}>
+                  {record.metadata.licenseType}
+                </Text>
+              )}
+            </div>
+          ) : (
+            <Text type="secondary" style={{ fontSize: '12px' }}>未设置</Text>
+          )}
+        </div>
+      ),
+      responsive: ['xl'] as Breakpoint[],
     },
     {
       title: '创建时间',
@@ -296,15 +356,34 @@ export default function ActivationCodesPage() {
       render: (_, record) => {
         const days = getDaysUntilExpiration(record.expiresAt)
         return (
-          <div>
-            <div style={{ fontSize: '11px', color: '#666' }}>
+          <div style={{ maxWidth: '120px' }}>
+            <div style={{
+              fontSize: '11px',
+              color: '#666',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
+            }}>
               创建: {formatDate(record.createdAt)}
             </div>
-            <div style={{ fontSize: '11px', color: '#666' }}>
+            <div style={{
+              fontSize: '11px',
+              color: '#666',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
+            }}>
               过期: {formatDate(record.expiresAt)}
             </div>
             {!record.isUsed && (
-              <Text type={days > 7 ? 'secondary' : 'warning'} style={{ fontSize: '10px' }}>
+              <Text
+                type={days > 7 ? 'secondary' : 'warning'}
+                style={{
+                  fontSize: '10px',
+                  display: 'block',
+                  marginTop: '2px'
+                }}
+              >
                 {days > 0 ? `${days}天后过期` : '已过期'}
               </Text>
             )}
@@ -507,14 +586,14 @@ export default function ActivationCodesPage() {
                     />
                   ) : (
                     <>
-                      <div className="responsive-table-container">
+                      <div className="responsive-table-container activation-codes-table">
                         <Table
                           columns={columns}
                           dataSource={filteredCodes}
                           rowKey="id"
                           loading={loading}
                           pagination={false}
-                          scroll={{ x: 800 }}
+                          scroll={{ x: 1200 }}
                           size="middle"
                         />
                       </div>

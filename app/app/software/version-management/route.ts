@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { corsResponse, handleOptions, validateApiKeyWithExpiration } from '@/lib/cors'
+import { corsResponse, handleOptions, validateUnifiedAuth } from '@/lib/cors'
 import { 
   updateAllLatestVersions, 
   updateLatestVersion, 
@@ -20,16 +20,21 @@ export async function POST(request: NextRequest) {
   const userAgent = request.headers.get('user-agent')
 
   try {
-    // API Key 验证
-    if (process.env.ENABLE_API_KEY_AUTH === 'true') {
-      const apiKeyValidation = validateApiKeyWithExpiration(request)
-      if (!apiKeyValidation.isValid) {
-        return corsResponse({
-          success: false,
-          error: apiKeyValidation.error || 'Invalid or missing API Key'
-        }, { status: 401 }, origin, userAgent)
-      }
+    // 统一认证验证（支持GitHub OAuth或API Key）
+    const authValidation = validateUnifiedAuth(request)
+    if (!authValidation.isValid) {
+      return corsResponse({
+        success: false,
+        error: authValidation.error || 'Authentication required for software management operations',
+        authType: authValidation.authType
+      }, { status: 401 }, origin, userAgent)
     }
+
+    // 记录操作日志
+    const logInfo = authValidation.authType === 'github-oauth'
+      ? `User: ${authValidation.user?.login} (${authValidation.user?.email})`
+      : `API Key authentication`
+    console.log(`[VERSION_MANAGEMENT] ${logInfo} - IP: ${request.headers.get('x-forwarded-for') || 'unknown'} - Time: ${new Date().toISOString()}`)
 
     const body = await request.json()
     const { action, softwareId, changeType } = body

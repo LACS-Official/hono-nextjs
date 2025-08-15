@@ -61,8 +61,8 @@ function getCorsHeaders(origin?: string | null, userAgent?: string | null) {
   return {
     'Access-Control-Allow-Origin': allowedOrigin,
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-API-Key, X-Request-ID',
-    'Access-Control-Allow-Credentials': 'false', // 禁用凭据传输以提高安全性
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-API-Key, X-Request-ID, Cookie',
+    'Access-Control-Allow-Credentials': 'true', // 启用凭据传输以支持Cookie认证
     'Access-Control-Max-Age': '86400', // 预检请求缓存24小时
     'Vary': 'Origin', // 告诉缓存根据Origin头部变化
   }
@@ -178,6 +178,148 @@ export function checkRateLimit(clientId: string, maxRequests = 100, windowMs = 6
 
   clientData.count++
   return true
+}
+
+// GitHub OAuth 验证结果接口
+export interface GitHubOAuthValidationResult {
+  isValid: boolean
+  user?: {
+    id: number
+    login: string
+    name: string
+    email: string
+    avatar_url: string
+    html_url: string
+  }
+  error?: string
+}
+
+// GitHub OAuth JWT Token 验证函数
+export function validateGitHubOAuth(request: Request): GitHubOAuthValidationResult {
+  // 导入认证函数
+  const { authenticateRequest, isAuthorizedAdmin } = require('./auth')
+
+  try {
+    // 从请求中提取并验证JWT token
+    const authResult = authenticateRequest(request)
+
+    if (!authResult.success || !authResult.user) {
+      return {
+        isValid: false,
+        error: authResult.error || 'Authentication failed'
+      }
+    }
+
+    // 检查用户是否有管理员权限
+    if (!isAuthorizedAdmin(authResult.user)) {
+      return {
+        isValid: false,
+        error: 'Insufficient permissions - admin access required'
+      }
+    }
+
+    return {
+      isValid: true,
+      user: authResult.user
+    }
+  } catch (error) {
+    console.error('GitHub OAuth validation error:', error)
+    return {
+      isValid: false,
+      error: 'OAuth validation failed'
+    }
+  }
+}
+
+// 统一认证验证函数 - 支持API Key或GitHub OAuth
+export interface UnifiedAuthValidationResult {
+  isValid: boolean
+  authType: 'api-key' | 'github-oauth' | 'none'
+  user?: {
+    id: number
+    login: string
+    name: string
+    email: string
+    avatar_url: string
+    html_url: string
+  }
+  apiKeyInfo?: {
+    expiresAt?: Date
+    remainingTime?: number
+  }
+  error?: string
+}
+
+export function validateUnifiedAuth(request: Request): UnifiedAuthValidationResult {
+  // 检查是否启用了API Key认证
+  const apiKeyEnabled = process.env.ENABLE_API_KEY_AUTH === 'true'
+
+  // 检查是否启用了GitHub OAuth认证
+  const githubOAuthEnabled = process.env.ENABLE_GITHUB_OAUTH_AUTH === 'true'
+
+  // 如果两种认证都未启用，则允许通过（开发模式）
+  if (!apiKeyEnabled && !githubOAuthEnabled) {
+    console.warn('⚠️ 未启用任何认证方式，允许所有请求通过')
+    return {
+      isValid: true,
+      authType: 'none'
+    }
+  }
+
+  // 优先尝试GitHub OAuth认证
+  if (githubOAuthEnabled) {
+    const authHeader = request.headers.get('Authorization')
+    const cookieHeader = request.headers.get('Cookie')
+
+    // 如果存在Authorization头部或认证Cookie，尝试GitHub OAuth验证
+    if (authHeader || cookieHeader) {
+      const oauthResult = validateGitHubOAuth(request)
+      if (oauthResult.isValid) {
+        return {
+          isValid: true,
+          authType: 'github-oauth',
+          user: oauthResult.user
+        }
+      }
+
+      // 如果GitHub OAuth验证失败且没有启用API Key，返回错误
+      if (!apiKeyEnabled) {
+        return {
+          isValid: false,
+          authType: 'github-oauth',
+          error: oauthResult.error
+        }
+      }
+    }
+  }
+
+  // 如果GitHub OAuth验证失败或未启用，尝试API Key验证
+  if (apiKeyEnabled) {
+    const apiKeyResult = validateApiKeyWithExpiration(request)
+    if (apiKeyResult.isValid) {
+      return {
+        isValid: true,
+        authType: 'api-key',
+        apiKeyInfo: {
+          expiresAt: apiKeyResult.expiresAt,
+          remainingTime: apiKeyResult.remainingTime
+        }
+      }
+    }
+
+    return {
+      isValid: false,
+      authType: 'api-key',
+      error: apiKeyResult.error
+    }
+  }
+
+  // 如果所有认证方式都失败
+  return {
+    isValid: false,
+    authType: 'none',
+    error: 'No valid authentication provided'
+  }
 }
 
 // 注意：Hono 相关功能已移除，因为项目已简化为纯 Next.js API

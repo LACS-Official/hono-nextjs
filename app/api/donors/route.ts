@@ -1,7 +1,7 @@
 /**
  * 捐赠人员管理API
- * POST /api/donors - 新增捐赠人员
- * GET /api/donors - 获取所有捐赠人员列表
+ * POST /api/donors - 新增捐赠人员（需要GitHub OAuth或API Key认证）
+ * GET /api/donors - 获取所有捐赠人员列表（公开访问，通过ALLOWED_ORIGINS环境变量限制）
  */
 
 import { NextRequest } from 'next/server'
@@ -82,24 +82,17 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET - 获取所有捐赠人员列表
+// GET - 获取所有捐赠人员列表（公开访问，通过CORS限制）
 export async function GET(request: NextRequest) {
   const origin = request.headers.get('Origin')
   const userAgent = request.headers.get('User-Agent')
 
   try {
-    // 统一认证验证 - 优先GitHub OAuth，其次API Key
-    const authResult = validateUnifiedAuth(request)
-    
-    if (!authResult.isValid) {
-      return corsResponse({
-        success: false,
-        error: authResult.error || '认证失败'
-      }, { status: 401 }, origin, userAgent)
-    }
-
     // 获取所有捐赠人员，按创建时间倒序排列
     const donorsList = await db.select().from(donors).orderBy(desc(donors.createdAt))
+
+    // 记录访问日志
+    console.log(`[DONORS] 获取捐赠人员列表 - Origin: ${origin || 'unknown'} - IP: ${request.headers.get('x-forwarded-for') || 'unknown'}`)
 
     return corsResponse({
       success: true,

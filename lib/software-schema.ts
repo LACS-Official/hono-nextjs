@@ -18,6 +18,7 @@ export const software = pgTable('software', {
   filetype: varchar('filetype', { length: 50 }), // 软件包文件格式类型（可选）
   isActive: boolean('is_active').default(true).notNull(), // 是否启用
   sortOrder: integer('sort_order').default(0), // 排序顺序
+  viewCount: integer('view_count').default(0).notNull(), // 访问量统计
   metadata: jsonb('metadata'), // 额外元数据
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),

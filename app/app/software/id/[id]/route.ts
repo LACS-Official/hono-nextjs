@@ -1,8 +1,9 @@
 import { NextRequest } from 'next/server'
 import { unifiedDb as db, software } from '@/lib/unified-db-connection'
-import { eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { corsResponse, handleOptions, validateUnifiedAuth } from '@/lib/cors'
 import { getLatestVersionWithId, getLatestVersionWithDownloadUrl } from '@/lib/version-manager'
+import { getClientIP, checkRateLimit, detectAnomalousPattern } from '@/lib/anti-spam'
 
 // OPTIONS 处理
 export async function OPTIONS(request: NextRequest) {
@@ -37,6 +38,30 @@ export async function GET(
       }, { status: 400 }, origin, userAgent)
     }
 
+    // 防刷机制检查
+    const clientIP = getClientIP(request)
+    const rateLimitResult = checkRateLimit(clientIP, softwareId)
+
+    if (!rateLimitResult.allowed) {
+      return corsResponse({
+        success: false,
+        error: rateLimitResult.reason || '访问频率过高',
+        retryAfter: rateLimitResult.retryAfter
+      }, {
+        status: 429,
+        headers: rateLimitResult.retryAfter ? {
+          'Retry-After': rateLimitResult.retryAfter.toString()
+        } : undefined
+      }, origin, userAgent)
+    }
+
+    // 异常模式检测
+    const anomalyResult = detectAnomalousPattern(clientIP, softwareId)
+    if (anomalyResult.isAnomalous && anomalyResult.confidence > 0.7) {
+      console.warn(`检测到异常访问模式: IP=${clientIP}, 软件ID=${softwareId}, 原因=${anomalyResult.reason}`)
+      // 对于异常模式，我们记录日志但不阻止访问，只是不增加访问量
+    }
+
     // 查询软件信息
     const [softwareInfo] = await db
       .select()
@@ -49,6 +74,35 @@ export async function GET(
         success: false,
         error: '未找到指定的软件'
       }, { status: 404 }, origin, userAgent)
+    }
+
+    // 原子性地递增访问计数（仅在非异常访问时）
+    let updatedSoftwareInfo = softwareInfo
+    const shouldIncrementViewCount = !anomalyResult.isAnomalous || anomalyResult.confidence <= 0.7
+
+    if (shouldIncrementViewCount) {
+      try {
+        // 使用原子性的 SQL 操作来递增访问计数
+        const [updated] = await db
+          .update(software)
+          .set({
+            viewCount: sql`${software.viewCount} + 1`,
+            updatedAt: new Date()
+          })
+          .where(eq(software.id, softwareId))
+          .returning()
+
+        if (updated) {
+          updatedSoftwareInfo = updated
+        }
+      } catch (error) {
+        // 访问计数更新失败不影响软件详情的返回
+        // 记录错误但继续返回软件信息
+        console.warn(`更新软件 ${softwareId} 访问计数失败:`, error)
+        // 保持原始的软件信息，只是访问计数不会增加
+      }
+    } else {
+      console.info(`跳过访问计数递增: IP=${clientIP}, 软件ID=${softwareId}, 原因=异常访问模式`)
     }
 
     // 获取最新版本ID和下载链接
@@ -65,7 +119,7 @@ export async function GET(
     return corsResponse({
       success: true,
       data: {
-        ...softwareInfo,
+        ...updatedSoftwareInfo,
         currentVersionId,
         latestDownloadUrl
       }

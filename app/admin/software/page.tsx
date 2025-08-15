@@ -37,7 +37,9 @@ import {
   HomeOutlined,
   SettingOutlined,
   CheckCircleOutlined,
-  CloseCircleOutlined
+  CloseCircleOutlined,
+  EyeInvisibleOutlined,
+  BarChartOutlined
 } from '@ant-design/icons'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -64,6 +66,7 @@ interface Software {
   systemRequirements?: any
   openname?: string
   filetype?: string
+  viewCount: number
   isActive: boolean
   sortOrder: number
   metadata?: any
@@ -75,6 +78,8 @@ interface SoftwareStats {
   total: number
   active: number
   inactive: number
+  totalViews: number
+  averageViews: number
   categories: { [key: string]: number }
 }
 
@@ -117,10 +122,13 @@ export default function SoftwareManagement() {
 
       if (data.success && data.data.software) {
         const allSoftware = data.data.software
+        const totalViews = allSoftware.reduce((sum: number, s: Software) => sum + (s.viewCount || 0), 0)
         const stats: SoftwareStats = {
           total: allSoftware.length,
           active: allSoftware.filter((s: Software) => s.isActive).length,
           inactive: allSoftware.filter((s: Software) => !s.isActive).length,
+          totalViews,
+          averageViews: allSoftware.length > 0 ? Math.round(totalViews / allSoftware.length) : 0,
           categories: {}
         }
 
@@ -388,13 +396,30 @@ export default function SoftwareManagement() {
       )
     },
     {
+      title: '访问量',
+      dataIndex: 'viewCount',
+      key: 'viewCount',
+      width: 100,
+      sorter: true,
+      render: (viewCount: number) => (
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#fa8c16' }}>
+            {viewCount || 0}
+          </div>
+          <div style={{ fontSize: '12px', color: '#666' }}>
+            <EyeOutlined /> 次访问
+          </div>
+        </div>
+      )
+    },
+    {
       title: '状态',
       dataIndex: 'isActive',
       key: 'isActive',
       width: 100,
       render: (isActive: boolean) => (
-        <Badge 
-          status={isActive ? 'success' : 'error'} 
+        <Badge
+          status={isActive ? 'success' : 'error'}
           text={isActive ? '启用' : '禁用'}
         />
       )
@@ -485,7 +510,7 @@ export default function SoftwareManagement() {
         {/* 统计卡片 */}
         {stats && (
           <Row gutter={16} style={{ marginBottom: '24px' }}>
-            <Col xs={24} sm={12} md={6}>
+            <Col xs={24} sm={12} lg={6}>
               <Card>
                 <Statistic
                   title="软件总数"
@@ -495,7 +520,7 @@ export default function SoftwareManagement() {
                 />
               </Card>
             </Col>
-            <Col xs={24} sm={12} md={6}>
+            <Col xs={24} sm={12} lg={6}>
               <Card>
                 <Statistic
                   title="启用软件"
@@ -505,22 +530,22 @@ export default function SoftwareManagement() {
                 />
               </Card>
             </Col>
-            <Col xs={24} sm={12} md={6}>
+            <Col xs={24} sm={12} lg={6}>
               <Card>
                 <Statistic
-                  title="禁用软件"
-                  value={stats.inactive}
-                  prefix={<CloseCircleOutlined />}
-                  valueStyle={{ color: '#ff4d4f' }}
+                  title="总访问量"
+                  value={stats.totalViews}
+                  prefix={<EyeOutlined />}
+                  valueStyle={{ color: '#fa8c16' }}
                 />
               </Card>
             </Col>
-            <Col xs={24} sm={12} md={6}>
+            <Col xs={24} sm={12} lg={6}>
               <Card>
                 <Statistic
-                  title="分类数量"
-                  value={Object.keys(stats.categories).length}
-                  prefix={<FilterOutlined />}
+                  title="平均访问量"
+                  value={stats.averageViews}
+                  prefix={<BarChartOutlined />}
                   valueStyle={{ color: '#722ed1' }}
                 />
               </Card>

@@ -28,7 +28,8 @@ import {
   GlobalOutlined,
   SettingOutlined,
   PictureOutlined,
-  UserOutlined
+  UserOutlined,
+  NotificationOutlined
 } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import PageContainer from '@/components/PageContainer'
@@ -109,11 +110,7 @@ export default function WebsitesPage() {
   // 处理编辑
   const handleEdit = (website: Website) => {
     setEditingWebsite(website)
-    form.setFieldsValue({
-      ...website,
-      themeColor: website.config?.theme?.primaryColor || '#1890ff',
-      seoKeywords: website.config?.seo?.keywords?.join(', ') || '',
-    })
+    form.setFieldsValue(website)
     setModalVisible(true)
   }
 
@@ -141,15 +138,9 @@ export default function WebsitesPage() {
   const handleSubmit = async (values: any) => {
     try {
       const submitData = {
-        ...values,
-        config: {
-          theme: {
-            primaryColor: values.themeColor
-          },
-          seo: {
-            keywords: values.seoKeywords ? values.seoKeywords.split(',').map((k: string) => k.trim()) : []
-          }
-        }
+        name: values.name,
+        domain: values.domain,
+        isActive: values.isActive
       }
 
       let response
@@ -201,11 +192,6 @@ export default function WebsitesPage() {
           <div style={{ fontSize: '12px', color: '#666' }}>
             {record.domain}
           </div>
-          {record.title && (
-            <div style={{ fontSize: '12px', color: '#999', marginTop: 2 }}>
-              {record.title}
-            </div>
-          )}
         </div>
       )
     },
@@ -214,14 +200,9 @@ export default function WebsitesPage() {
       key: 'status',
       width: 120,
       render: (_, record) => (
-        <Space direction="vertical" size={2}>
-          <Tag color={record.isActive ? 'green' : 'red'}>
-            {record.isActive ? '启用' : '禁用'}
-          </Tag>
-          <Tag color={record.isPublic ? 'blue' : 'orange'}>
-            {record.isPublic ? '公开' : '私有'}
-          </Tag>
-        </Space>
+        <Tag color={record.isActive ? 'green' : 'red'}>
+          {record.isActive ? '启用' : '禁用'}
+        </Tag>
       )
     },
     {
@@ -245,6 +226,17 @@ export default function WebsitesPage() {
               onClick={() => {
                 // 这里可以跳转到网站详情页面
                 window.open(`/admin/websites/${record.id}`, '_blank')
+              }}
+            />
+          </Tooltip>
+          <Tooltip title="公告管理">
+            <Button
+              type="text"
+              size="small"
+              icon={<NotificationOutlined />}
+              onClick={() => {
+                // 跳转到公告管理页面
+                window.open(`/admin/websites/${record.id}/announcements`, '_blank')
               }}
             />
           </Tooltip>
@@ -349,9 +341,7 @@ export default function WebsitesPage() {
           layout="vertical"
           onFinish={handleSubmit}
           initialValues={{
-            isActive: true,
-            isPublic: true,
-            themeColor: '#1890ff'
+            isActive: true
           }}
         >
           <Row gutter={16}>
@@ -376,88 +366,15 @@ export default function WebsitesPage() {
           </Row>
 
           <Form.Item
-            label="网站标题"
-            name="title"
+            label="启用状态"
+            name="isActive"
+            valuePropName="checked"
           >
-            <Input placeholder="网站标题（用于SEO）" />
-          </Form.Item>
-
-          <Form.Item
-            label="网站描述"
-            name="description"
-          >
-            <TextArea
-              rows={3}
-              placeholder="网站描述（用于SEO）"
-              showCount
-              maxLength={500}
+            <Switch
+              checkedChildren="启用"
+              unCheckedChildren="禁用"
             />
           </Form.Item>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                label="Logo URL"
-                name="logo"
-              >
-                <Input placeholder="https://example.com/logo.png" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                label="Favicon URL"
-                name="favicon"
-              >
-                <Input placeholder="https://example.com/favicon.ico" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                label="主题色"
-                name="themeColor"
-              >
-                <Input type="color" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                label="SEO关键词"
-                name="seoKeywords"
-              >
-                <Input placeholder="关键词1, 关键词2, 关键词3" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                label="启用状态"
-                name="isActive"
-                valuePropName="checked"
-              >
-                <Switch
-                  checkedChildren="启用"
-                  unCheckedChildren="禁用"
-                />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                label="公开状态"
-                name="isPublic"
-                valuePropName="checked"
-              >
-                <Switch
-                  checkedChildren="公开"
-                  unCheckedChildren="私有"
-                />
-              </Form.Item>
-            </Col>
-          </Row>
 
           <Divider />
 

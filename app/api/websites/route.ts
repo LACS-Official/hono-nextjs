@@ -17,44 +17,11 @@ export async function OPTIONS(request: NextRequest) {
   return handleOptions(origin, userAgent)
 }
 
-// 网站创建验证模式
+// 网站创建验证模式（简化版）
 const createWebsiteSchema = z.object({
   name: z.string().min(1, '网站名称不能为空'),
   domain: z.string().min(1, '域名不能为空'),
-  title: z.string().optional(),
-  description: z.string().optional(),
-  logo: z.string().optional(),
-  favicon: z.string().optional(),
-  config: z.object({
-    theme: z.object({
-      primaryColor: z.string().optional(),
-      secondaryColor: z.string().optional(),
-      backgroundColor: z.string().optional(),
-      textColor: z.string().optional(),
-    }).optional(),
-    layout: z.object({
-      headerStyle: z.string().optional(),
-      footerStyle: z.string().optional(),
-      sidebarEnabled: z.boolean().optional(),
-    }).optional(),
-    features: z.object({
-      searchEnabled: z.boolean().optional(),
-      categoriesEnabled: z.boolean().optional(),
-      tagsEnabled: z.boolean().optional(),
-      commentsEnabled: z.boolean().optional(),
-    }).optional(),
-    seo: z.object({
-      keywords: z.array(z.string()).optional(),
-      author: z.string().optional(),
-      robots: z.string().optional(),
-    }).optional(),
-    analytics: z.object({
-      googleAnalyticsId: z.string().optional(),
-      baiduAnalyticsId: z.string().optional(),
-    }).optional(),
-  }).optional(),
   isActive: z.boolean().optional(),
-  isPublic: z.boolean().optional(),
 })
 
 // GET - 获取网站列表
@@ -87,8 +54,7 @@ export async function GET(request: NextRequest) {
       whereConditions.push(
         or(
           like(websites.name, `%${search}%`),
-          like(websites.domain, `%${search}%`),
-          like(websites.title, `%${search}%`)
+          like(websites.domain, `%${search}%`)
         )
       )
     }
@@ -178,13 +144,7 @@ export async function POST(request: NextRequest) {
       .values({
         name: validatedData.name,
         domain: validatedData.domain,
-        title: validatedData.title,
-        description: validatedData.description,
-        logo: validatedData.logo,
-        favicon: validatedData.favicon,
-        config: validatedData.config || {},
         isActive: validatedData.isActive ?? true,
-        isPublic: validatedData.isPublic ?? true,
       })
       .returning()
 

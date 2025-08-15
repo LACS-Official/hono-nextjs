@@ -1,12 +1,12 @@
 /**
- * 单个轮播图管理API
- * GET /api/websites/[id]/banners/[bannerId] - 获取轮播图详情
- * PUT /api/websites/[id]/banners/[bannerId] - 更新轮播图
- * DELETE /api/websites/[id]/banners/[bannerId] - 删除轮播图
+ * 单个公告管理API
+ * GET /api/websites/[id]/announcements/[announcementId] - 获取公告详情
+ * PUT /api/websites/[id]/announcements/[announcementId] - 更新公告
+ * DELETE /api/websites/[id]/announcements/[announcementId] - 删除公告
  */
 
 import { NextRequest } from 'next/server'
-import { unifiedDb as db, websites, banners } from '@/lib/unified-db-connection'
+import { unifiedDb as db, websites, announcements } from '@/lib/unified-db-connection'
 import { eq, and } from 'drizzle-orm'
 import { corsResponse, handleOptions, validateUnifiedAuth } from '@/lib/cors'
 import { z } from 'zod'
@@ -18,63 +18,63 @@ export async function OPTIONS(request: NextRequest) {
   return handleOptions(origin, userAgent)
 }
 
-// 轮播图更新验证模式（简化版）
-const updateBannerSchema = z.object({
-  title: z.string().min(1, '标题不能为空').optional(),
-  description: z.string().optional(),
-  imageUrl: z.string().min(1, '图片URL不能为空').optional(),
-  imageAlt: z.string().optional(),
-  linkUrl: z.string().optional(),
-  linkTarget: z.enum(['_self', '_blank']).optional(),
+// 公告更新验证模式
+const updateAnnouncementSchema = z.object({
+  title: z.string().min(1, '公告标题不能为空').optional(),
+  content: z.string().min(1, '公告内容不能为空').optional(),
+  type: z.enum(['info', 'warning', 'error', 'success']).optional(),
+  isSticky: z.boolean().optional(),
   sortOrder: z.number().optional(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
   isActive: z.boolean().optional(),
   isPublished: z.boolean().optional(),
 })
 
-// GET - 获取轮播图详情
+// GET - 获取公告详情
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string; bannerId: string } }
+  { params }: { params: { id: string; announcementId: string } }
 ) {
   const origin = request.headers.get('Origin')
   const userAgent = request.headers.get('User-Agent')
 
   try {
-    const { id, bannerId } = params
+    const { id, announcementId } = params
     const websiteId = parseInt(id)
-    const bannerIdNum = parseInt(bannerId)
+    const announcementIdNum = parseInt(announcementId)
 
-    if (isNaN(websiteId) || isNaN(bannerIdNum)) {
+    if (isNaN(websiteId) || isNaN(announcementIdNum)) {
       return corsResponse({
         success: false,
         error: '无效的ID格式'
       }, { status: 400 }, origin, userAgent)
     }
 
-    // 获取轮播图详情
-    const [banner] = await db
+    // 获取公告详情
+    const [announcement] = await db
       .select()
-      .from(banners)
+      .from(announcements)
       .where(and(
-        eq(banners.websiteId, websiteId),
-        eq(banners.id, bannerIdNum)
+        eq(announcements.websiteId, websiteId),
+        eq(announcements.id, announcementIdNum)
       ))
       .limit(1)
 
-    if (!banner) {
+    if (!announcement) {
       return corsResponse({
         success: false,
-        error: '轮播图不存在'
+        error: '公告不存在'
       }, { status: 404 }, origin, userAgent)
     }
 
     return corsResponse({
       success: true,
-      data: banner
+      data: announcement
     }, undefined, origin, userAgent)
 
   } catch (error) {
-    console.error('获取轮播图详情失败:', error)
+    console.error('获取公告详情失败:', error)
     return corsResponse({
       success: false,
       error: '服务器内部错误'
@@ -82,10 +82,10 @@ export async function GET(
   }
 }
 
-// PUT - 更新轮播图
+// PUT - 更新公告
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string; bannerId: string } }
+  { params }: { params: { id: string; announcementId: string } }
 ) {
   const origin = request.headers.get('Origin')
   const userAgent = request.headers.get('User-Agent')
@@ -100,36 +100,36 @@ export async function PUT(
       }, { status: 401 }, origin, userAgent)
     }
 
-    const { id, bannerId } = params
+    const { id, announcementId } = params
     const websiteId = parseInt(id)
-    const bannerIdNum = parseInt(bannerId)
+    const announcementIdNum = parseInt(announcementId)
 
-    if (isNaN(websiteId) || isNaN(bannerIdNum)) {
+    if (isNaN(websiteId) || isNaN(announcementIdNum)) {
       return corsResponse({
         success: false,
         error: '无效的ID格式'
       }, { status: 400 }, origin, userAgent)
     }
 
-    // 验证轮播图是否存在
-    const [existingBanner] = await db
+    // 验证公告是否存在
+    const [existingAnnouncement] = await db
       .select()
-      .from(banners)
+      .from(announcements)
       .where(and(
-        eq(banners.websiteId, websiteId),
-        eq(banners.id, bannerIdNum)
+        eq(announcements.websiteId, websiteId),
+        eq(announcements.id, announcementIdNum)
       ))
       .limit(1)
 
-    if (!existingBanner) {
+    if (!existingAnnouncement) {
       return corsResponse({
         success: false,
-        error: '轮播图不存在'
+        error: '公告不存在'
       }, { status: 404 }, origin, userAgent)
     }
 
     const body = await request.json()
-    const validatedData = updateBannerSchema.parse(body)
+    const validatedData = updateAnnouncementSchema.parse(body)
 
     // 构建更新数据
     const updateData: any = {
@@ -137,29 +137,29 @@ export async function PUT(
     }
 
     if (validatedData.title !== undefined) updateData.title = validatedData.title
-    if (validatedData.description !== undefined) updateData.description = validatedData.description
-    if (validatedData.imageUrl !== undefined) updateData.imageUrl = validatedData.imageUrl
-    if (validatedData.imageAlt !== undefined) updateData.imageAlt = validatedData.imageAlt
-    if (validatedData.linkUrl !== undefined) updateData.linkUrl = validatedData.linkUrl
-    if (validatedData.linkTarget !== undefined) updateData.linkTarget = validatedData.linkTarget
+    if (validatedData.content !== undefined) updateData.content = validatedData.content
+    if (validatedData.type !== undefined) updateData.type = validatedData.type
+    if (validatedData.isSticky !== undefined) updateData.isSticky = validatedData.isSticky
     if (validatedData.sortOrder !== undefined) updateData.sortOrder = validatedData.sortOrder
+    if (validatedData.startDate !== undefined) updateData.startDate = validatedData.startDate ? new Date(validatedData.startDate) : null
+    if (validatedData.endDate !== undefined) updateData.endDate = validatedData.endDate ? new Date(validatedData.endDate) : null
     if (validatedData.isActive !== undefined) updateData.isActive = validatedData.isActive
     if (validatedData.isPublished !== undefined) updateData.isPublished = validatedData.isPublished
 
-    // 更新轮播图
-    const [updatedBanner] = await db
-      .update(banners)
+    // 更新公告
+    const [updatedAnnouncement] = await db
+      .update(announcements)
       .set(updateData)
       .where(and(
-        eq(banners.websiteId, websiteId),
-        eq(banners.id, bannerIdNum)
+        eq(announcements.websiteId, websiteId),
+        eq(announcements.id, announcementIdNum)
       ))
       .returning()
 
     return corsResponse({
       success: true,
-      data: updatedBanner,
-      message: '轮播图更新成功'
+      data: updatedAnnouncement,
+      message: '公告更新成功'
     }, undefined, origin, userAgent)
 
   } catch (error) {
@@ -171,7 +171,7 @@ export async function PUT(
       }, { status: 400 }, origin, userAgent)
     }
 
-    console.error('更新轮播图失败:', error)
+    console.error('更新公告失败:', error)
     return corsResponse({
       success: false,
       error: '服务器内部错误'
@@ -179,10 +179,10 @@ export async function PUT(
   }
 }
 
-// DELETE - 删除轮播图
+// DELETE - 删除公告
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string; bannerId: string } }
+  { params }: { params: { id: string; announcementId: string } }
 ) {
   const origin = request.headers.get('Origin')
   const userAgent = request.headers.get('User-Agent')
@@ -197,49 +197,49 @@ export async function DELETE(
       }, { status: 401 }, origin, userAgent)
     }
 
-    const { id, bannerId } = params
+    const { id, announcementId } = params
     const websiteId = parseInt(id)
-    const bannerIdNum = parseInt(bannerId)
+    const announcementIdNum = parseInt(announcementId)
 
-    if (isNaN(websiteId) || isNaN(bannerIdNum)) {
+    if (isNaN(websiteId) || isNaN(announcementIdNum)) {
       return corsResponse({
         success: false,
         error: '无效的ID格式'
       }, { status: 400 }, origin, userAgent)
     }
 
-    // 验证轮播图是否存在
-    const [existingBanner] = await db
+    // 验证公告是否存在
+    const [existingAnnouncement] = await db
       .select()
-      .from(banners)
+      .from(announcements)
       .where(and(
-        eq(banners.websiteId, websiteId),
-        eq(banners.id, bannerIdNum)
+        eq(announcements.websiteId, websiteId),
+        eq(announcements.id, announcementIdNum)
       ))
       .limit(1)
 
-    if (!existingBanner) {
+    if (!existingAnnouncement) {
       return corsResponse({
         success: false,
-        error: '轮播图不存在'
+        error: '公告不存在'
       }, { status: 404 }, origin, userAgent)
     }
 
-    // 删除轮播图
+    // 删除公告
     await db
-      .delete(banners)
+      .delete(announcements)
       .where(and(
-        eq(banners.websiteId, websiteId),
-        eq(banners.id, bannerIdNum)
+        eq(announcements.websiteId, websiteId),
+        eq(announcements.id, announcementIdNum)
       ))
 
     return corsResponse({
       success: true,
-      message: '轮播图删除成功'
+      message: '公告删除成功'
     }, undefined, origin, userAgent)
 
   } catch (error) {
-    console.error('删除轮播图失败:', error)
+    console.error('删除公告失败:', error)
     return corsResponse({
       success: false,
       error: '服务器内部错误'

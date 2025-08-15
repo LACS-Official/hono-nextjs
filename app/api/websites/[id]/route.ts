@@ -6,7 +6,7 @@
  */
 
 import { NextRequest } from 'next/server'
-import { unifiedDb as db, websites, banners, websitePages, websiteMenus, websiteUsers } from '@/lib/unified-db-connection'
+import { unifiedDb as db, websites, banners, announcements } from '@/lib/unified-db-connection'
 import { eq } from 'drizzle-orm'
 import { corsResponse, handleOptions, validateUnifiedAuth } from '@/lib/cors'
 import { z } from 'zod'
@@ -18,44 +18,11 @@ export async function OPTIONS(request: NextRequest) {
   return handleOptions(origin, userAgent)
 }
 
-// 网站更新验证模式
+// 网站更新验证模式（简化版）
 const updateWebsiteSchema = z.object({
   name: z.string().min(1, '网站名称不能为空').optional(),
   domain: z.string().min(1, '域名不能为空').optional(),
-  title: z.string().optional(),
-  description: z.string().optional(),
-  logo: z.string().optional(),
-  favicon: z.string().optional(),
-  config: z.object({
-    theme: z.object({
-      primaryColor: z.string().optional(),
-      secondaryColor: z.string().optional(),
-      backgroundColor: z.string().optional(),
-      textColor: z.string().optional(),
-    }).optional(),
-    layout: z.object({
-      headerStyle: z.string().optional(),
-      footerStyle: z.string().optional(),
-      sidebarEnabled: z.boolean().optional(),
-    }).optional(),
-    features: z.object({
-      searchEnabled: z.boolean().optional(),
-      categoriesEnabled: z.boolean().optional(),
-      tagsEnabled: z.boolean().optional(),
-      commentsEnabled: z.boolean().optional(),
-    }).optional(),
-    seo: z.object({
-      keywords: z.array(z.string()).optional(),
-      author: z.string().optional(),
-      robots: z.string().optional(),
-    }).optional(),
-    analytics: z.object({
-      googleAnalyticsId: z.string().optional(),
-      baiduAnalyticsId: z.string().optional(),
-    }).optional(),
-  }).optional(),
   isActive: z.boolean().optional(),
-  isPublic: z.boolean().optional(),
 })
 
 // GET - 获取网站详情
@@ -106,20 +73,10 @@ export async function GET(
       .from(banners)
       .where(eq(banners.websiteId, websiteId))
 
-    const [pagesCount] = await db
-      .select({ count: websitePages.id })
-      .from(websitePages)
-      .where(eq(websitePages.websiteId, websiteId))
-
-    const [menusCount] = await db
-      .select({ count: websiteMenus.id })
-      .from(websiteMenus)
-      .where(eq(websiteMenus.websiteId, websiteId))
-
-    const [usersCount] = await db
-      .select({ count: websiteUsers.id })
-      .from(websiteUsers)
-      .where(eq(websiteUsers.websiteId, websiteId))
+    const [announcementsCount] = await db
+      .select({ count: announcements.id })
+      .from(announcements)
+      .where(eq(announcements.websiteId, websiteId))
 
     return corsResponse({
       success: true,
@@ -127,9 +84,7 @@ export async function GET(
         website,
         stats: {
           bannersCount: bannersCount?.count || 0,
-          pagesCount: pagesCount?.count || 0,
-          menusCount: menusCount?.count || 0,
-          usersCount: usersCount?.count || 0,
+          announcementsCount: announcementsCount?.count || 0,
         }
       }
     }, undefined, origin, userAgent)
@@ -211,13 +166,7 @@ export async function PUT(
 
     if (validatedData.name !== undefined) updateData.name = validatedData.name
     if (validatedData.domain !== undefined) updateData.domain = validatedData.domain
-    if (validatedData.title !== undefined) updateData.title = validatedData.title
-    if (validatedData.description !== undefined) updateData.description = validatedData.description
-    if (validatedData.logo !== undefined) updateData.logo = validatedData.logo
-    if (validatedData.favicon !== undefined) updateData.favicon = validatedData.favicon
-    if (validatedData.config !== undefined) updateData.config = validatedData.config
     if (validatedData.isActive !== undefined) updateData.isActive = validatedData.isActive
-    if (validatedData.isPublic !== undefined) updateData.isPublic = validatedData.isPublic
 
     const [updatedWebsite] = await db
       .update(websites)

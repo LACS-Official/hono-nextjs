@@ -1,11 +1,11 @@
 /**
- * 轮播图管理API
- * GET /api/websites/[id]/banners - 获取网站轮播图列表
- * POST /api/websites/[id]/banners - 创建新轮播图
+ * 公告管理API
+ * GET /api/websites/[id]/announcements - 获取网站公告列表
+ * POST /api/websites/[id]/announcements - 创建新公告
  */
 
 import { NextRequest } from 'next/server'
-import { unifiedDb as db, websites, banners } from '@/lib/unified-db-connection'
+import { unifiedDb as db, websites, announcements } from '@/lib/unified-db-connection'
 import { eq, desc, and } from 'drizzle-orm'
 import { corsResponse, handleOptions, validateUnifiedAuth } from '@/lib/cors'
 import { z } from 'zod'
@@ -17,20 +17,20 @@ export async function OPTIONS(request: NextRequest) {
   return handleOptions(origin, userAgent)
 }
 
-// 轮播图创建验证模式（简化版）
-const createBannerSchema = z.object({
-  title: z.string().min(1, '标题不能为空'),
-  description: z.string().optional(),
-  imageUrl: z.string().min(1, '图片URL不能为空'),
-  imageAlt: z.string().optional(),
-  linkUrl: z.string().optional(),
-  linkTarget: z.enum(['_self', '_blank']).default('_self'),
+// 公告创建验证模式
+const createAnnouncementSchema = z.object({
+  title: z.string().min(1, '公告标题不能为空'),
+  content: z.string().min(1, '公告内容不能为空'),
+  type: z.enum(['info', 'warning', 'error', 'success']).default('info'),
+  isSticky: z.boolean().default(false),
   sortOrder: z.number().default(0),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
   isActive: z.boolean().default(true),
   isPublished: z.boolean().default(true),
 })
 
-// GET - 获取轮播图列表
+// GET - 获取公告列表
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -66,28 +66,33 @@ export async function GET(
     const url = new URL(request.url)
     const isPublished = url.searchParams.get('published') // true, false, all
     const isActive = url.searchParams.get('active') // true, false, all
+    const type = url.searchParams.get('type') // info, warning, error, success, all
 
     // 构建查询条件
-    let whereConditions: any[] = [eq(banners.websiteId, websiteId)]
+    let whereConditions: any[] = [eq(announcements.websiteId, websiteId)]
 
     if (isPublished === 'true') {
-      whereConditions.push(eq(banners.isPublished, true))
+      whereConditions.push(eq(announcements.isPublished, true))
     } else if (isPublished === 'false') {
-      whereConditions.push(eq(banners.isPublished, false))
+      whereConditions.push(eq(announcements.isPublished, false))
     }
 
     if (isActive === 'true') {
-      whereConditions.push(eq(banners.isActive, true))
+      whereConditions.push(eq(announcements.isActive, true))
     } else if (isActive === 'false') {
-      whereConditions.push(eq(banners.isActive, false))
+      whereConditions.push(eq(announcements.isActive, false))
     }
 
-    // 获取轮播图列表
-    const bannerList = await db
+    if (type && type !== 'all') {
+      whereConditions.push(eq(announcements.type, type))
+    }
+
+    // 获取公告列表
+    const announcementList = await db
       .select()
-      .from(banners)
+      .from(announcements)
       .where(and(...whereConditions))
-      .orderBy(banners.sortOrder, desc(banners.createdAt))
+      .orderBy(announcements.sortOrder, desc(announcements.createdAt))
 
     return corsResponse({
       success: true,
@@ -97,12 +102,12 @@ export async function GET(
           name: website.name,
           domain: website.domain
         },
-        banners: bannerList
+        announcements: announcementList
       }
     }, undefined, origin, userAgent)
 
   } catch (error) {
-    console.error('获取轮播图列表失败:', error)
+    console.error('获取公告列表失败:', error)
     return corsResponse({
       success: false,
       error: '服务器内部错误'
@@ -110,7 +115,7 @@ export async function GET(
   }
 }
 
-// POST - 创建新轮播图
+// POST - 创建新公告
 export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -153,20 +158,20 @@ export async function POST(
     }
 
     const body = await request.json()
-    const validatedData = createBannerSchema.parse(body)
+    const validatedData = createAnnouncementSchema.parse(body)
 
-    // 创建新轮播图
-    const [newBanner] = await db
-      .insert(banners)
+    // 创建新公告
+    const [newAnnouncement] = await db
+      .insert(announcements)
       .values({
         websiteId: websiteId,
         title: validatedData.title,
-        description: validatedData.description,
-        imageUrl: validatedData.imageUrl,
-        imageAlt: validatedData.imageAlt,
-        linkUrl: validatedData.linkUrl,
-        linkTarget: validatedData.linkTarget,
+        content: validatedData.content,
+        type: validatedData.type,
+        isSticky: validatedData.isSticky,
         sortOrder: validatedData.sortOrder,
+        startDate: validatedData.startDate ? new Date(validatedData.startDate) : null,
+        endDate: validatedData.endDate ? new Date(validatedData.endDate) : null,
         isActive: validatedData.isActive,
         isPublished: validatedData.isPublished,
       })
@@ -174,8 +179,8 @@ export async function POST(
 
     return corsResponse({
       success: true,
-      data: newBanner,
-      message: '轮播图创建成功'
+      data: newAnnouncement,
+      message: '公告创建成功'
     }, undefined, origin, userAgent)
 
   } catch (error) {
@@ -187,7 +192,7 @@ export async function POST(
       }, { status: 400 }, origin, userAgent)
     }
 
-    console.error('创建轮播图失败:', error)
+    console.error('创建公告失败:', error)
     return corsResponse({
       success: false,
       error: '服务器内部错误'

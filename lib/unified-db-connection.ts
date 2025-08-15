@@ -59,10 +59,8 @@ export const {
 
   // 网站管理相关表
   websites,
+  announcements,
   banners,
-  websitePages,
-  websiteMenus,
-  websiteUsers,
 } = unifiedSchema
 
 // 数据库健康检查函数

@@ -18,8 +18,7 @@ import {
   Row,
   Col,
   Select,
-  InputNumber,
-  Image,
+  DatePicker,
   Breadcrumb
 } from 'antd'
 import {
@@ -27,38 +26,33 @@ import {
   EditOutlined,
   DeleteOutlined,
   EyeOutlined,
-  PictureOutlined,
+  NotificationOutlined,
   HomeOutlined,
-  GlobalOutlined,
-  ArrowUpOutlined,
-  ArrowDownOutlined
+  GlobalOutlined
 } from '@ant-design/icons'
 import { useParams, useRouter } from 'next/navigation'
 import type { ColumnsType } from 'antd/es/table'
 import PageContainer from '@/components/PageContainer'
+import dayjs from 'dayjs'
 
 const { Title, Text } = Typography
 const { TextArea } = Input
 const { Option } = Select
+const { RangePicker } = DatePicker
 
-interface Banner {
+interface Announcement {
   id: number
   websiteId: number
   title: string
-  subtitle?: string
-  description?: string
-  imageUrl: string
-  imageAlt?: string
-  linkUrl?: string
-  linkTarget: string
-  position: string
+  content: string
+  type: string
+  isSticky: boolean
   sortOrder: number
-  style?: any
-  displayConditions?: any
+  startDate?: string
+  endDate?: string
   isActive: boolean
   isPublished: boolean
   viewCount: number
-  clickCount: number
   createdAt: string
   updatedAt: string
 }
@@ -69,34 +63,34 @@ interface Website {
   domain: string
 }
 
-export default function BannersPage() {
+export default function AnnouncementsPage() {
   const params = useParams()
   const router = useRouter()
   const websiteId = parseInt(params.id as string)
 
   const [website, setWebsite] = useState<Website | null>(null)
-  const [banners, setBanners] = useState<Banner[]>([])
+  const [announcements, setAnnouncements] = useState<Announcement[]>([])
   const [loading, setLoading] = useState(false)
   const [modalVisible, setModalVisible] = useState(false)
-  const [editingBanner, setEditingBanner] = useState<Banner | null>(null)
+  const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null)
   const [form] = Form.useForm()
 
-  // 获取轮播图列表
-  const fetchBanners = async () => {
+  // 获取公告列表
+  const fetchAnnouncements = async () => {
     setLoading(true)
     try {
-      const response = await fetch(`/api/websites/${websiteId}/banners`)
+      const response = await fetch(`/api/websites/${websiteId}/announcements`)
       const data = await response.json()
 
       if (data.success) {
         setWebsite(data.data.website)
-        setBanners(data.data.banners)
+        setAnnouncements(data.data.announcements)
       } else {
-        message.error('获取轮播图列表失败')
+        message.error('获取公告列表失败')
       }
     } catch (error) {
-      console.error('获取轮播图列表失败:', error)
-      message.error('获取轮播图列表失败')
+      console.error('获取公告列表失败:', error)
+      message.error('获取公告列表失败')
     } finally {
       setLoading(false)
     }
@@ -104,29 +98,34 @@ export default function BannersPage() {
 
   useEffect(() => {
     if (websiteId) {
-      fetchBanners()
+      fetchAnnouncements()
     }
   }, [websiteId])
 
   // 处理编辑
-  const handleEdit = (banner: Banner) => {
-    setEditingBanner(banner)
-    form.setFieldsValue(banner)
+  const handleEdit = (announcement: Announcement) => {
+    setEditingAnnouncement(announcement)
+    form.setFieldsValue({
+      ...announcement,
+      dateRange: announcement.startDate && announcement.endDate 
+        ? [dayjs(announcement.startDate), dayjs(announcement.endDate)]
+        : null
+    })
     setModalVisible(true)
   }
 
   // 处理删除
   const handleDelete = async (id: number) => {
     try {
-      const response = await fetch(`/api/websites/${websiteId}/banners/${id}`, {
+      const response = await fetch(`/api/websites/${websiteId}/announcements/${id}`, {
         method: 'DELETE'
       })
 
       const data = await response.json()
 
       if (data.success) {
-        message.success('轮播图删除成功')
-        fetchBanners()
+        message.success('公告删除成功')
+        fetchAnnouncements()
       } else {
         message.error(data.error || '删除失败')
       }
@@ -140,19 +139,19 @@ export default function BannersPage() {
     try {
       const submitData = {
         title: values.title,
-        description: values.description,
-        imageUrl: values.imageUrl,
-        imageAlt: values.imageAlt,
-        linkUrl: values.linkUrl,
-        linkTarget: values.linkTarget,
+        content: values.content,
+        type: values.type,
+        isSticky: values.isSticky,
         sortOrder: values.sortOrder,
+        startDate: values.dateRange?.[0]?.toISOString(),
+        endDate: values.dateRange?.[1]?.toISOString(),
         isActive: values.isActive,
         isPublished: values.isPublished,
       }
 
       let response
-      if (editingBanner) {
-        response = await fetch(`/api/websites/${websiteId}/banners/${editingBanner.id}`, {
+      if (editingAnnouncement) {
+        response = await fetch(`/api/websites/${websiteId}/announcements/${editingAnnouncement.id}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json'
@@ -160,7 +159,7 @@ export default function BannersPage() {
           body: JSON.stringify(submitData)
         })
       } else {
-        response = await fetch(`/api/websites/${websiteId}/banners`, {
+        response = await fetch(`/api/websites/${websiteId}/announcements`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -172,11 +171,11 @@ export default function BannersPage() {
       const data = await response.json()
 
       if (data.success) {
-        message.success(editingBanner ? '轮播图更新成功' : '轮播图创建成功')
+        message.success(editingAnnouncement ? '公告更新成功' : '公告创建成功')
         setModalVisible(false)
-        setEditingBanner(null)
+        setEditingAnnouncement(null)
         form.resetFields()
-        fetchBanners()
+        fetchAnnouncements()
       } else {
         message.error(data.error || '操作失败')
       }
@@ -185,58 +184,42 @@ export default function BannersPage() {
     }
   }
 
-  // 渲染位置标签
-  const renderPositionTag = (position: string) => {
-    const positionConfig = {
-      main: { color: 'blue', text: '主要' },
-      sidebar: { color: 'green', text: '侧边栏' },
-      footer: { color: 'orange', text: '页脚' },
+  // 渲染类型标签
+  const renderTypeTag = (type: string) => {
+    const typeConfig = {
+      info: { color: 'blue', text: '信息' },
+      warning: { color: 'orange', text: '警告' },
+      error: { color: 'red', text: '错误' },
+      success: { color: 'green', text: '成功' },
     }
-    const config = positionConfig[position as keyof typeof positionConfig] || { color: 'default', text: position }
+    const config = typeConfig[type as keyof typeof typeConfig] || { color: 'default', text: type }
     return <Tag color={config.color}>{config.text}</Tag>
   }
 
   // 表格列定义
-  const columns: ColumnsType<Banner> = [
+  const columns: ColumnsType<Announcement> = [
     {
-      title: '轮播图',
-      key: 'image',
-      width: 120,
-      render: (_, record) => (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Image
-            src={record.imageUrl}
-            alt={record.imageAlt || record.title}
-            width={60}
-            height={40}
-            style={{ objectFit: 'cover', borderRadius: 4 }}
-            fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMIAAADDCAYAAADQvc6UAAABRWlDQ1BJQ0MgUHJvZmlsZQAAKJFjYGASSSwoyGFhYGDIzSspCnJ3UoiIjFJgf8LAwSDCIMogwMCcmFxc4BgQ4ANUwgCjUcG3awyMIPqyLsis7PPOq3QdDFcvjV3jOD1boQVTPQrgSkktTgbSf4A4LbmgqISBgTEFyFYuLykAsTuAbJEioKOA7DkgdjqEvQHEToKwj4DVhAQ5A9k3gGyB5IxEoBmML4BsnSQk8XQkNtReEOBxcfXxUQg1Mjc0dyHgXNJBSWpFCYh2zi+oLMpMzyhRcASGUqqCZ16yno6CkYGRAQMDKMwhqj/fAIcloxgHQqxAjIHBEugw5sUIsSQpBobtQPdLciLEVJYzMPBHMDBsayhILEqEO4DxG0txmrERhM29nYGBddr//5/DGRjYNRkY/l7////39v///y4Dmn+LgeHANwDrkl1AuO+pmgAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAwqADAAQAAAABAAAAwwAAAAD9b/HnAAAHlklEQVR4Ae3dP3Ik1RnG4W+FgYxN"
-          />
-        </div>
-      )
-    },
-    {
-      title: '标题信息',
+      title: '公告信息',
       key: 'info',
       render: (_, record) => (
         <div>
           <div style={{ fontWeight: 500, marginBottom: 4 }}>
+            {record.isSticky && <Tag color="red" style={{ marginRight: 8 }}>置顶</Tag>}
             {record.title}
           </div>
-          {record.description && (
-            <div style={{ fontSize: '12px', color: '#666', marginBottom: 2 }}>
-              {record.description.length > 30 ? record.description.substring(0, 30) + '...' : record.description}
-            </div>
-          )}
-          {record.linkUrl && (
-            <div style={{ fontSize: '12px', color: '#1890ff' }}>
-              链接: {record.linkUrl}
-            </div>
-          )}
+          <div style={{ fontSize: '12px', color: '#666', marginBottom: 2 }}>
+            {record.content.length > 50 ? record.content.substring(0, 50) + '...' : record.content}
+          </div>
         </div>
       )
     },
-
+    {
+      title: '类型',
+      dataIndex: 'type',
+      key: 'type',
+      width: 80,
+      render: renderTypeTag
+    },
     {
       title: '排序',
       dataIndex: 'sortOrder',
@@ -260,50 +243,17 @@ export default function BannersPage() {
       )
     },
     {
-      title: '统计',
-      key: 'stats',
+      title: '浏览量',
+      dataIndex: 'viewCount',
+      key: 'viewCount',
       width: 80,
-      render: (_, record) => (
-        <div style={{ fontSize: '12px' }}>
-          <div>浏览: {record.viewCount}</div>
-          <div>点击: {record.clickCount}</div>
-        </div>
-      )
     },
     {
       title: '操作',
       key: 'action',
-      width: 150,
+      width: 120,
       render: (_, record) => (
         <Space size="small">
-          <Tooltip title="预览">
-            <Button
-              type="text"
-              size="small"
-              icon={<EyeOutlined />}
-              onClick={() => {
-                Modal.info({
-                  title: record.title,
-                  width: 600,
-                  content: (
-                    <div>
-                      <Image
-                        src={record.imageUrl}
-                        alt={record.imageAlt || record.title}
-                        style={{ width: '100%', marginBottom: 16 }}
-                      />
-                      {record.description && (
-                        <p><strong>描述：</strong>{record.description}</p>
-                      )}
-                      {record.linkUrl && (
-                        <p><strong>链接：</strong><a href={record.linkUrl} target={record.linkTarget}>{record.linkUrl}</a></p>
-                      )}
-                    </div>
-                  )
-                })
-              }}
-            />
-          </Tooltip>
           <Tooltip title="编辑">
             <Button
               type="text"
@@ -314,7 +264,7 @@ export default function BannersPage() {
           </Tooltip>
           <Tooltip title="删除">
             <Popconfirm
-              title="确定要删除这个轮播图吗？"
+              title="确定要删除这个公告吗？"
               onConfirm={() => handleDelete(record.id)}
               okText="确定"
               cancelText="取消"
@@ -333,7 +283,7 @@ export default function BannersPage() {
   ]
 
   return (
-    <PageContainer title="轮播图管理">
+    <PageContainer title="公告管理">
       <Breadcrumb style={{ marginBottom: 16 }}>
         <Breadcrumb.Item>
           <HomeOutlined />
@@ -345,16 +295,16 @@ export default function BannersPage() {
           </span>
         </Breadcrumb.Item>
         <Breadcrumb.Item>
-          <PictureOutlined />
-          轮播图管理
+          <NotificationOutlined />
+          公告管理
         </Breadcrumb.Item>
       </Breadcrumb>
 
       <Card
         title={
           <Space>
-            <PictureOutlined />
-            轮播图管理
+            <NotificationOutlined />
+            公告管理
             {website && (
               <Text type="secondary">({website.name})</Text>
             )}
@@ -365,39 +315,39 @@ export default function BannersPage() {
             type="primary"
             icon={<PlusOutlined />}
             onClick={() => {
-              setEditingBanner(null)
+              setEditingAnnouncement(null)
               form.resetFields()
               setModalVisible(true)
             }}
           >
-            添加轮播图
+            添加公告
           </Button>
         }
       >
         <Table
           columns={columns}
-          dataSource={banners}
+          dataSource={announcements}
           rowKey="id"
           loading={loading}
           pagination={{
             pageSize: 10,
             showSizeChanger: true,
             showQuickJumper: true,
-            showTotal: (total) => `共 ${total} 个轮播图`
+            showTotal: (total) => `共 ${total} 个公告`
           }}
           locale={{
-            emptyText: '暂无轮播图数据'
+            emptyText: '暂无公告数据'
           }}
         />
       </Card>
 
-      {/* 添加/编辑轮播图模态框 */}
+      {/* 添加/编辑公告模态框 */}
       <Modal
-        title={editingBanner ? '编辑轮播图' : '添加轮播图'}
+        title={editingAnnouncement ? '编辑公告' : '添加公告'}
         open={modalVisible}
         onCancel={() => {
           setModalVisible(false)
-          setEditingBanner(null)
+          setEditingAnnouncement(null)
           form.resetFields()
         }}
         footer={null}
@@ -409,74 +359,79 @@ export default function BannersPage() {
           layout="vertical"
           onFinish={handleSubmit}
           initialValues={{
-            linkTarget: '_self',
+            type: 'info',
+            isSticky: false,
             sortOrder: 0,
             isActive: true,
             isPublished: true
           }}
         >
           <Form.Item
-            label="标题"
+            label="公告标题"
             name="title"
-            rules={[{ required: true, message: '请输入标题' }]}
+            rules={[{ required: true, message: '请输入公告标题' }]}
           >
-            <Input placeholder="请输入轮播图标题" />
+            <Input placeholder="请输入公告标题" />
           </Form.Item>
 
           <Form.Item
-            label="图片URL"
-            name="imageUrl"
-            rules={[{ required: true, message: '请输入图片URL' }]}
-          >
-            <Input placeholder="https://example.com/image.jpg" />
-          </Form.Item>
-
-          <Form.Item
-            label="图片描述"
-            name="imageAlt"
-          >
-            <Input placeholder="图片alt文本（用于SEO和无障碍访问）" />
-          </Form.Item>
-
-          <Form.Item
-            label="描述"
-            name="description"
+            label="公告内容"
+            name="content"
+            rules={[{ required: true, message: '请输入公告内容' }]}
           >
             <TextArea
-              rows={3}
-              placeholder="轮播图描述"
+              rows={4}
+              placeholder="请输入公告内容"
               showCount
-              maxLength={500}
+              maxLength={1000}
             />
           </Form.Item>
 
           <Row gutter={16}>
-            <Col span={12}>
+            <Col span={8}>
               <Form.Item
-                label="链接URL"
-                name="linkUrl"
-              >
-                <Input placeholder="点击跳转链接（可选）" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                label="链接打开方式"
-                name="linkTarget"
+                label="公告类型"
+                name="type"
               >
                 <Select>
-                  <Option value="_self">当前窗口</Option>
-                  <Option value="_blank">新窗口</Option>
+                  <Option value="info">信息</Option>
+                  <Option value="warning">警告</Option>
+                  <Option value="error">错误</Option>
+                  <Option value="success">成功</Option>
                 </Select>
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item
+                label="排序"
+                name="sortOrder"
+              >
+                <Input type="number" placeholder="数字越小越靠前" />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item
+                label="置顶"
+                name="isSticky"
+                valuePropName="checked"
+              >
+                <Switch
+                  checkedChildren="置顶"
+                  unCheckedChildren="普通"
+                />
               </Form.Item>
             </Col>
           </Row>
 
           <Form.Item
-            label="排序"
-            name="sortOrder"
+            label="显示时间"
+            name="dateRange"
           >
-            <Input type="number" placeholder="数字越小越靠前" />
+            <RangePicker
+              showTime
+              style={{ width: '100%' }}
+              placeholder={['开始时间', '结束时间']}
+            />
           </Form.Item>
 
           <Row gutter={16}>
@@ -510,13 +465,13 @@ export default function BannersPage() {
             <Space>
               <Button onClick={() => {
                 setModalVisible(false)
-                setEditingBanner(null)
+                setEditingAnnouncement(null)
                 form.resetFields()
               }}>
                 取消
               </Button>
               <Button type="primary" htmlType="submit">
-                {editingBanner ? '更新' : '创建'}
+                {editingAnnouncement ? '更新' : '创建'}
               </Button>
             </Space>
           </Form.Item>

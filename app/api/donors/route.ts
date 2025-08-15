@@ -20,7 +20,7 @@ export async function OPTIONS(request: NextRequest) {
   return handleOptions(origin, userAgent)
 }
 
-// 新增捐赠人员请求体验证模式
+// 新增捐赠人员请求体验证模
 const createDonorSchema = z.object({
   name: z.string().min(1, '捐赠人姓名不能为空').max(255, '捐赠人姓名不能超过255个字符'),
   donationDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, '捐赠日期格式必须为YYYY-MM-DD')

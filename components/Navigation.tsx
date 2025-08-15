@@ -46,11 +46,8 @@ export default function Navigation({ className }: NavigationProps) {
     if (pathname.includes('/announcements')) {
       return ['announcements']
     }
-    if (pathname.includes('/hugo')) {
-      return ['hugo']
-    }
-    if (pathname.startsWith('/admin')) {
-      return ['admin']
+    if (pathname === '/admin') {
+      return ['dashboard']
     }
     return []
   }
@@ -58,9 +55,9 @@ export default function Navigation({ className }: NavigationProps) {
   // 菜单项配置
   const menuItems: MenuProps['items'] = [
     {
-      key: 'admin',
+      key: 'dashboard',
       icon: <HomeOutlined />,
-      label: '管理控制台',
+      label: '仪表板',
       onClick: () => router.push('/admin'),
     },
     {
@@ -70,33 +67,18 @@ export default function Navigation({ className }: NavigationProps) {
       onClick: () => router.push('/admin/software'),
     },
     {
-      key: 'announcements',
-      icon: <NotificationOutlined />,
-      label: '公告管理',
-      onClick: () => router.push('/admin/announcements'),
-    },
-    {
       key: 'activation-codes',
       icon: <KeyOutlined />,
       label: '激活码管理',
       onClick: () => router.push('/admin/activation-codes'),
     },
+    {
+      key: 'announcements',
+      icon: <NotificationOutlined />,
+      label: '公告管理',
+      onClick: () => router.push('/admin/announcements'),
+    },
   ]
-
-  // 如果在Hugo页面，添加Hugo菜单项
-  if (pathname.includes('/hugo')) {
-    menuItems.push({
-      key: 'hugo',
-      icon: <FileTextOutlined />,
-      label: 'Hugo文章',
-      onClick: () => {
-        const match = pathname.match(/\/admin\/hugo\/([^\/]+)/)
-        if (match) {
-          router.push(`/admin/hugo/${match[1]}`)
-        }
-      },
-    })
-  }
 
   // 用户下拉菜单
   const userMenuItems: MenuProps['items'] = [

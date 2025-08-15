@@ -42,7 +42,7 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 
 import EnhancedVersionManager from '@/components/EnhancedVersionManager'
-import AnnouncementManager from '@/components/AnnouncementManager'
+
 
 const { Title, Text, Paragraph } = Typography
 const { Content } = Layout
@@ -421,25 +421,7 @@ export default function SoftwareDetail() {
                 />
               )
             },
-            {
-              key: 'announcements',
-              label: (
-                <span>
-                  <BellOutlined />
-                  公告管理
-                </span>
-              ),
-              children: (
-                <AnnouncementManager
-                  softwareId={software.id}
-                  softwareName={software.name}
-                  onAnnouncementAdded={() => {
-                    // 公告添加后可以刷新软件信息
-                    fetchSoftwareDetail()
-                  }}
-                />
-              )
-            }
+
           ]}
         />
     </div>

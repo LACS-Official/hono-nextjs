@@ -14,6 +14,8 @@ export interface User {
   email: string
   avatar_url: string
   html_url: string
+  websiteId?: number // 网站用户专用字段
+  role?: string // 用户角色
 }
 
 // JWT 载荷接口
@@ -142,11 +144,36 @@ export function createLogoutHeaders(): Record<string, string> {
   }
 }
 
+// 验证网站用户权限
+export function isAuthorizedWebsiteUser(user: User, websiteId?: number): boolean {
+  if (!user || !user.login) {
+    console.warn('Website user check: Invalid user object')
+    return false
+  }
+
+  // 如果指定了网站ID，检查用户是否属于该网站
+  if (websiteId && user.websiteId && user.websiteId !== websiteId) {
+    console.warn('Website user check: User does not belong to the specified website')
+    return false
+  }
+
+  return true
+}
+
+// 检查网站用户是否有管理权限
+export function isWebsiteAdmin(user: User): boolean {
+  if (!user || !user.role) {
+    return false
+  }
+
+  return user.role === 'admin' || user.role === 'moderator'
+}
+
 // 认证中间件函数
 export function requireAuth(handler: (request: NextRequest, user: User) => Promise<Response>) {
   return async (request: NextRequest): Promise<Response> => {
     const authResult = authenticateRequest(request)
-    
+
     if (!authResult.success || !authResult.user) {
       return new Response(
         JSON.stringify({
@@ -174,5 +201,42 @@ export function requireAuth(handler: (request: NextRequest, user: User) => Promi
     }
 
     return handler(request, authResult.user)
+  }
+}
+
+// 网站用户认证中间件
+export function requireWebsiteAuth(websiteId?: number) {
+  return (handler: (request: NextRequest, user: User) => Promise<Response>) => {
+    return async (request: NextRequest): Promise<Response> => {
+      const authResult = authenticateRequest(request)
+
+      if (!authResult.success || !authResult.user) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: authResult.error || 'Authentication required'
+          }),
+          {
+            status: 401,
+            headers: { 'Content-Type': 'application/json' }
+          }
+        )
+      }
+
+      if (!isAuthorizedWebsiteUser(authResult.user, websiteId)) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: 'Insufficient permissions for this website'
+          }),
+          {
+            status: 403,
+            headers: { 'Content-Type': 'application/json' }
+          }
+        )
+      }
+
+      return handler(request, authResult.user)
+    }
   }
 }

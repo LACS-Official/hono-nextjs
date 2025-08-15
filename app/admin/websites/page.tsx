@@ -289,7 +289,7 @@ export default function WebsitesPage() {
   ]
 
   return (
-    <PageContainer>
+    <PageContainer title="网站管理">
       <Card
         title={
           <Space>

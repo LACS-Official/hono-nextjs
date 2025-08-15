@@ -339,7 +339,7 @@ export default function BannersPage() {
   ]
 
   return (
-    <PageContainer>
+    <PageContainer title="轮播图管理">
       <Breadcrumb style={{ marginBottom: 16 }}>
         <Breadcrumb.Item>
           <HomeOutlined />

@@ -40,7 +40,7 @@ import {
 } from '@ant-design/icons'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import Navigation from '@/components/Navigation'
+
 import EnhancedVersionManager from '@/components/EnhancedVersionManager'
 import AnnouncementManager from '@/components/AnnouncementManager'
 
@@ -159,45 +159,32 @@ export default function SoftwareDetail() {
 
   if (loading) {
     return (
-      <Layout style={{ minHeight: '100vh' }}>
-        <Navigation />
-        <Content style={{ padding: '24px', marginTop: '64px', background: '#f5f5f5' }}>
-          <div style={{ textAlign: 'center', padding: '50px' }}>
-            <Spin size="large" />
-            <div style={{ marginTop: '16px' }}>
-              <Text>正在加载软件详情...</Text>
-            </div>
-          </div>
-        </Content>
-      </Layout>
+      <div style={{ textAlign: 'center', padding: '50px' }}>
+        <Spin size="large" />
+        <div style={{ marginTop: '16px' }}>
+          <Text>正在加载软件详情...</Text>
+        </div>
+      </div>
     )
   }
 
   if (!software) {
     return (
-      <Layout style={{ minHeight: '100vh' }}>
-        <Navigation />
-        <Content style={{ padding: '24px', marginTop: '64px', background: '#f5f5f5' }}>
-          <div style={{ textAlign: 'center', padding: '50px' }}>
-            <Empty
-              description="未找到软件信息"
-              image={Empty.PRESENTED_IMAGE_SIMPLE}
-            >
-              <Link href="/admin/software">
-                <Button type="primary">返回软件列表</Button>
-              </Link>
-            </Empty>
-          </div>
-        </Content>
-      </Layout>
+      <div style={{ textAlign: 'center', padding: '50px' }}>
+        <Empty
+          description="未找到软件信息"
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+        >
+          <Link href="/admin/software">
+            <Button type="primary">返回软件列表</Button>
+          </Link>
+        </Empty>
+      </div>
     )
   }
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
-      <Navigation />
-      
-      <Content style={{ padding: '24px', marginTop: '64px', background: '#f5f5f5' }}>
+    <div className="responsive-container" style={{ paddingTop: '0', paddingBottom: '24px' }}>
         {/* 面包屑导航 */}
         <Breadcrumb style={{ marginBottom: '24px' }}>
           <Breadcrumb.Item>
@@ -455,7 +442,6 @@ export default function SoftwareDetail() {
             }
           ]}
         />
-      </Content>
-    </Layout>
+    </div>
   )
 }

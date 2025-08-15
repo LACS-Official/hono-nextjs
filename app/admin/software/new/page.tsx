@@ -33,7 +33,7 @@ import {
 } from '@ant-design/icons'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import Navigation from '@/components/Navigation'
+
 
 const { TextArea } = Input
 const { Title, Text } = Typography
@@ -115,10 +115,7 @@ export default function SoftwareNew() {
   }
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
-      <Navigation />
-      
-      <Content style={{ padding: '24px', marginTop: '64px', background: '#f5f5f5' }}>
+    <div className="responsive-container" style={{ paddingTop: '0', paddingBottom: '24px' }}>
         {/* 面包屑导航 */}
         <Breadcrumb style={{ marginBottom: '24px' }}>
           <Breadcrumb.Item>
@@ -494,7 +491,6 @@ export default function SoftwareNew() {
             </Card>
           </Col>
         </Row>
-      </Content>
-    </Layout>
+    </div>
   )
 }

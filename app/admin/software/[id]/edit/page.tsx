@@ -33,7 +33,7 @@ import {
 } from '@ant-design/icons'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
-import Navigation from '@/components/Navigation'
+
 
 const { TextArea } = Input
 const { Title, Text } = Typography
@@ -187,17 +187,12 @@ export default function SoftwareEdit() {
 
   if (loading) {
     return (
-      <Layout style={{ minHeight: '100vh' }}>
-        <Navigation />
-        <Content style={{ padding: '24px', marginTop: '64px', background: '#f5f5f5' }}>
-          <div style={{ textAlign: 'center', padding: '50px' }}>
-            <Spin size="large" />
-            <div style={{ marginTop: '16px' }}>
-              <Text>正在加载软件信息...</Text>
-            </div>
-          </div>
-        </Content>
-      </Layout>
+      <div style={{ textAlign: 'center', padding: '50px' }}>
+        <Spin size="large" />
+        <div style={{ marginTop: '16px' }}>
+          <Text>正在加载软件信息...</Text>
+        </div>
+      </div>
     )
   }
 

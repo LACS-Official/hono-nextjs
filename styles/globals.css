@@ -448,3 +448,190 @@ html, body {
   border-radius: 4px;
   padding: 8px 12px;
 }
+
+/* 侧边栏布局样式 */
+.admin-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.admin-sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 240px;
+  background: #fff;
+  border-right: 1px solid #f0f0f0;
+  z-index: 1000;
+  transition: all 0.2s ease-in-out;
+}
+
+.admin-sidebar.collapsed {
+  width: 80px;
+}
+
+.admin-content {
+  flex: 1;
+  margin-left: 240px;
+  background: #f5f5f5;
+  min-height: 100vh;
+  transition: margin-left 0.2s ease-in-out;
+}
+
+.admin-content.collapsed {
+  margin-left: 80px;
+}
+
+/* 移动端侧边栏样式 */
+@media (max-width: 767px) {
+  .admin-sidebar {
+    display: none;
+  }
+
+  .admin-content {
+    margin-left: 0;
+    margin-top: 64px;
+  }
+
+  .admin-content.collapsed {
+    margin-left: 0;
+  }
+}
+
+/* 侧边栏菜单样式优化 */
+.ant-layout-sider .ant-menu {
+  border-right: none;
+}
+
+.ant-layout-sider .ant-menu-item {
+  margin: 4px 8px;
+  border-radius: 6px;
+  height: 40px;
+  line-height: 40px;
+}
+
+.ant-layout-sider .ant-menu-item:hover {
+  background-color: #f5f5f5;
+}
+
+.ant-layout-sider .ant-menu-item-selected {
+  background-color: #e6f7ff;
+  color: #1890ff;
+}
+
+.ant-layout-sider .ant-menu-item-selected::after {
+  display: none;
+}
+
+/* 侧边栏用户信息样式 */
+.sidebar-user-info {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 16px;
+  border-top: 1px solid #f0f0f0;
+  background: #fff;
+}
+
+.sidebar-user-info:hover {
+  background-color: #f5f5f5;
+}
+
+/* 折叠按钮样式 */
+.sidebar-collapse-btn {
+  position: absolute;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1001;
+}
+
+/* 移动端顶部栏样式 */
+.mobile-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  background: #fff;
+  border-bottom: 1px solid #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  z-index: 1000;
+}
+
+/* 响应式容器调整 */
+@media (min-width: 768px) {
+  .responsive-container {
+    max-width: none;
+    padding: 0 24px;
+  }
+}
+
+/* 侧边栏动画优化 */
+.ant-layout-sider-trigger {
+  display: none;
+}
+
+.sidebar-logo {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  border-bottom: 1px solid #f0f0f0;
+  background: #fff;
+}
+
+.sidebar-logo.collapsed {
+  justify-content: center;
+  padding: 0;
+}
+
+/* 抽屉菜单样式优化 */
+.ant-drawer-header {
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.ant-drawer-body .ant-menu {
+  border-right: none;
+}
+
+.ant-drawer-body .ant-menu-item {
+  margin: 4px 16px;
+  border-radius: 6px;
+  height: 48px;
+  line-height: 48px;
+  font-size: 16px;
+}
+
+/* 移动端用户信息样式 */
+.mobile-user-info {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 16px;
+  border-top: 1px solid #f0f0f0;
+  background: #fff;
+}
+
+.mobile-user-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid #f0f0f0;
+  background: #fafafa;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+.mobile-user-card:hover {
+  background: #f0f0f0;
+  border-color: #d9d9d9;
+}

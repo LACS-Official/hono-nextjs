@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
       return corsResponse({
         success: false,
         error: '数据验证失败',
-        details: error.errors
+        details: error.issues
       }, { status: 400 }, origin, userAgent)
     }
 
@@ -197,7 +197,7 @@ async function handleWebsiteLogin(data: any, request: NextRequest, origin: strin
   await db
     .update(websiteUsers)
     .set({
-      loginCount: user.loginCount + 1,
+      loginCount: (user.loginCount || 0) + 1,
       lastLoginAt: new Date(),
       lastLoginIp: clientIp,
       updatedAt: new Date()
@@ -213,7 +213,7 @@ async function handleWebsiteLogin(data: any, request: NextRequest, origin: strin
     avatar_url: user.avatar || '',
     html_url: `${website.domain}/user/${user.username}`,
     websiteId: data.websiteId,
-    role: user.role
+    role: user.role || undefined
   }
 
   const token = generateToken(userForToken)
@@ -240,7 +240,7 @@ async function handleWebsiteLogin(data: any, request: NextRequest, origin: strin
         status: user.status,
         emailVerified: user.emailVerified,
         role: user.role,
-        loginCount: user.loginCount + 1,
+        loginCount: (user.loginCount || 0) + 1,
         lastLoginAt: new Date()
       },
       token: token,

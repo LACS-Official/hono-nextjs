@@ -7,7 +7,6 @@
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-
     "migrate:device-connections": "node scripts/migrate-device-connections-simplify.js",
     "migrate:unified": "node scripts/migrate-to-unified-database.js",
     "migrate:unified:dry-run": "node scripts/migrate-to-unified-database.js --dry-run",
@@ -37,6 +36,7 @@
     "zod": "^4.0.10"
   },
   "devDependencies": {
+    "@types/crypto-js": "^4.2.2",
     "@types/node": "18.11.18",
     "@types/react": "18.0.26",
     "@types/react-dom": "18.0.10",

@@ -151,7 +151,7 @@ export async function POST(request: NextRequest) {
       avatar_url: newUser.avatar || '',
       html_url: `${website.domain}/user/${newUser.username}`,
       websiteId: validatedData.websiteId,
-      role: newUser.role
+      role: newUser.role || undefined
     }
 
     const token = generateToken(userForToken)
@@ -189,7 +189,7 @@ export async function POST(request: NextRequest) {
       return corsResponse({
         success: false,
         error: '数据验证失败',
-        details: error.errors.map(err => ({
+        details: error.issues.map(err => ({
           field: err.path.join('.'),
           message: err.message
         }))

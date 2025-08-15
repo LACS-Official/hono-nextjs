@@ -140,7 +140,7 @@ export const websitePages = pgTable('website_pages', {
   isHomepage: boolean('is_homepage').default(false), // 是否为首页
   
   // 排序和层级
-  parentId: integer('parent_id').references(() => websitePages.id), // 父页面ID
+  parentId: integer('parent_id'), // 父页面ID
   sortOrder: integer('sort_order').default(0),
   
   // 时间戳
@@ -161,7 +161,7 @@ export const websiteMenus = pgTable('website_menus', {
   icon: varchar('icon', { length: 100 }), // 图标
   
   // 层级结构
-  parentId: integer('parent_id').references(() => websiteMenus.id), // 父菜单ID
+  parentId: integer('parent_id'), // 父菜单ID
   sortOrder: integer('sort_order').default(0), // 排序
   level: integer('level').default(0), // 菜单层级
   

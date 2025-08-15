@@ -170,7 +170,7 @@ export async function GET(request: NextRequest) {
     // 9. 设备连接统计
     const deviceStatsResult = await db
       .select({
-        totalDevices: sql<number>`COUNT(DISTINCT ${deviceConnections.deviceFingerprint})`,
+        totalDevices: sql<number>`COUNT(DISTINCT ${deviceConnections.userDeviceFingerprint})`,
         totalConnections: count()
       })
       .from(deviceConnections)

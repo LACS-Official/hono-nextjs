@@ -40,8 +40,8 @@ export async function GET(
 
   try {
     // 验证管理员权限
-    const authResult = await validateUnifiedAuth(request)
-    if (!authResult.success) {
+    const authResult = validateUnifiedAuth(request)
+    if (!authResult.isValid) {
       return corsResponse({
         success: false,
         error: authResult.error || '认证失败'
@@ -181,8 +181,8 @@ export async function POST(
 
   try {
     // 验证管理员权限
-    const authResult = await validateUnifiedAuth(request)
-    if (!authResult.success) {
+    const authResult = validateUnifiedAuth(request)
+    if (!authResult.isValid) {
       return corsResponse({
         success: false,
         error: authResult.error || '认证失败'
@@ -290,7 +290,7 @@ export async function POST(
       return corsResponse({
         success: false,
         error: '数据验证失败',
-        details: error.errors
+        details: error.issues
       }, { status: 400 }, origin, userAgent)
     }
 

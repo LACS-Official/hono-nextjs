@@ -9,7 +9,8 @@ export default {
     './lib/activation-codes-schema.ts',
     './lib/software-schema.ts',
     './lib/user-behavior-schema.ts',
-    './lib/donors-schema.ts'
+    './lib/donors-schema.ts',
+    './lib/website-management-schema.ts'
   ],
   out: './drizzle/unified',
   dialect: 'postgresql',

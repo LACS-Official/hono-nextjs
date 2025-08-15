@@ -43,11 +43,10 @@ export async function GET(request: NextRequest) {
     if (tags) {
       const tagList = tags.split(',').map(tag => tag.trim()).filter(Boolean)
       if (tagList.length > 0) {
-        // 使用 JSON 操作符检查标签数组是否包含任意一个指定标签
-        const tagConditions = tagList.map(tag => 
-          sql`${software.tags} ? ${tag}`
-        )
-        conditions.push(or(...tagConditions))
+        // 使用简单的 LIKE 查询来匹配标签
+        for (const tag of tagList) {
+          conditions.push(like(sql`${software.tags}::text`, `%"${tag}"%`))
+        }
       }
     }
 
@@ -62,14 +61,7 @@ export async function GET(request: NextRequest) {
     // 搜索关键词
     if (search) {
       const searchTerm = `%${search}%`
-      conditions.push(
-        or(
-          like(software.name, searchTerm),
-          like(software.nameEn, searchTerm),
-          like(software.description, searchTerm),
-          like(software.descriptionEn, searchTerm)
-        )
-      )
+      conditions.push(like(software.name, searchTerm))
     }
 
     // 查询软件列表（按访问量降序排列）

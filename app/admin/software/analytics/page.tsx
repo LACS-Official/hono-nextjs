@@ -21,7 +21,7 @@ import {
 import {
   BarChartOutlined,
   EyeOutlined,
-  TrendingUpOutlined,
+  RiseOutlined,
   HomeOutlined,
   AppstoreOutlined,
   ReloadOutlined,
@@ -376,7 +376,7 @@ export default function SoftwareAnalytics() {
                 <Statistic
                   title="平均访问量"
                   value={statsData.summary.averageViews}
-                  prefix={<TrendingUpOutlined />}
+                  prefix={<RiseOutlined />}
                   valueStyle={{ color: '#52c41a' }}
                 />
               </Card>

@@ -17,11 +17,11 @@ export async function GET(request: NextRequest) {
 
   try {
     // 验证管理员权限
-    const authResult = await validateUnifiedAuth(request)
-    if (!authResult.success) {
+    const authResult = validateUnifiedAuth(request)
+    if (!authResult.isValid) {
       return corsResponse({
         success: false,
-        error: authResult.error
+        error: authResult.error || 'Authentication required'
       }, { status: 401 }, origin, userAgent)
     }
 
@@ -143,11 +143,11 @@ export async function POST(request: NextRequest) {
 
   try {
     // 验证管理员权限
-    const authResult = await validateUnifiedAuth(request)
-    if (!authResult.success) {
+    const authResult = validateUnifiedAuth(request)
+    if (!authResult.isValid) {
       return corsResponse({
         success: false,
-        error: authResult.error
+        error: authResult.error || 'Authentication required'
       }, { status: 401 }, origin, userAgent)
     }
 

@@ -59,10 +59,7 @@ export default function AdminLayout({
             contentBg: '#ffffff',
             headerBg: '#ffffff',
           },
-          Sider: {
-            // 侧边栏样式
-            colorBgContainer: '#ffffff',
-          },
+
         },
       }}
     >

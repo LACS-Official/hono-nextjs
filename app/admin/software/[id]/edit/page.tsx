@@ -198,30 +198,24 @@ export default function SoftwareEdit() {
 
   if (!software) {
     return (
-      <Layout style={{ minHeight: '100vh' }}>
-        <Navigation />
-        <Content style={{ padding: '24px', marginTop: '64px', background: '#f5f5f5' }}>
-          <Alert
-            message="软件不存在"
-            description="未找到指定的软件信息"
-            type="error"
-            showIcon
-            action={
-              <Link href="/admin/software">
-                <Button size="small">返回软件列表</Button>
-              </Link>
-            }
-          />
-        </Content>
-      </Layout>
+      <div style={{ textAlign: 'center', padding: '50px' }}>
+        <Alert
+          message="软件不存在"
+          description="未找到指定的软件信息"
+          type="error"
+          showIcon
+          action={
+            <Link href="/admin/software">
+              <Button size="small">返回软件列表</Button>
+            </Link>
+          }
+        />
+      </div>
     )
   }
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
-      <Navigation />
-      
-      <Content style={{ padding: '24px', marginTop: '64px', background: '#f5f5f5' }}>
+    <div className="responsive-container" style={{ paddingTop: '0', paddingBottom: '24px' }}>
         {/* 面包屑导航 */}
         <Breadcrumb style={{ marginBottom: '24px' }}>
           <Breadcrumb.Item>
@@ -616,7 +610,6 @@ export default function SoftwareEdit() {
             </Card>
           </Col>
         </Row>
-      </Content>
-    </Layout>
+    </div>
   )
 }

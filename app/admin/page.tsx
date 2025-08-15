@@ -33,7 +33,8 @@ import {
   DatabaseOutlined,
   ApiOutlined,
   RiseOutlined,
-  FallOutlined
+  FallOutlined,
+  HeartOutlined
 } from '@ant-design/icons'
 
 const { Title, Paragraph, Text } = Typography
@@ -169,6 +170,9 @@ export default function AdminDashboard() {
         break
       case 'manage-activation-codes':
         router.push('/admin/activation-codes')
+        break
+      case 'manage-donors':
+        router.push('/admin/donors')
         break
       default:
         break
@@ -455,6 +459,15 @@ export default function AdminDashboard() {
                   onClick={() => handleQuickAction('manage-announcements')}
                 >
                   管理公告
+                </Button>
+              </Col>
+              <Col xs={24} sm={12}>
+                <Button
+                  block
+                  icon={<HeartOutlined />}
+                  onClick={() => handleQuickAction('manage-donors')}
+                >
+                  捐赠人员管理
                 </Button>
               </Col>
             </Row>

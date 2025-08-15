@@ -14,7 +14,8 @@ import {
   NotificationOutlined,
   MenuOutlined,
   MenuFoldOutlined,
-  MenuUnfoldOutlined
+  MenuUnfoldOutlined,
+  HeartOutlined
 } from '@ant-design/icons'
 import type { MenuProps } from 'antd'
 import { useAuth } from '@/contexts/AuthContext'
@@ -65,6 +66,9 @@ export default function Navigation({ className }: NavigationProps) {
     if (pathname.includes('/announcements')) {
       return ['announcements']
     }
+    if (pathname.includes('/donors')) {
+      return ['donors']
+    }
     if (pathname === '/admin') {
       return ['dashboard']
     }
@@ -96,6 +100,12 @@ export default function Navigation({ className }: NavigationProps) {
       icon: <NotificationOutlined />,
       label: '公告管理',
       onClick: () => router.push('/admin/announcements'),
+    },
+    {
+      key: 'donors',
+      icon: <HeartOutlined />,
+      label: '捐赠人员管理',
+      onClick: () => router.push('/admin/donors'),
     },
   ]
 

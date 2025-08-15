@@ -12,12 +12,14 @@ import { lt } from 'drizzle-orm'
 import * as activationCodesSchema from './activation-codes-schema'
 import * as softwareSchema from './software-schema'
 import * as userBehaviorSchema from './user-behavior-schema'
+import * as donorsSchema from './donors-schema'
 
 // 合并所有模式
 const unifiedSchema = {
   ...activationCodesSchema,
   ...softwareSchema,
   ...userBehaviorSchema,
+  ...donorsSchema,
 }
 
 // 统一数据库连接字符串
@@ -49,6 +51,9 @@ export const {
   softwareActivations,
   deviceConnections,
   behaviorStats,
+
+  // 捐赠人员相关表
+  donors,
 } = unifiedSchema
 
 // 数据库健康检查函数

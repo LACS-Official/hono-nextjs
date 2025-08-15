@@ -7,8 +7,9 @@ config({ path: '.env.local' })
 export default {
   schema: [
     './lib/activation-codes-schema.ts',
-    './lib/software-schema.ts', 
-    './lib/user-behavior-schema.ts'
+    './lib/software-schema.ts',
+    './lib/user-behavior-schema.ts',
+    './lib/donors-schema.ts'
   ],
   out: './drizzle/unified',
   dialect: 'postgresql',

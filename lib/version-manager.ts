@@ -127,11 +127,12 @@ export async function getLatestVersionWithDownloadUrl(softwareId: number): Promi
     let downloadUrl: string | null = null
     if (latestVersion.downloadLinks) {
       const links = latestVersion.downloadLinks as any
-      // 优先级：official > quark > pan123 > baidu > thunder > backup[0]
+      // 优先级：official > quark > pan123 > baidu > thunderPan > thunder > backup[0]
       downloadUrl = links.official ||
                    links.quark ||
                    links.pan123 ||
                    links.baidu ||
+                   links.thunderPan ||
                    links.thunder ||
                    (links.backup && links.backup.length > 0 ? links.backup[0] : null)
     }

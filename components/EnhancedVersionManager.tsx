@@ -51,6 +51,7 @@ interface DownloadLinks {
   pan123?: string
   baidu?: string
   thunder?: string
+  thunderPan?: string
   backup?: string[]
 }
 
@@ -265,6 +266,14 @@ export default function EnhancedVersionManager({
       linkButtons.push(
         <Button key="thunder" size="small" href={links.thunder} target="_blank">
           迅雷
+        </Button>
+      )
+    }
+
+    if (links.thunderPan) {
+      linkButtons.push(
+        <Button key="thunderPan" size="small" href={links.thunderPan} target="_blank">
+          迅雷网盘
         </Button>
       )
     }
@@ -815,6 +824,22 @@ export default function EnhancedVersionManager({
                     style={{ marginBottom: 8 }}
                   >
                     <Input placeholder="百度网盘链接" />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item
+                    name={['downloadLinks', 'thunder']}
+                    style={{ marginBottom: 8 }}
+                  >
+                    <Input placeholder="迅雷下载链接" />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item
+                    name={['downloadLinks', 'thunderPan']}
+                    style={{ marginBottom: 8 }}
+                  >
+                    <Input placeholder="迅雷网盘链接" />
                   </Form.Item>
                 </Col>
               </Row>

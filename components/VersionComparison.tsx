@@ -99,7 +99,8 @@ export default function VersionComparison({
       { key: 'quark', label: '夸克', color: 'purple' },
       { key: 'pan123', label: '123', color: 'green' },
       { key: 'baidu', label: '百度', color: 'red' },
-      { key: 'thunder', label: '迅雷', color: 'orange' }
+      { key: 'thunder', label: '迅雷', color: 'orange' },
+      { key: 'thunderPan', label: '迅雷网盘', color: 'gold' }
     ]
 
     return (

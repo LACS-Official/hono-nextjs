@@ -40,6 +40,7 @@ export const softwareVersionHistory = pgTable('software_version_history', {
     pan123?: string;       // 123网盘链接
     baidu?: string;        // 百度网盘链接
     thunder?: string;      // 迅雷下载链接
+    thunderPan?: string;   // 迅雷网盘链接
     backup?: string[];     // 其他备用链接
   }>(),
 
@@ -84,7 +85,7 @@ export const downloadStats = pgTable('download_stats', {
   id: serial('id').primaryKey(),
   softwareId: integer('software_id').notNull().references(() => software.id, { onDelete: 'cascade' }),
   versionId: integer('version_id').references(() => softwareVersionHistory.id, { onDelete: 'cascade' }),
-  downloadSource: varchar('download_source', { length: 50 }).notNull(), // official, quark, pan123, baidu, thunder
+  downloadSource: varchar('download_source', { length: 50 }).notNull(), // official, quark, pan123, baidu, thunder, thunderPan
   downloadCount: integer('download_count').default(0).notNull(),
   lastDownloadAt: timestamp('last_download_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
@@ -114,6 +115,7 @@ export interface DownloadLinks {
   pan123?: string;
   baidu?: string;
   thunder?: string;
+  thunderPan?: string;
   backup?: string[];
 }
 

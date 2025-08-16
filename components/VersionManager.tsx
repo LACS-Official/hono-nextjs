@@ -42,6 +42,7 @@ interface DownloadLinks {
   pan123?: string
   baidu?: string
   thunder?: string
+  thunderPan?: string
   backup?: string[]
 }
 
@@ -214,6 +215,11 @@ export default function VersionManager({ softwareId, softwareName, onVersionAdde
           {links?.thunder && (
             <Button size="small" href={links.thunder} target="_blank">
               迅雷下载
+            </Button>
+          )}
+          {links?.thunderPan && (
+            <Button size="small" href={links.thunderPan} target="_blank">
+              迅雷网盘
             </Button>
           )}
         </Space>
@@ -464,9 +470,18 @@ export default function VersionManager({ softwareId, softwareName, onVersionAdde
             </Col>
           </Row>
 
-          <Form.Item name={['downloadLinks', 'thunder']} label="迅雷下载链接">
-            <Input placeholder="thunder://..." />
-          </Form.Item>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name={['downloadLinks', 'thunder']} label="迅雷下载链接">
+                <Input placeholder="thunder://..." />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name={['downloadLinks', 'thunderPan']} label="迅雷网盘链接">
+                <Input placeholder="https://pan.xunlei.com/..." />
+              </Form.Item>
+            </Col>
+          </Row>
 
           <Divider>版本信息</Divider>
 

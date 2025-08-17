@@ -94,9 +94,27 @@ curl "https://your-domain.com/api/admin/dashboard/stats" \
 
 ## 🔐 认证方式
 
-### API Key 认证
+### 双重认证支持
 
-所有API请求都需要在请求头中包含API Key：
+激活码管理API支持两种认证方式：
+
+#### 1. JWT Token 认证（推荐）
+
+通过GitHub OAuth登录后获取的JWT Token，适用于前端管理界面：
+
+```http
+Authorization: Bearer your-jwt-token
+```
+
+**获取方式**：
+1. 访问 `/admin` 页面
+2. 通过GitHub OAuth登录
+3. JWT Token自动存储在Cookie中
+4. 前端自动在请求头中包含Token
+
+#### 2. API Key 认证（传统方式）
+
+适用于服务器端API调用：
 
 ```http
 X-API-Key: your-api-key-here
@@ -104,10 +122,22 @@ X-API-Key: your-api-key-here
 
 **示例**:
 ```bash
+# 使用API Key
 curl -H "X-API-Key: your-api-key" \
      -H "Content-Type: application/json" \
-     https://your-domain.com/api/endpoint
+     https://your-domain.com/api/activation-codes
+
+# 使用JWT Token
+curl -H "Authorization: Bearer your-jwt-token" \
+     -H "Content-Type: application/json" \
+     https://your-domain.com/api/activation-codes
 ```
+
+### 认证优先级
+
+1. **JWT Token优先**：首先检查Authorization头中的Bearer Token
+2. **API Key备用**：如果JWT认证失败，检查X-API-Key头
+3. **权限验证**：JWT Token需要验证GitHub用户的管理员权限
 
 ### 响应格式
 
@@ -154,12 +184,14 @@ const response = await fetch('/admin/endpoint', {
 
 | 方法 | 端点 | 描述 | 认证 |
 |------|------|------|------|
-| POST | `/api/activation-codes` | 生成激活码 | API Key |
-| POST | `/api/activation-codes/verify` | 验证激活码 | API Key |
-| GET | `/api/activation-codes` | 查询激活码列表 | API Key |
-| GET | `/api/activation-codes/stats` | 获取统计信息 | API Key |
-| POST | `/api/activation-codes/cleanup` | 清理过期激活码 | API Key |
-| POST | `/api/activation-codes/cleanup-unused` | 清理未使用激活码 | API Key |
+| POST | `/api/activation-codes` | 生成激活码 | JWT Token 或 API Key |
+| POST | `/api/activation-codes/verify` | 验证激活码 | 无需认证 |
+| GET | `/api/activation-codes` | 查询激活码列表 | JWT Token 或 API Key |
+| GET | `/api/activation-codes/{id}` | 获取激活码详情 | JWT Token 或 API Key |
+| DELETE | `/api/activation-codes/{id}` | 删除激活码 | JWT Token 或 API Key |
+| GET | `/api/activation-codes/stats` | 获取统计信息 | JWT Token 或 API Key |
+| POST | `/api/activation-codes/cleanup` | 清理过期激活码 | JWT Token 或 API Key |
+| POST | `/api/activation-codes/cleanup-unused` | 清理未使用激活码 | JWT Token 或 API Key |
 
 ### 🎲 生成激活码
 
@@ -2195,7 +2227,7 @@ curl "https://your-domain.com/api/admin/dashboard/activities?days=30&limit=50" \
 
 ## 📚 更新日志
 
-### v2.3.0 - 激活码格式优化 (2025-08-17)
+### v2.3.0 - 激活码格式优化与认证增强 (2025-08-17)
 
 #### 🔄 激活码格式变更
 - **新格式**：激活码从带连字符格式（如 `MDMNBPJX-3S0P6E-B1360C10`）更改为8位大写字母和数字组合（如 `A1B2C3D4`）
@@ -2203,15 +2235,31 @@ curl "https://your-domain.com/api/admin/dashboard/activities?days=30&limit=50" \
 - **生成规则**：新激活码使用8位随机大写字母（A-Z）和数字（0-9）组合
 - **格式验证**：添加激活码格式验证，拒绝格式不正确的激活码
 
-#### 🔧 技术改进
+#### � 认证系统增强
+- **双重认证支持**：激活码管理API现在支持JWT Token和API Key两种认证方式
+- **GitHub OAuth集成**：通过GitHub OAuth登录的用户可以直接使用激活码功能
+- **前端自动认证**：前端API客户端自动从Cookie中获取JWT Token
+- **向后兼容**：保持API Key认证方式的完全兼容性
+
+#### �🔧 技术改进
 - 优化激活码生成算法，提高唯一性和安全性
 - 简化激活码格式，便于用户输入和记忆
-- 更新API文档中的所有激活码示例
+- 实现JWT认证优先，API Key备用的认证策略
+- 更新API文档中的所有激活码示例和认证说明
 - 保持向后兼容性，旧格式激活码继续有效
+
+#### 🛠️ 问题修复
+- **修复GitHub OAuth登录后无法生成激活码的问题**
+- **解决前端401身份验证失败错误**
+- **优化错误消息，提供更清晰的认证失败提示**
 
 #### 📊 示例对比
 - **旧格式**：`MDMNBPJX-3S0P6E-B1360C10`（带连字符，长度不固定）
 - **新格式**：`A1B2C3D4`（8位固定长度，无连字符）
+
+#### 🔑 认证方式
+- **JWT Token**：`Authorization: Bearer <jwt-token>`（GitHub OAuth用户）
+- **API Key**：`X-API-Key: <api-key>`（传统API调用）
 
 ### v2.2.0 - 网站管理功能 (2025-08-17)
 

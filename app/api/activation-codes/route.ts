@@ -43,12 +43,28 @@ export async function OPTIONS(request: NextRequest) {
   return handleOptions(origin, userAgent)
 }
 
-// 生成激活码
+// 生成激活码 - 新格式：8位大写字母和数字组合
 function generateActivationCode(): string {
-  const timestamp = Date.now().toString(36)
-  const random = Math.random().toString(36).substring(2, 8)
-  const uuid = uuidv4().replace(/-/g, '').substring(0, 8)
-  return `${timestamp}-${random}-${uuid}`.toUpperCase()
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+  let result = ''
+
+  // 生成8位随机字符
+  for (let i = 0; i < 8; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length))
+  }
+
+  return result
+}
+
+// 验证激活码格式（支持新旧两种格式）
+function isValidActivationCodeFormat(code: string): boolean {
+  // 新格式：8位大写字母和数字
+  const newFormatRegex = /^[A-Z0-9]{8}$/
+
+  // 旧格式：带连字符的格式（如 "MDMNBPJX-3S0P6E-B1360C10"）
+  const oldFormatRegex = /^[A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+$/
+
+  return newFormatRegex.test(code) || oldFormatRegex.test(code)
 }
 
 // POST - 生成激活码

@@ -5,6 +5,17 @@ import { eq, and, lt } from 'drizzle-orm'
 import { corsResponse, handleOptions } from '@/lib/cors'
 import { TimeUtils } from '@/lib/time-utils'
 
+// 验证激活码格式（支持新旧两种格式）
+function isValidActivationCodeFormat(code: string): boolean {
+  // 新格式：8位大写字母和数字
+  const newFormatRegex = /^[A-Z0-9]{8}$/
+
+  // 旧格式：带连字符的格式（如 "MDMNBPJX-3S0P6E-B1360C10"）
+  const oldFormatRegex = /^[A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+$/
+
+  return newFormatRegex.test(code) || oldFormatRegex.test(code)
+}
+
 // 自动清理5分钟内未使用的激活码
 async function cleanupUnusedCodes() {
   try {
@@ -56,6 +67,14 @@ export async function POST(request: NextRequest) {
       return corsResponse({
         success: false,
         error: '激活码参数缺失'
+      }, { status: 400 }, origin, userAgent)
+    }
+
+    // 验证激活码格式（支持新旧两种格式）
+    if (!isValidActivationCodeFormat(code)) {
+      return corsResponse({
+        success: false,
+        error: '激活码格式不正确'
       }, { status: 400 }, origin, userAgent)
     }
 

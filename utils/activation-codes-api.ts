@@ -135,10 +135,35 @@ export class ActivationCodeApiClient {
   }
 
   private getHeaders(): HeadersInit {
-    return {
+    const headers: HeadersInit = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
     }
+
+    // 在浏览器环境中，尝试从Cookie中获取JWT token
+    if (typeof window !== 'undefined') {
+      const token = this.getAuthToken()
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
+      }
+    }
+
+    return headers
+  }
+
+  private getAuthToken(): string | null {
+    if (typeof window === 'undefined') return null
+
+    // 从Cookie中获取auth-token
+    const cookies = document.cookie.split(';')
+    for (const cookie of cookies) {
+      const [name, value] = cookie.trim().split('=')
+      if (name === 'auth-token') {
+        return value
+      }
+    }
+
+    return null
   }
 
   private async handleResponse<T>(response: Response): Promise<T> {

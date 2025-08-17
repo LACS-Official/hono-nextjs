@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { unifiedDb as db, activationCodes } from '@/lib/unified-db-connection'
 import { eq } from 'drizzle-orm'
 import { corsResponse, validateApiKeyWithExpiration } from '@/lib/cors'
+import { authenticateRequest, isAuthorizedAdmin } from '@/lib/auth'
 
 // GET - 获取单个激活码详情
 export async function GET(
@@ -13,6 +14,35 @@ export async function GET(
   const userAgent = request.headers.get('User-Agent')
 
   try {
+    // 认证验证：支持API Key或JWT Token
+    let isAuthenticated = false
+    let authError = ''
+
+    // 首先尝试JWT认证（GitHub OAuth）
+    const jwtAuth = authenticateRequest(request)
+    if (jwtAuth.success && jwtAuth.user && isAuthorizedAdmin(jwtAuth.user)) {
+      isAuthenticated = true
+    } else {
+      // 如果JWT认证失败，尝试API Key认证
+      if (process.env.ENABLE_API_KEY_AUTH === 'true') {
+        const apiKeyValidation = validateApiKeyWithExpiration(request)
+        if (apiKeyValidation.isValid) {
+          isAuthenticated = true
+        } else {
+          authError = apiKeyValidation.error || 'Invalid or missing API Key'
+        }
+      } else {
+        authError = jwtAuth.error || 'Authentication required'
+      }
+    }
+
+    if (!isAuthenticated) {
+      return corsResponse({
+        success: false,
+        error: authError || '身份验证失败，请重新登录'
+      }, { status: 401 }, origin, userAgent)
+    }
+
     const { id } = params
 
     const [activationCode] = await db
@@ -64,16 +94,33 @@ export async function DELETE(
   const userAgent = request.headers.get('User-Agent')
 
   try {
-    // API Key 验证（带过期时间）
-    let apiKeyValidation = null
-    if (process.env.ENABLE_API_KEY_AUTH === 'true') {
-      apiKeyValidation = validateApiKeyWithExpiration(request)
-      if (!apiKeyValidation.isValid) {
-        return corsResponse({
-          success: false,
-          error: apiKeyValidation.error || 'Invalid or missing API Key'
-        }, { status: 401 }, origin, userAgent)
+    // 认证验证：支持API Key或JWT Token
+    let isAuthenticated = false
+    let authError = ''
+
+    // 首先尝试JWT认证（GitHub OAuth）
+    const jwtAuth = authenticateRequest(request)
+    if (jwtAuth.success && jwtAuth.user && isAuthorizedAdmin(jwtAuth.user)) {
+      isAuthenticated = true
+    } else {
+      // 如果JWT认证失败，尝试API Key认证
+      if (process.env.ENABLE_API_KEY_AUTH === 'true') {
+        const apiKeyValidation = validateApiKeyWithExpiration(request)
+        if (apiKeyValidation.isValid) {
+          isAuthenticated = true
+        } else {
+          authError = apiKeyValidation.error || 'Invalid or missing API Key'
+        }
+      } else {
+        authError = jwtAuth.error || 'Authentication required'
       }
+    }
+
+    if (!isAuthenticated) {
+      return corsResponse({
+        success: false,
+        error: authError || '身份验证失败，请重新登录'
+      }, { status: 401 }, origin, userAgent)
     }
 
     const { id } = params

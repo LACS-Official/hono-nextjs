@@ -4,7 +4,7 @@
  */
 
 import { NextRequest } from 'next/server'
-import { unifiedDb as db, software, activationCodes, softwareActivations } from '@/lib/unified-db-connection'
+import { unifiedDb as db, software, activationCodes, softwareUsage } from '@/lib/unified-db-connection'
 import { desc, gte, or, and, eq } from 'drizzle-orm'
 import { corsResponse, handleOptions, validateUnifiedAuth } from '@/lib/cors'
 
@@ -21,7 +21,7 @@ export async function OPTIONS(request: NextRequest) {
 // 活动记录接口
 interface Activity {
   id: string
-  type: 'software_created' | 'software_updated' | 'activation_code_generated' | 'activation_code_used' | 'software_activated'
+  type: 'software_created' | 'software_updated' | 'activation_code_generated' | 'activation_code_used' | 'software_used'
   title: string
   description: string
   timestamp: string
@@ -248,31 +248,31 @@ async function getActivationCodeActivities(startDate: Date, limit: number): Prom
 // 获取用户激活相关活动
 async function getUserActivationActivities(startDate: Date, limit: number): Promise<Activity[]> {
   try {
-    const recentActivations = await db
+    const recentUsage = await db
       .select({
-        id: softwareActivations.id,
-        softwareName: softwareActivations.softwareName,
-        softwareVersion: softwareActivations.softwareVersion,
-        deviceFingerprint: softwareActivations.deviceFingerprint,
-        activatedAt: softwareActivations.activatedAt,
-        deviceOs: softwareActivations.deviceOs
+        id: softwareUsage.id,
+        softwareName: softwareUsage.softwareName,
+        softwareVersion: softwareUsage.softwareVersion,
+        deviceFingerprint: softwareUsage.deviceFingerprint,
+        usedAt: softwareUsage.usedAt,
+        used: softwareUsage.used
       })
-      .from(softwareActivations)
-      .where(gte(softwareActivations.activatedAt, startDate))
-      .orderBy(desc(softwareActivations.activatedAt))
+      .from(softwareUsage)
+      .where(gte(softwareUsage.usedAt, startDate))
+      .orderBy(desc(softwareUsage.usedAt))
       .limit(limit)
 
-    const activities: Activity[] = recentActivations.map(activation => ({
-      id: `software_activated_${activation.id}`,
-      type: 'software_activated',
-      title: '软件激活',
-      description: `用户激活了「${activation.softwareName}」版本 ${activation.softwareVersion}`,
-      timestamp: activation.activatedAt.toISOString(),
+    const activities: Activity[] = recentUsage.map(usage => ({
+      id: `software_used_${usage.id}`,
+      type: 'software_used',
+      title: '软件使用',
+      description: `用户使用了「${usage.softwareName}」${usage.used}次 (版本 ${usage.softwareVersion || '未知'})`,
+      timestamp: usage.usedAt.toISOString(),
       metadata: {
-        softwareName: activation.softwareName,
-        softwareVersion: activation.softwareVersion,
-        deviceInfo: activation.deviceFingerprint?.substring(0, 8) + '...' || '未知设备',
-        platform: activation.deviceOs || '未知平台'
+        softwareName: usage.softwareName,
+        softwareVersion: usage.softwareVersion,
+        deviceInfo: usage.deviceFingerprint?.substring(0, 8) + '...' || '未知设备',
+        usageCount: usage.used
       }
     }))
 

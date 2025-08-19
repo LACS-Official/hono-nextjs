@@ -58,10 +58,10 @@ interface DashboardStats {
     usageRate: number
   }
   userBehavior: {
-    totalActivations: number
-    recentActivations: number
+    totalUsage: number
+    recentUsage: number
     uniqueDevices: number
-    popularSoftware: Array<{ softwareName: string; activations: number }>
+    popularSoftware: Array<{ softwareName: string; totalUsed: number }>
   }
   system: {
     status: 'healthy' | 'degraded' | 'error'
@@ -503,7 +503,7 @@ export default function AdminDashboard() {
                           />
                           {item.softwareName}
                         </span>
-                        <Text type="secondary">{item.activations} 次激活</Text>
+                        <Text type="secondary">{item.totalUsed} 次使用</Text>
                       </div>
                     </List.Item>
                   )}

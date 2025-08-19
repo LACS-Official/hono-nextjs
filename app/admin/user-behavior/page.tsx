@@ -76,7 +76,7 @@ export default function UserBehaviorPage() {
   const [loading, setLoading] = useState(false)
   const [usageStats, setUsageStats] = useState<UsageStats | null>(null)
   const [deviceStats, setDeviceStats] = useState<DeviceConnectionStats | null>(null)
-  const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null)
+  const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(null)
   const [selectedSoftware, setSelectedSoftware] = useState<number | undefined>(undefined)
 
   // 获取使用统计数据
@@ -88,7 +88,7 @@ export default function UserBehaviorPage() {
       if (selectedSoftware) {
         params.append('softwareId', selectedSoftware.toString())
       }
-      if (dateRange) {
+      if (dateRange && dateRange[0] && dateRange[1]) {
         params.append('startDate', dateRange[0].format('YYYY-MM-DD'))
         params.append('endDate', dateRange[1].format('YYYY-MM-DD'))
       }
@@ -118,7 +118,7 @@ export default function UserBehaviorPage() {
       if (selectedSoftware) {
         params.append('softwareId', selectedSoftware.toString())
       }
-      if (dateRange) {
+      if (dateRange && dateRange[0] && dateRange[1]) {
         params.append('startDate', dateRange[0].format('YYYY-MM-DD'))
         params.append('endDate', dateRange[1].format('YYYY-MM-DD'))
       }

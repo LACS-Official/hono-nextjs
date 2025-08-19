@@ -49,26 +49,33 @@ export async function POST(request: NextRequest) {
     }
 
     // 专用API Key验证
+    console.log('🔍 [DEBUG] 开始执行API Key验证...')
     const apiKeyValidation = validateUserBehaviorRecordApiKey(request)
+    console.log('🔍 [DEBUG] API Key验证结果:', apiKeyValidation)
+
     if (!apiKeyValidation.isValid) {
+      console.log('❌ [DEBUG] API Key验证失败，返回401错误')
       return corsResponse({
         success: false,
         error: apiKeyValidation.error || 'Invalid or missing API Key for user behavior recording'
       }, { status: 401 }, origin, userAgent)
     }
 
-    // 安全检查
-    const securityCheck = await UserBehaviorSecurity.performSecurityCheck(request)
-    if (!securityCheck.success) {
-      return UserBehaviorSecurity.createSecurityErrorResponse(securityCheck)
-    }
+    console.log('✅ [DEBUG] API Key验证通过，继续处理请求')
 
+    // 读取请求体
     const bodyText = await request.text()
     if (!bodyText) {
       return corsResponse({
         success: false,
         error: '请求体不能为空'
       }, { status: 400 }, origin, userAgent)
+    }
+
+    // 安全检查（传递请求体）
+    const securityCheck = await UserBehaviorSecurity.performSecurityCheck(request, bodyText)
+    if (!securityCheck.success) {
+      return UserBehaviorSecurity.createSecurityErrorResponse(securityCheck)
     }
 
     const body = JSON.parse(bodyText)

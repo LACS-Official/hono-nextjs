@@ -147,15 +147,25 @@ export function validateApiKeyWithExpiration(request: Request): ApiKeyValidation
 // 用户行为记录API专用的API Key验证函数
 export function validateUserBehaviorRecordApiKey(request: Request): ApiKeyValidationResult {
   const apiKey = request.headers.get('X-API-Key')
-  const validApiKey = process.env.USER_BEHAVIOR_RECORD_API_KEY
+  // 优先使用专用的API Key，如果没有设置则使用通用的API Key
+  const validApiKey = process.env.USER_BEHAVIOR_RECORD_API_KEY || process.env.USER_BEHAVIOR_API_KEY
 
-  // 如果没有设置专用API Key，则跳过验证（开发模式）
+  console.log('🔍 [DEBUG] validateUserBehaviorRecordApiKey 被调用')
+  console.log('🔍 [DEBUG] 请求中的API Key:', apiKey ? `${apiKey.substring(0, 8)}...` : '未提供')
+  console.log('🔍 [DEBUG] 使用的环境变量:', process.env.USER_BEHAVIOR_RECORD_API_KEY ? 'USER_BEHAVIOR_RECORD_API_KEY' : 'USER_BEHAVIOR_API_KEY')
+  console.log('🔍 [DEBUG] 环境变量API Key:', validApiKey ? '已设置' : '未设置')
+
+  // 如果两个API Key都没有设置，返回错误
   if (!validApiKey) {
-    console.warn('⚠️ USER_BEHAVIOR_RECORD_API_KEY 环境变量未设置，跳过API Key验证')
-    return { isValid: true }
+    console.error('❌ USER_BEHAVIOR_RECORD_API_KEY 和 USER_BEHAVIOR_API_KEY 环境变量都未设置，无法验证API Key')
+    return {
+      isValid: false,
+      error: 'Server configuration error: No API Key configured for user behavior recording'
+    }
   }
 
   if (!apiKey) {
+    console.log('❌ [DEBUG] API Key验证失败: 缺少API Key')
     return {
       isValid: false,
       error: 'Missing API Key for user behavior recording'
@@ -163,12 +173,14 @@ export function validateUserBehaviorRecordApiKey(request: Request): ApiKeyValida
   }
 
   if (apiKey !== validApiKey) {
+    console.log('❌ [DEBUG] API Key验证失败: API Key不匹配')
     return {
       isValid: false,
       error: 'Invalid API Key for user behavior recording'
     }
   }
 
+  console.log('✅ [DEBUG] API Key验证成功')
   return { isValid: true }
 }
 

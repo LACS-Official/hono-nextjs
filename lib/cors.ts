@@ -144,6 +144,34 @@ export function validateApiKeyWithExpiration(request: Request): ApiKeyValidation
   }
 }
 
+// 用户行为记录API专用的API Key验证函数
+export function validateUserBehaviorRecordApiKey(request: Request): ApiKeyValidationResult {
+  const apiKey = request.headers.get('X-API-Key')
+  const validApiKey = process.env.USER_BEHAVIOR_RECORD_API_KEY
+
+  // 如果没有设置专用API Key，则跳过验证（开发模式）
+  if (!validApiKey) {
+    console.warn('⚠️ USER_BEHAVIOR_RECORD_API_KEY 环境变量未设置，跳过API Key验证')
+    return { isValid: true }
+  }
+
+  if (!apiKey) {
+    return {
+      isValid: false,
+      error: 'Missing API Key for user behavior recording'
+    }
+  }
+
+  if (apiKey !== validApiKey) {
+    return {
+      isValid: false,
+      error: 'Invalid API Key for user behavior recording'
+    }
+  }
+
+  return { isValid: true }
+}
+
 // 速率限制检查（改进的实现，包含清理机制）
 const requestCounts = new Map<string, { count: number; resetTime: number }>()
 
@@ -179,6 +207,89 @@ export function checkRateLimit(clientId: string, maxRequests = 100, windowMs = 6
   clientData.count++
   return true
 }
+
+// 用户行为记录API专用的频率限制存储
+const userBehaviorRateLimits = new Map<string, { lastRequestTime: number }>()
+
+/**
+ * 用户行为记录API的频率限制检查
+ * 限制同一IP在10秒内只能访问每个POST记录API一次
+ */
+export function checkUserBehaviorRateLimit(
+  clientIp: string,
+  endpoint: string,
+  windowMs = 10000
+): { allowed: boolean; error?: string; retryAfter?: number } {
+  if (!clientIp) {
+    console.warn('User behavior rate limit check: clientIp is empty')
+    return { allowed: true }
+  }
+
+  const rateLimitKey = `${clientIp}:${endpoint}`
+  const now = Date.now()
+  const clientData = userBehaviorRateLimits.get(rateLimitKey)
+
+  if (!clientData) {
+    // 首次访问，记录时间并允许通过
+    userBehaviorRateLimits.set(rateLimitKey, { lastRequestTime: now })
+    return { allowed: true }
+  }
+
+  const timeSinceLastRequest = now - clientData.lastRequestTime
+
+  if (timeSinceLastRequest < windowMs) {
+    // 在限制时间窗口内，拒绝请求
+    const retryAfter = Math.ceil((windowMs - timeSinceLastRequest) / 1000)
+    console.warn(`User behavior rate limit exceeded for IP: ${clientIp}, endpoint: ${endpoint}`)
+    return {
+      allowed: false,
+      error: `Rate limit exceeded. Please wait ${retryAfter} seconds before trying again.`,
+      retryAfter
+    }
+  }
+
+  // 超过限制时间窗口，更新时间并允许通过
+  clientData.lastRequestTime = now
+  return { allowed: true }
+}
+
+/**
+ * 获取客户端IP地址
+ */
+export function getClientIp(request: Request): string {
+  // 尝试从各种头部获取真实IP
+  const xForwardedFor = request.headers.get('x-forwarded-for')
+  const xRealIp = request.headers.get('x-real-ip')
+  const cfConnectingIp = request.headers.get('cf-connecting-ip')
+
+  if (xForwardedFor) {
+    // x-forwarded-for 可能包含多个IP，取第一个
+    return xForwardedFor.split(',')[0].trim()
+  }
+
+  if (xRealIp) {
+    return xRealIp.trim()
+  }
+
+  if (cfConnectingIp) {
+    return cfConnectingIp.trim()
+  }
+
+  // 如果都没有，返回默认值
+  return 'unknown'
+}
+
+// 定期清理过期的用户行为频率限制记录
+setInterval(() => {
+  const now = Date.now()
+  const expireTime = 60000 // 1分钟后清理
+
+  for (const [key, data] of userBehaviorRateLimits.entries()) {
+    if (now - data.lastRequestTime > expireTime) {
+      userBehaviorRateLimits.delete(key)
+    }
+  }
+}, 60000) // 每分钟清理一次
 
 // GitHub OAuth 验证结果接口
 export interface GitHubOAuthValidationResult {

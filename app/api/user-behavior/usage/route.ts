@@ -7,7 +7,7 @@
 import { NextRequest } from 'next/server'
 import { unifiedDb as userBehaviorDb, softwareUsage } from '@/lib/unified-db-connection'
 import { eq, count, desc, and, gte, lte, sql } from 'drizzle-orm'
-import { corsResponse, handleOptions, validateApiKeyWithExpiration } from '@/lib/cors'
+import { corsResponse, handleOptions, validateUserBehaviorRecordApiKey, checkUserBehaviorRateLimit, getClientIp, validateGitHubOAuth } from '@/lib/cors'
 import { z } from 'zod'
 import { UserBehaviorSecurity } from '@/lib/user-behavior-security'
 
@@ -33,13 +33,27 @@ export async function POST(request: NextRequest) {
   const userAgent = request.headers.get('User-Agent')
 
   try {
-    // API Key 验证
-    const authResult = validateApiKeyWithExpiration(request)
-    if (!authResult.isValid) {
-      console.error('API Key validation failed:', authResult.error)
+    // 获取客户端IP
+    const clientIp = getClientIp(request)
+
+    // 频率限制检查
+    const rateLimitResult = checkUserBehaviorRateLimit(clientIp, 'usage-post')
+    if (!rateLimitResult.allowed) {
       return corsResponse({
         success: false,
-        error: authResult.error
+        error: rateLimitResult.error || 'Rate limit exceeded'
+      }, {
+        status: 429,
+        headers: rateLimitResult.retryAfter ? { 'Retry-After': rateLimitResult.retryAfter.toString() } : undefined
+      }, origin, userAgent)
+    }
+
+    // 专用API Key验证
+    const apiKeyValidation = validateUserBehaviorRecordApiKey(request)
+    if (!apiKeyValidation.isValid) {
+      return corsResponse({
+        success: false,
+        error: apiKeyValidation.error || 'Invalid or missing API Key for user behavior recording'
       }, { status: 401 }, origin, userAgent)
     }
 
@@ -150,6 +164,15 @@ export async function GET(request: NextRequest) {
   const userAgent = request.headers.get('User-Agent')
 
   try {
+    // GitHub OAuth认证检查
+    const authResult = validateGitHubOAuth(request)
+    if (!authResult.isValid) {
+      return corsResponse({
+        success: false,
+        error: authResult.error || 'GitHub OAuth authentication required'
+      }, { status: 401 }, origin, userAgent)
+    }
+
     // 安全检查
     const securityCheck = await UserBehaviorSecurity.performSecurityCheck(request)
     if (!securityCheck.success) {

@@ -93,7 +93,9 @@ export default function UserBehaviorPage() {
         params.append('endDate', dateRange[1].format('YYYY-MM-DD'))
       }
 
-      const response = await fetch(`/api/user-behavior/usage?${params}`)
+      const response = await fetch(`/api/user-behavior/usage?${params}`, {
+        credentials: 'include'
+      })
       const data = await response.json()
 
       if (data.success) {
@@ -123,7 +125,9 @@ export default function UserBehaviorPage() {
         params.append('endDate', dateRange[1].format('YYYY-MM-DD'))
       }
 
-      const response = await fetch(`/api/user-behavior/device-connections?${params}`)
+      const response = await fetch(`/api/user-behavior/device-connections?${params}`, {
+        credentials: 'include'
+      })
       const data = await response.json()
 
       if (data.success) {

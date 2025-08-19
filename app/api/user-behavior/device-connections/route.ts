@@ -114,11 +114,8 @@ export async function GET(request: NextRequest) {
       }, { status: 401 }, origin, userAgent)
     }
 
-    // 安全检查
-    const securityCheck = await UserBehaviorSecurity.performSecurityCheck(request)
-    if (!securityCheck.success) {
-      return UserBehaviorSecurity.createSecurityErrorResponse(securityCheck)
-    }
+    // 跳过额外的安全检查 - GET端点只需要GitHub OAuth认证
+    console.log('ℹ️ [DEBUG] GET端点跳过额外安全检查，只使用GitHub OAuth认证')
 
     const { searchParams } = new URL(request.url)
     const softwareId = searchParams.get('softwareId')

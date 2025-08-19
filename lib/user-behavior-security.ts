@@ -71,7 +71,13 @@ export class UserBehaviorSecurity {
    */
   private static verifyClientOrigin(origin: string | null, referer: string | null): SecurityCheckResult {
     const allowedOrigins = process.env.ALLOWED_CLIENT_ORIGINS?.split(',') || []
-    
+
+    // 如果没有配置允许的来源，则跳过检查（开发模式）
+    if (allowedOrigins.length === 0) {
+      console.warn('⚠️ ALLOWED_CLIENT_ORIGINS 未配置，跳过客户端来源验证')
+      return { success: true }
+    }
+
     // 检查 Origin 头
     if (origin && allowedOrigins.includes(origin)) {
       return { success: true }
@@ -79,18 +85,24 @@ export class UserBehaviorSecurity {
 
     // 检查 Referer 头（作为备选）
     if (referer) {
-      const refererOrigin = new URL(referer).origin
-      if (allowedOrigins.includes(refererOrigin)) {
-        return { success: true }
+      try {
+        const refererOrigin = new URL(referer).origin
+        if (allowedOrigins.includes(refererOrigin)) {
+          return { success: true }
+        }
+      } catch (error) {
+        console.warn('⚠️ 无法解析 Referer URL:', referer)
       }
     }
 
-    // 对于 Tauri 应用，可能没有标准的 Origin
+    // 对于 Tauri 应用或桌面应用，可能没有标准的 Origin
     if (!origin && !referer) {
       // 允许没有 Origin 的请求（Tauri 桌面应用）
+      console.log('ℹ️ 允许无 Origin 的请求（可能是桌面应用）')
       return { success: true }
     }
 
+    console.warn(`❌ 未授权的客户端来源 - Origin: ${origin}, Referer: ${referer}`)
     return {
       success: false,
       error: 'Unauthorized client origin',
@@ -110,9 +122,13 @@ export class UserBehaviorSecurity {
       }
     }
 
-    const expectedApiKey = process.env.USER_BEHAVIOR_API_KEY
-    if (!expectedApiKey) {
-      console.error('USER_BEHAVIOR_API_KEY not configured')
+    // 支持两种API Key：通用的和专用记录的
+    const generalApiKey = process.env.USER_BEHAVIOR_API_KEY
+    const recordApiKey = process.env.USER_BEHAVIOR_RECORD_API_KEY
+
+    // 如果两个API Key都没有配置，返回配置错误
+    if (!generalApiKey && !recordApiKey) {
+      console.error('Neither USER_BEHAVIOR_API_KEY nor USER_BEHAVIOR_RECORD_API_KEY is configured')
       return {
         success: false,
         error: 'Server configuration error',
@@ -120,15 +136,16 @@ export class UserBehaviorSecurity {
       }
     }
 
-    if (apiKey !== expectedApiKey) {
-      return {
-        success: false,
-        error: 'Invalid API key',
-        statusCode: 401
-      }
+    // 检查是否匹配任一API Key
+    if ((generalApiKey && apiKey === generalApiKey) || (recordApiKey && apiKey === recordApiKey)) {
+      return { success: true }
     }
 
-    return { success: true }
+    return {
+      success: false,
+      error: 'Invalid API key',
+      statusCode: 401
+    }
   }
 
   /**
@@ -248,6 +265,53 @@ export class UserBehaviorSecurity {
       return { success: true }
     } catch (error) {
       console.error('Security check error:', error)
+      return {
+        success: false,
+        error: 'Security verification failed',
+        statusCode: 500
+      }
+    }
+  }
+
+  /**
+   * 执行基础安全检查（跳过API Key和JWT验证，用于POST记录端点）
+   */
+  static async performBasicSecurityCheck(
+    request: NextRequest,
+    body?: string
+  ): Promise<SecurityCheckResult> {
+    // 如果安全验证未启用，直接通过
+    if (!this.isSecurityEnabled()) {
+      return { success: true }
+    }
+
+    try {
+      // 1. 验证 User-Agent
+      const userAgentCheck = this.verifyUserAgent(request.headers.get('User-Agent'))
+      if (!userAgentCheck.success) {
+        return userAgentCheck
+      }
+
+      // 2. 验证客户端来源
+      const originCheck = this.verifyClientOrigin(
+        request.headers.get('Origin'),
+        request.headers.get('Referer')
+      )
+      if (!originCheck.success) {
+        return originCheck
+      }
+
+      // 跳过API Key和JWT验证，只进行基础检查
+
+      // 3. 验证请求签名（可选）
+      const signatureCheck = await this.verifyRequestSignature(request, body)
+      if (!signatureCheck.success) {
+        return signatureCheck
+      }
+
+      return { success: true }
+    } catch (error) {
+      console.error('Basic security check error:', error)
       return {
         success: false,
         error: 'Security verification failed',

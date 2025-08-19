@@ -1168,17 +1168,49 @@ curl -X POST "https://your-domain.com/admin/software/view-count" \
 }
 ```
 
-## � 用户行为统计API
+## 📊 用户行为统计API
+
+### � 认证机制说明
+
+用户行为统计API采用**双重认证机制**，根据操作类型使用不同的认证方式：
+
+#### 📝 POST端点（数据记录）- 专用API Key认证
+- **适用端点**：`POST /api/user-behavior/usage`、`POST /api/user-behavior/device-connections`
+- **认证方式**：`X-API-Key: USER_BEHAVIOR_RECORD_API_KEY`
+- **用途**：用于客户端软件记录使用数据和设备连接信息
+- **频率限制**：同一IP在10秒内只能访问每个端点一次
+- **API Key格式**：`ubrec_` 前缀 + 48位十六进制字符串
+
+#### �📊 GET端点（数据查询）- GitHub OAuth认证
+- **适用端点**：`GET /api/user-behavior/stats`、`GET /api/user-behavior/usage`、`GET /api/user-behavior/device-connections`
+- **认证方式**：`Authorization: Bearer JWT_TOKEN`
+- **用途**：用于管理员查看统计数据和分析报告
+- **获取方式**：通过前端管理页面 `/admin` 进行GitHub OAuth登录
+- **权限要求**：仅限授权的GitHub用户访问
 
 ### 📊 API端点总览
 
-| 方法 | 端点 | 描述 | 认证 |
-|------|------|------|------|
-| GET | `/api/user-behavior/stats` | 获取综合统计信息 | API Key |
-| POST | `/api/user-behavior/usage` | 记录软件使用 | API Key |
-| GET | `/api/user-behavior/usage` | 获取使用统计 | API Key |
-| POST | `/api/user-behavior/device-connections` | 记录设备连接 | API Key |
-| GET | `/api/user-behavior/device-connections` | 获取设备连接统计 | API Key |
+| 方法 | 端点 | 描述 | 认证方式 | 用途 |
+|------|------|------|----------|------|
+| GET | `/api/user-behavior/stats` | 获取综合统计信息 | GitHub OAuth | 管理员查看 |
+| POST | `/api/user-behavior/usage` | 记录软件使用 | 专用API Key | 客户端记录 |
+| GET | `/api/user-behavior/usage` | 获取使用统计 | GitHub OAuth | 管理员查看 |
+| POST | `/api/user-behavior/device-connections` | 记录设备连接 | 专用API Key | 客户端记录 |
+| GET | `/api/user-behavior/device-connections` | 获取设备连接统计 | GitHub OAuth | 管理员查看 |
+
+### 🔑 环境变量配置
+
+```bash
+# 专用记录API Key（用于POST端点）
+USER_BEHAVIOR_RECORD_API_KEY=ubrec_5fc4a91f2048db7d6315731e344799de45c21916d559386c
+
+# GitHub OAuth配置（用于GET端点）
+ENABLE_GITHUB_OAUTH_AUTH=true
+GITHUB_CLIENT_ID=your_github_client_id
+GITHUB_CLIENT_SECRET=your_github_client_secret
+ALLOWED_GITHUB_USERNAME=your_github_username
+ALLOWED_GITHUB_EMAIL=your_email@example.com
+```
 
 ### 📈 获取综合统计
 
@@ -1234,6 +1266,17 @@ curl -X POST "https://your-domain.com/admin/software/view-count" \
 
 **端点**：`POST /api/user-behavior/usage`
 
+**认证要求**：需要专用的用户行为记录API Key
+
+**认证方式**：
+```http
+X-API-Key: ubrec_your_48_character_hex_string_here
+```
+
+**频率限制**：
+- 同一IP地址在10秒内只能访问此端点一次
+- 超出限制返回429状态码和Retry-After头部
+
 **请求参数**：
 ```json
 {
@@ -1245,7 +1288,7 @@ curl -X POST "https://your-domain.com/admin/software/view-count" \
 }
 ```
 
-**响应示例**：
+**成功响应示例**：
 ```json
 {
   "success": true,
@@ -1258,9 +1301,61 @@ curl -X POST "https://your-domain.com/admin/software/view-count" \
 }
 ```
 
+**错误响应示例**：
+```json
+// 401 - 缺少或无效的API Key
+{
+  "success": false,
+  "error": "Invalid or missing API Key for user behavior recording"
+}
+
+// 429 - 频率限制
+{
+  "success": false,
+  "error": "Rate limit exceeded. Please wait 8 seconds before trying again."
+}
+```
+
+**使用示例**：
+```bash
+# 正确的请求示例
+curl -X POST "https://api-g.lacs.cc/api/user-behavior/usage" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: ubrec_5fc4a91f2048db7d6315731e344799de45c21916d559386c" \
+  -d '{
+    "softwareId": 1,
+    "softwareName": "玩机管家",
+    "softwareVersion": "1.0.0",
+    "deviceFingerprint": "device-fingerprint-123",
+    "used": 1
+  }'
+
+# 错误示例：缺少API Key（将返回401）
+curl -X POST "https://api-g.lacs.cc/api/user-behavior/usage" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "softwareId": 1,
+    "deviceFingerprint": "device-123",
+    "used": 1
+  }'
+```
+
 ### 📊 获取使用统计
 
 **端点**：`GET /api/user-behavior/usage`
+
+**认证要求**：需要GitHub OAuth认证（仅限管理员访问）
+
+**认证方式**：
+```http
+Authorization: Bearer your_jwt_token_here
+```
+
+**获取JWT Token的方法**：
+1. 访问前端管理页面 `/admin`
+2. 通过GitHub OAuth登录
+3. JWT Token会自动存储在Cookie中
+4. 前端请求会自动包含认证信息
 
 **查询参数**：
 ```bash
@@ -1269,7 +1364,7 @@ curl -X POST "https://your-domain.com/admin/software/view-count" \
 &endDate=2025-01-31   # 结束日期（可选）
 ```
 
-**响应示例**：
+**成功响应示例**：
 ```json
 {
   "success": true,
@@ -1295,35 +1390,124 @@ curl -X POST "https://your-domain.com/admin/software/view-count" \
 }
 ```
 
+**错误响应示例**：
+```json
+// 401 - 未认证或认证失败
+{
+  "success": false,
+  "error": "GitHub OAuth authentication required"
+}
+```
+
+**使用示例**：
+```bash
+# 需要先通过前端管理页面登录获取JWT Token
+# 然后使用Token访问API
+curl "https://api-g.lacs.cc/api/user-behavior/usage?softwareId=1" \
+  -H "Authorization: Bearer your_jwt_token_here"
+
+# 错误示例：未提供认证信息（将返回401）
+curl "https://api-g.lacs.cc/api/user-behavior/usage"
+```
+
 ### 🔌 记录设备连接
 
 **端点**：`POST /api/user-behavior/device-connections`
+
+**认证要求**：需要专用的用户行为记录API Key
+
+**认证方式**：
+```http
+X-API-Key: ubrec_your_48_character_hex_string_here
+```
+
+**频率限制**：
+- 同一IP地址在10秒内只能访问此端点一次
+- 超出限制返回429状态码和Retry-After头部
 
 **请求参数**：
 ```json
 {
   "deviceSerial": "device-serial-123",     // 设备序列号（必需）
   "softwareId": 1,                         // 软件ID（必需）
-  "userDeviceFingerprint": "fingerprint"   // 用户设备指纹（可选）
+  "userDeviceFingerprint": "fingerprint", // 用户设备指纹（必需）
+  "deviceBrand": "Samsung",                // 设备品牌（可选）
+  "deviceModel": "Galaxy S21",             // 设备型号（可选）
+  "osVersion": "Android 11"                // 操作系统版本（可选）
 }
 ```
 
-**响应示例**：
+**成功响应示例**：
 ```json
 {
   "success": true,
   "data": {
     "id": "uuid-456",
     "deviceSerial": "device-serial-123",
-    "softwareId": 1
+    "softwareId": 1,
+    "createdAt": "2025-08-01T00:00:00.000Z"
   },
   "message": "设备连接记录已保存"
 }
 ```
 
+**错误响应示例**：
+```json
+// 401 - 缺少或无效的API Key
+{
+  "success": false,
+  "error": "Invalid or missing API Key for user behavior recording"
+}
+
+// 429 - 频率限制
+{
+  "success": false,
+  "error": "Rate limit exceeded. Please wait 7 seconds before trying again."
+}
+```
+
+**使用示例**：
+```bash
+# 正确的请求示例
+curl -X POST "https://api-g.lacs.cc/api/user-behavior/device-connections" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: ubrec_5fc4a91f2048db7d6315731e344799de45c21916d559386c" \
+  -d '{
+    "deviceSerial": "SM-G991B-123456789",
+    "softwareId": 1,
+    "userDeviceFingerprint": "user-device-fingerprint-456",
+    "deviceBrand": "Samsung",
+    "deviceModel": "Galaxy S21",
+    "osVersion": "Android 11"
+  }'
+
+# 错误示例：使用错误的API Key（将返回401）
+curl -X POST "https://api-g.lacs.cc/api/user-behavior/device-connections" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: wrong-api-key" \
+  -d '{
+    "deviceSerial": "device-123",
+    "softwareId": 1,
+    "userDeviceFingerprint": "fingerprint"
+  }'
+```
+
 ### 📱 获取设备连接统计
 
 **端点**：`GET /api/user-behavior/device-connections`
+
+**认证要求**：需要GitHub OAuth认证（仅限管理员访问）
+
+**认证方式**：
+```http
+Authorization: Bearer your_jwt_token_here
+```
+
+**获取JWT Token的方法**：
+1. 访问前端管理页面 `/admin`
+2. 通过GitHub OAuth登录
+3. JWT Token会自动存储在Cookie中
+4. 前端请求会自动包含认证信息
 
 **查询参数**：
 ```bash
@@ -1334,7 +1518,7 @@ curl -X POST "https://your-domain.com/admin/software/view-count" \
 &limit=10            # 每页数量（默认：10）
 ```
 
-**响应示例**：
+**成功响应示例**：
 ```json
 {
   "success": true,
@@ -1355,6 +1539,7 @@ curl -X POST "https://your-domain.com/admin/software/view-count" \
         "deviceSerial": "device-serial-123",
         "deviceBrand": "Samsung",
         "deviceModel": "Galaxy S21",
+        "osVersion": "Android 11",
         "connectedAt": "2025-08-01T00:00:00.000Z"
       }
     ],
@@ -1365,6 +1550,26 @@ curl -X POST "https://your-domain.com/admin/software/view-count" \
     }
   }
 }
+```
+
+**错误响应示例**：
+```json
+// 401 - 未认证或认证失败
+{
+  "success": false,
+  "error": "GitHub OAuth authentication required"
+}
+```
+
+**使用示例**：
+```bash
+# 需要先通过前端管理页面登录获取JWT Token
+# 然后使用Token访问API
+curl "https://api-g.lacs.cc/api/user-behavior/device-connections?softwareId=1&limit=20" \
+  -H "Authorization: Bearer your_jwt_token_here"
+
+# 错误示例：未提供认证信息（将返回401）
+curl "https://api-g.lacs.cc/api/user-behavior/device-connections"
 ```
 
 ## 🌐 网站管理API

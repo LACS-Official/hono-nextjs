@@ -7,7 +7,7 @@
 import { NextRequest } from 'next/server'
 import { unifiedDb as userBehaviorDb, deviceConnections } from '@/lib/unified-db-connection'
 import { eq, count, desc, and, gte, lte, sql } from 'drizzle-orm'
-import { corsResponse, handleOptions, validateUserBehaviorRecordApiKey, checkUserBehaviorRateLimit, getClientIp, validateGitHubOAuth } from '@/lib/cors'
+import { corsResponse, handleOptions, checkUserBehaviorRateLimit, getClientIp, validateGitHubOAuth } from '@/lib/cors'
 import { z } from 'zod'
 import crypto from 'crypto'
 import { UserBehaviorSecurity } from '@/lib/user-behavior-security'
@@ -49,18 +49,12 @@ export async function POST(request: NextRequest) {
       }, origin, userAgent)
     }
 
-    // 专用API Key验证
-    const apiKeyValidation = validateUserBehaviorRecordApiKey(request)
-    if (!apiKeyValidation.isValid) {
-      return corsResponse({
-        success: false,
-        error: apiKeyValidation.error || 'Invalid or missing API Key for user behavior recording'
-      }, { status: 401 }, origin, userAgent)
-    }
+    // 移除API Key验证 - 现在只依赖频率限制进行访问控制
+    console.log('ℹ️ [DEBUG] 跳过API Key验证，仅使用频率限制控制访问')
 
-    // 安全检查
+    // 简化的安全检查（跳过API Key验证）
     const bodyText = await request.text()
-    const securityCheck = await UserBehaviorSecurity.performSecurityCheck(request, bodyText)
+    const securityCheck = await UserBehaviorSecurity.performBasicSecurityCheck(request, bodyText)
     if (!securityCheck.success) {
       return UserBehaviorSecurity.createSecurityErrorResponse(securityCheck)
     }

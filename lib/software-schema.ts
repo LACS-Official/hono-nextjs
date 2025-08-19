@@ -73,6 +73,7 @@ export const softwareAnnouncements = pgTable('software_announcements', {
   priority: varchar('priority', { length: 20 }).default('normal').notNull(), // 优先级
   version: varchar('version', { length: 50 }), // 相关版本
   isPublished: boolean('is_published').default(true).notNull(), // 是否发布
+  isSticky: boolean('is_sticky').default(false).notNull(), // 是否置顶
   publishedAt: timestamp('published_at', { withTimezone: true }).defaultNow().notNull(),
   expiresAt: timestamp('expires_at', { withTimezone: true }), // 过期时间
   metadata: jsonb('metadata'), // 额外元数据

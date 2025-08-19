@@ -151,6 +151,7 @@ export async function PUT(
       priority: body.priority || 'normal',
       version: body.version,
       isPublished: body.isPublished !== undefined ? body.isPublished : true,
+      isSticky: body.isSticky !== undefined ? body.isSticky : false,
       expiresAt: body.expiresAt ? new Date(body.expiresAt) : null,
       metadata: body.metadata || {},
       updatedAt: new Date()

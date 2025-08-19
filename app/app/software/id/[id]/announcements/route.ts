@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { unifiedDb as db, software, softwareAnnouncements } from '@/lib/unified-db-connection'
-import { eq, and, desc } from 'drizzle-orm'
+import { eq, and, desc, asc } from 'drizzle-orm'
 import { corsResponse, handleOptions, validateUnifiedAuth } from '@/lib/cors'
 
 // OPTIONS 处理
@@ -50,7 +50,7 @@ export async function GET(
       }, { status: 404 }, origin, userAgent)
     }
     
-    // 获取该软件的公告
+    // 获取该软件的公告，置顶公告排在前面
     const announcements = await db
       .select()
       .from(softwareAnnouncements)
@@ -60,7 +60,10 @@ export async function GET(
           eq(softwareAnnouncements.isPublished, true)
         )
       )
-      .orderBy(desc(softwareAnnouncements.publishedAt))
+      .orderBy(
+        desc(softwareAnnouncements.isSticky), // 置顶公告优先
+        desc(softwareAnnouncements.publishedAt) // 然后按发布时间排序
+      )
     
     return corsResponse({
       success: true,
@@ -137,7 +140,7 @@ export async function POST(
     }
 
     // 验证必填字段
-    const { title, content, titleEn, contentEn, type, priority, version, isPublished, expiresAt } = body
+    const { title, content, titleEn, contentEn, type, priority, version, isPublished, isSticky, expiresAt } = body
 
     if (!title || !content) {
       return corsResponse({
@@ -159,6 +162,7 @@ export async function POST(
         priority: priority || 'normal',
         version,
         isPublished: isPublished !== undefined ? isPublished : true,
+        isSticky: isSticky !== undefined ? isSticky : false,
         publishedAt: new Date(),
         expiresAt: expiresAt ? new Date(expiresAt) : null,
         metadata: body.metadata || {}

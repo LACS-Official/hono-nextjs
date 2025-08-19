@@ -42,6 +42,7 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 
 import EnhancedVersionManager from '@/components/EnhancedVersionManager'
+import SoftwareAnnouncementManager from '@/components/SoftwareAnnouncementManager'
 
 
 const { Title, Text, Paragraph } = Typography
@@ -421,6 +422,21 @@ export default function SoftwareDetail() {
                 />
               )
             },
+            {
+              key: 'announcements',
+              label: (
+                <span>
+                  <BellOutlined />
+                  公告管理
+                </span>
+              ),
+              children: (
+                <SoftwareAnnouncementManager
+                  softwareId={software.id}
+                  softwareName={software.name}
+                />
+              )
+            }
 
           ]}
         />

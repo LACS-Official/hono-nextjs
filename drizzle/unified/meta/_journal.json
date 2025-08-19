@@ -15,6 +15,13 @@
       "when": 1755229485499,
       "tag": "0001_reflective_siren",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1755565612831,
+      "tag": "0002_flashy_enchantress",
+      "breakpoints": true
     }
   ]
 }

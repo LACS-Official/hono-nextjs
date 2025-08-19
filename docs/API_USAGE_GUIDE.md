@@ -1175,8 +1175,8 @@ curl -X POST "https://your-domain.com/admin/software/view-count" \
 | 方法 | 端点 | 描述 | 认证 |
 |------|------|------|------|
 | GET | `/api/user-behavior/stats` | 获取综合统计信息 | API Key |
-| POST | `/api/user-behavior/activations` | 记录软件激活 | API Key |
-| GET | `/api/user-behavior/activations` | 获取激活统计 | API Key |
+| POST | `/api/user-behavior/usage` | 记录软件使用 | API Key |
+| GET | `/api/user-behavior/usage` | 获取使用统计 | API Key |
 | POST | `/api/user-behavior/device-connections` | 记录设备连接 | API Key |
 | GET | `/api/user-behavior/device-connections` | 获取设备连接统计 | API Key |
 
@@ -1197,14 +1197,15 @@ curl -X POST "https://your-domain.com/admin/software/view-count" \
   "success": true,
   "data": {
     "summary": {
-      "totalActivations": 1000,
-      "uniqueActivatedDevices": 800,
+      "totalUsage": 1000,
+      "uniqueUsedDevices": 800,
       "totalConnections": 1500,
       "uniqueConnectedDevices": 900,
+      "averageUsagePerDevice": "1.25",
       "averageConnectionsPerDevice": "1.67"
     },
     "trends": {
-      "activationTrend": [
+      "usageTrend": [
         {"date": "2025-08-01", "count": 50},
         {"date": "2025-08-02", "count": 45}
       ],
@@ -1213,10 +1214,6 @@ curl -X POST "https://your-domain.com/admin/software/view-count" \
         {"date": "2025-08-02", "count": 68}
       ]
     },
-    "geoDistribution": [
-      {"country": "中国", "region": "北京市", "count": 100},
-      {"country": "中国", "region": "上海市", "count": 85}
-    ],
     "brandDistribution": [
       {"brand": "Samsung", "count": 200},
       {"brand": "Xiaomi", "count": 150}
@@ -1233,9 +1230,9 @@ curl -X POST "https://your-domain.com/admin/software/view-count" \
 }
 ```
 
-### 📱 记录软件激活
+### 📱 记录软件使用
 
-**端点**：`POST /api/user-behavior/activations`
+**端点**：`POST /api/user-behavior/usage`
 
 **请求参数**：
 ```json
@@ -1244,15 +1241,7 @@ curl -X POST "https://your-domain.com/admin/software/view-count" \
   "softwareName": "玩机管家",          // 软件名称（可选，默认：玩机管家）
   "softwareVersion": "1.0.0",         // 软件版本（可选）
   "deviceFingerprint": "device-123",  // 设备指纹（必需，用于唯一标识设备）
-  "deviceOs": "Windows 11",           // 操作系统（可选）
-  "deviceArch": "x64",                // 系统架构（可选）
-  "activationCode": "XXXX-XXXX",      // 激活码（可选）
-  "username": "用户名",                // 用户名（可选）
-  "userEmail": "user@example.com",    // 用户邮箱（可选）
-  "ipAddress": "192.168.1.1",         // IP地址（可选）
-  "country": "中国",                   // 国家（可选）
-  "region": "北京市",                  // 地区（可选）
-  "city": "北京"                       // 城市（可选）
+  "used": 1                           // 使用次数增量（必需，每次调用自增1）
 }
 ```
 
@@ -1261,26 +1250,23 @@ curl -X POST "https://your-domain.com/admin/software/view-count" \
 {
   "success": true,
   "data": {
-    "id": "uuid-123",
     "softwareId": 1,
     "deviceFingerprint": "device-123",
-    "activatedAt": "2025-08-01T00:00:00.000Z"
+    "usedAt": "2025-08-01T00:00:00.000Z"
   },
-  "message": "激活记录成功"
+  "message": "使用记录成功"
 }
 ```
 
-### 📊 获取激活统计
+### 📊 获取使用统计
 
-**端点**：`GET /api/user-behavior/activations`
+**端点**：`GET /api/user-behavior/usage`
 
 **查询参数**：
 ```bash
 ?softwareId=1        # 软件ID（可选）
 &startDate=2025-01-01 # 开始日期（可选）
 &endDate=2025-01-31   # 结束日期（可选）
-&page=1              # 页码（默认：1）
-&limit=10            # 每页数量（默认：10）
 ```
 
 **响应示例**：
@@ -1288,22 +1274,22 @@ curl -X POST "https://your-domain.com/admin/software/view-count" \
 {
   "success": true,
   "data": {
-    "totalActivations": 500,
+    "totalUsage": 500,
     "uniqueDevices": 400,
-    "recentActivations": [
+    "recentUsage": [
       {
         "id": "uuid-123",
-        "softwareId": 1,
+        "softwareName": "玩机管家",
+        "softwareVersion": "1.0.0",
         "deviceFingerprint": "device-123",
-        "activatedAt": "2025-08-01T00:00:00.000Z",
-        "country": "中国",
-        "region": "北京市"
+        "used": 5,
+        "usedAt": "2025-08-01T00:00:00.000Z"
       }
     ],
     "summary": {
-      "totalActivations": 500,
+      "totalUsage": 500,
       "uniqueDevices": 400,
-      "averageActivationsPerDevice": "1.25"
+      "averageUsagePerDevice": "1.25"
     }
   }
 }
@@ -1317,8 +1303,6 @@ curl -X POST "https://your-domain.com/admin/software/view-count" \
 ```json
 {
   "deviceSerial": "device-serial-123",     // 设备序列号（必需）
-  "deviceBrand": "Samsung",                // 设备品牌（可选）
-  "deviceModel": "Galaxy S21",             // 设备型号（可选）
   "softwareId": 1,                         // 软件ID（必需）
   "userDeviceFingerprint": "fingerprint"   // 用户设备指纹（可选）
 }
@@ -1331,10 +1315,9 @@ curl -X POST "https://your-domain.com/admin/software/view-count" \
   "data": {
     "id": "uuid-456",
     "deviceSerial": "device-serial-123",
-    "softwareId": 1,
-    "connectedAt": "2025-08-01T00:00:00.000Z"
+    "softwareId": 1
   },
-  "message": "设备连接记录成功"
+  "message": "设备连接记录已保存"
 }
 ```
 

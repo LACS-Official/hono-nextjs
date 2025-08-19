@@ -21,11 +21,9 @@ export async function OPTIONS(request: NextRequest) {
 
 // 设备连接记录请求体验证（简化版本）
 const deviceConnectionRequestSchema = z.object({
-  deviceSerial: z.string().min(1),
-  deviceBrand: z.string().optional(),
-  deviceModel: z.string().optional(),
-  softwareId: z.number().int().positive(),
-  userDeviceFingerprint: z.string().optional(),
+  deviceSerial: z.string().min(1), // 设备序列号（必需）
+  softwareId: z.number().int().positive(), // 软件ID（必需）
+  userDeviceFingerprint: z.string().optional(), // 用户设备指纹（可选）
 })
 
 
@@ -62,7 +60,9 @@ export async function POST(request: NextRequest) {
     const [newConnection] = await userBehaviorDb
       .insert(deviceConnections)
       .values({
-        ...validatedData,
+        deviceSerial: validatedData.deviceSerial,
+        softwareId: validatedData.softwareId,
+        userDeviceFingerprint: validatedData.userDeviceFingerprint,
         createdAt: new Date(),
         updatedAt: new Date(),
       })
@@ -74,8 +74,7 @@ export async function POST(request: NextRequest) {
       data: {
         id: newConnection.id,
         deviceSerial: newConnection.deviceSerial,
-        deviceBrand: newConnection.deviceBrand,
-        deviceModel: newConnection.deviceModel
+        softwareId: newConnection.softwareId
       }
     }, undefined, origin, userAgent)
 

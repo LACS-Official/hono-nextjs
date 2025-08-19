@@ -4,7 +4,7 @@
  */
 
 import { NextRequest } from 'next/server'
-import { unifiedDb as userBehaviorDb, softwareActivations, deviceConnections } from '@/lib/unified-db-connection'
+import { unifiedDb as userBehaviorDb, softwareUsage, deviceConnections } from '@/lib/unified-db-connection'
 import { eq, count, desc, and, gte, lte, sql } from 'drizzle-orm'
 import { corsResponse, handleOptions } from '@/lib/cors'
 
@@ -27,55 +27,52 @@ export async function GET(request: NextRequest) {
     const endDate = searchParams.get('endDate')
 
     // 构建查询条件
-    const activationConditions = []
+    const usageConditions = []
     const connectionConditions = []
-    
+
     if (softwareId) {
-      activationConditions.push(eq(softwareActivations.softwareId, parseInt(softwareId)))
+      usageConditions.push(eq(softwareUsage.softwareId, parseInt(softwareId)))
       connectionConditions.push(eq(deviceConnections.softwareId, parseInt(softwareId)))
     }
     if (startDate) {
-      activationConditions.push(gte(softwareActivations.activatedAt, new Date(startDate)))
+      usageConditions.push(gte(softwareUsage.usedAt, new Date(startDate)))
       connectionConditions.push(gte(deviceConnections.createdAt, new Date(startDate)))
     }
     if (endDate) {
-      activationConditions.push(lte(softwareActivations.activatedAt, new Date(endDate)))
+      usageConditions.push(lte(softwareUsage.usedAt, new Date(endDate)))
       connectionConditions.push(lte(deviceConnections.createdAt, new Date(endDate)))
     }
 
     // 并行查询各种统计数据
     const [
-      // 激活统计
-      totalActivationsResult,
-      uniqueActivatedDevicesResult,
-      
+      // 使用统计
+      totalUsageResult,
+      uniqueUsedDevicesResult,
+
       // 设备连接统计
       totalConnectionsResult,
       uniqueConnectedDevicesResult,
-      
-      // 最近7天的激活趋势
-      recentActivationTrendResult,
-      
+
+      // 最近7天的使用趋势
+      recentUsageTrendResult,
+
       // 最近7天的连接趋势
       recentConnectionTrendResult,
-      
-      // 地理分布统计
-      geoStatsResult,
-      
+
       // 设备品牌统计
       brandStatsResult
     ] = await Promise.all([
-      // 总激活数
+      // 总使用次数
       userBehaviorDb
-        .select({ count: count() })
-        .from(softwareActivations)
-        .where(activationConditions.length > 0 ? and(...activationConditions) : undefined),
-      
-      // 唯一激活设备数
+        .select({ totalUsed: sql<number>`sum(${softwareUsage.used})` })
+        .from(softwareUsage)
+        .where(usageConditions.length > 0 ? and(...usageConditions) : undefined),
+
+      // 唯一使用设备数
       userBehaviorDb
-        .selectDistinct({ deviceFingerprint: softwareActivations.deviceFingerprint })
-        .from(softwareActivations)
-        .where(activationConditions.length > 0 ? and(...activationConditions) : undefined),
+        .selectDistinct({ deviceFingerprint: softwareUsage.deviceFingerprint })
+        .from(softwareUsage)
+        .where(usageConditions.length > 0 ? and(...usageConditions) : undefined),
       
       // 总连接次数
       userBehaviorDb
@@ -89,21 +86,21 @@ export async function GET(request: NextRequest) {
         .from(deviceConnections)
         .where(connectionConditions.length > 0 ? and(...connectionConditions) : undefined),
       
-      // 最近7天激活趋势
+      // 最近7天使用趋势
       userBehaviorDb
         .select({
-          date: sql<string>`DATE(${softwareActivations.activatedAt})`,
-          count: count()
+          date: sql<string>`DATE(${softwareUsage.usedAt})`,
+          count: sql<number>`sum(${softwareUsage.used})`
         })
-        .from(softwareActivations)
+        .from(softwareUsage)
         .where(
           and(
-            gte(softwareActivations.activatedAt, new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)),
-            ...(activationConditions.length > 0 ? activationConditions : [])
+            gte(softwareUsage.usedAt, new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)),
+            ...(usageConditions.length > 0 ? usageConditions : [])
           )
         )
-        .groupBy(sql`DATE(${softwareActivations.activatedAt})`)
-        .orderBy(sql`DATE(${softwareActivations.activatedAt})`),
+        .groupBy(sql`DATE(${softwareUsage.usedAt})`)
+        .orderBy(sql`DATE(${softwareUsage.usedAt})`),
       
       // 最近7天连接趋势
       userBehaviorDb
@@ -120,24 +117,6 @@ export async function GET(request: NextRequest) {
         )
         .groupBy(sql`DATE(${deviceConnections.createdAt})`)
         .orderBy(sql`DATE(${deviceConnections.createdAt})`),
-      
-      // 地理分布统计（基于激活数据）
-      userBehaviorDb
-        .select({
-          country: softwareActivations.country,
-          region: softwareActivations.region,
-          count: count()
-        })
-        .from(softwareActivations)
-        .where(
-          and(
-            sql`${softwareActivations.country} IS NOT NULL`,
-            ...(activationConditions.length > 0 ? activationConditions : [])
-          )
-        )
-        .groupBy(softwareActivations.country, softwareActivations.region)
-        .orderBy(desc(count()))
-        .limit(10),
       
       // 设备品牌统计（基于连接数据）
       userBehaviorDb
@@ -158,8 +137,8 @@ export async function GET(request: NextRequest) {
     ])
 
     // 处理统计结果
-    const totalActivations = totalActivationsResult[0]?.count || 0
-    const uniqueActivatedDevices = uniqueActivatedDevicesResult.length
+    const totalUsage = totalUsageResult[0]?.totalUsed || 0
+    const uniqueUsedDevices = uniqueUsedDevicesResult.length
     const totalConnections = totalConnectionsResult[0]?.count || 0
     const uniqueConnectedDevices = uniqueConnectedDevicesResult.length
 
@@ -168,26 +147,25 @@ export async function GET(request: NextRequest) {
       data: {
         // 核心指标
         summary: {
-          totalActivations,
-          uniqueActivatedDevices,
+          totalUsage,
+          uniqueUsedDevices,
           totalConnections,
           uniqueConnectedDevices,
-          averageConnectionsPerDevice: uniqueConnectedDevices > 0 ? 
+          averageUsagePerDevice: uniqueUsedDevices > 0 ?
+            (totalUsage / uniqueUsedDevices).toFixed(2) : '0',
+          averageConnectionsPerDevice: uniqueConnectedDevices > 0 ?
             (totalConnections / uniqueConnectedDevices).toFixed(2) : '0'
         },
-        
+
         // 趋势数据
         trends: {
-          activationTrend: recentActivationTrendResult,
+          usageTrend: recentUsageTrendResult,
           connectionTrend: recentConnectionTrendResult
         },
-        
-        // 地理分布
-        geoDistribution: geoStatsResult,
-        
+
         // 设备品牌分布
         brandDistribution: brandStatsResult,
-        
+
         // 元数据
         metadata: {
           queryParams: {

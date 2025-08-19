@@ -340,17 +340,17 @@ export default function AdminDashboard() {
         <Col xs={24} sm={12} lg={6}>
           <Card className="responsive-statistic-card" style={{ height: '100%' }}>
             <Statistic
-              title="总激活次数"
-              value={stats?.userBehavior.totalActivations || 0}
+              title="总使用次数"
+              value={stats?.userBehavior.totalUsage || 0}
               prefix={<UserOutlined style={{ color: '#fa8c16' }} />}
               suffix={
                 <div style={{ fontSize: '12px', color: '#8c8c8c' }}>
                   <div>设备: {stats?.userBehavior.uniqueDevices || 0}</div>
-                  <div>最近7天: {stats?.userBehavior.recentActivations || 0}</div>
+                  <div>最近7天: {stats?.userBehavior.recentUsage || 0}</div>
                 </div>
               }
             />
-            {stats?.userBehavior.recentActivations ? (
+            {stats?.userBehavior.recentUsage ? (
               <div style={{ marginTop: '8px' }}>
                 <Tag color="orange" icon={<TrophyOutlined />}>
                   近期活跃

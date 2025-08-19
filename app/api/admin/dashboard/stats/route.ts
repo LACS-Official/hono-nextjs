@@ -4,7 +4,7 @@
  */
 
 import { NextRequest } from 'next/server'
-import { unifiedDb as db, software, activationCodes, softwareActivations } from '@/lib/unified-db-connection'
+import { unifiedDb as db, software, activationCodes, softwareUsage } from '@/lib/unified-db-connection'
 import { count, eq, and, gte, lte, desc, sql } from 'drizzle-orm'
 import { corsResponse, handleOptions, validateUnifiedAuth } from '@/lib/cors'
 
@@ -197,51 +197,47 @@ async function getActivationCodeStats() {
 // 获取用户行为统计数据
 async function getUserBehaviorStats() {
   try {
-    // 总激活次数
-    const [totalActivations] = await db
-      .select({ count: count() })
-      .from(softwareActivations)
+    // 总使用次数
+    const [totalUsageResult] = await db
+      .select({ totalUsed: sql<number>`sum(${softwareUsage.used})` })
+      .from(softwareUsage)
 
-    // 最近7天的激活次数
+    // 最近7天的使用次数
     const sevenDaysAgo = new Date()
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-    
-    const [recentActivations] = await db
-      .select({ count: count() })
-      .from(softwareActivations)
-      .where(gte(softwareActivations.activatedAt, sevenDaysAgo))
+
+    const [recentUsageResult] = await db
+      .select({ totalUsed: sql<number>`sum(${softwareUsage.used})` })
+      .from(softwareUsage)
+      .where(gte(softwareUsage.usedAt, sevenDaysAgo))
 
     // 独特设备数量（基于设备指纹）
     const uniqueDevices = await db
-      .select({ 
-        deviceFingerprint: softwareActivations.deviceFingerprint,
-        count: count()
-      })
-      .from(softwareActivations)
-      .groupBy(softwareActivations.deviceFingerprint)
+      .selectDistinct({ deviceFingerprint: softwareUsage.deviceFingerprint })
+      .from(softwareUsage)
 
-    // 最受欢迎的软件（按激活次数）
+    // 最受欢迎的软件（按使用次数）
     const popularSoftware = await db
       .select({
-        softwareName: softwareActivations.softwareName,
-        activations: count()
+        softwareName: softwareUsage.softwareName,
+        totalUsed: sql<number>`sum(${softwareUsage.used})`
       })
-      .from(softwareActivations)
-      .groupBy(softwareActivations.softwareName)
-      .orderBy(desc(count()))
+      .from(softwareUsage)
+      .groupBy(softwareUsage.softwareName)
+      .orderBy(desc(sql`sum(${softwareUsage.used})`))
       .limit(5)
 
     return {
-      totalActivations: totalActivations.count,
-      recentActivations: recentActivations.count,
+      totalUsage: totalUsageResult.totalUsed || 0,
+      recentUsage: recentUsageResult.totalUsed || 0,
       uniqueDevices: uniqueDevices.length,
       popularSoftware: popularSoftware
     }
   } catch (error) {
     console.error('Error fetching user behavior stats:', error)
     return {
-      totalActivations: 0,
-      recentActivations: 0,
+      totalUsage: 0,
+      recentUsage: 0,
       uniqueDevices: 0,
       popularSoftware: []
     }

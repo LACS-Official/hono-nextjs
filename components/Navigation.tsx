@@ -16,7 +16,8 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   HeartOutlined,
-  GlobalOutlined
+  GlobalOutlined,
+  BarChartOutlined
 } from '@ant-design/icons'
 import type { MenuProps } from 'antd'
 import { useAuth } from '@/contexts/AuthContext'
@@ -67,7 +68,9 @@ export default function Navigation({ className }: NavigationProps) {
     if (pathname.includes('/websites')) {
       return ['websites']
     }
-
+    if (pathname.includes('/user-behavior')) {
+      return ['user-behavior']
+    }
     if (pathname.includes('/donors')) {
       return ['donors']
     }
@@ -103,7 +106,12 @@ export default function Navigation({ className }: NavigationProps) {
       label: '激活码管理',
       onClick: () => router.push('/admin/activation-codes'),
     },
-
+    {
+      key: 'user-behavior',
+      icon: <BarChartOutlined />,
+      label: '用户行为统计',
+      onClick: () => router.push('/admin/user-behavior'),
+    },
     {
       key: 'donors',
       icon: <HeartOutlined />,

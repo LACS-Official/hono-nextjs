@@ -50,7 +50,8 @@ export const {
   downloadStats,
 
   // 用户行为相关表
-  softwareActivations,
+  softwareUsage,
+  softwareActivations, // 向后兼容性别名
   deviceConnections,
   behaviorStats,
 

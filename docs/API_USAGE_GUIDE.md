@@ -1174,12 +1174,12 @@ curl -X POST "https://your-domain.com/admin/software/view-count" \
 
 用户行为统计API采用**双重认证机制**，根据操作类型使用不同的认证方式：
 
-#### 📝 POST端点（数据记录）- 专用API Key认证
+#### 📝 POST端点（数据记录）- 无需认证
 - **适用端点**：`POST /api/user-behavior/usage`、`POST /api/user-behavior/device-connections`
-- **认证方式**：`X-API-Key: USER_BEHAVIOR_RECORD_API_KEY`
+- **认证方式**：无需API Key或其他认证
 - **用途**：用于客户端软件记录使用数据和设备连接信息
 - **频率限制**：同一IP在10秒内只能访问每个端点一次
-- **API Key格式**：`ubrec_` 前缀 + 48位十六进制字符串
+- **访问控制**：仅通过频率限制防止滥用
 
 #### �📊 GET端点（数据查询）- GitHub OAuth认证
 - **适用端点**：`GET /api/user-behavior/stats`、`GET /api/user-behavior/usage`、`GET /api/user-behavior/device-connections`
@@ -1193,9 +1193,9 @@ curl -X POST "https://your-domain.com/admin/software/view-count" \
 | 方法 | 端点 | 描述 | 认证方式 | 用途 |
 |------|------|------|----------|------|
 | GET | `/api/user-behavior/stats` | 获取综合统计信息 | GitHub OAuth | 管理员查看 |
-| POST | `/api/user-behavior/usage` | 记录软件使用 | 专用API Key | 客户端记录 |
+| POST | `/api/user-behavior/usage` | 记录软件使用 | 无需认证 | 客户端记录 |
 | GET | `/api/user-behavior/usage` | 获取使用统计 | GitHub OAuth | 管理员查看 |
-| POST | `/api/user-behavior/device-connections` | 记录设备连接 | 专用API Key | 客户端记录 |
+| POST | `/api/user-behavior/device-connections` | 记录设备连接 | 无需认证 | 客户端记录 |
 | GET | `/api/user-behavior/device-connections` | 获取设备连接统计 | GitHub OAuth | 管理员查看 |
 
 ### 🔑 环境变量配置
@@ -1266,11 +1266,11 @@ ALLOWED_GITHUB_EMAIL=your_email@example.com
 
 **端点**：`POST /api/user-behavior/usage`
 
-**认证要求**：需要专用的用户行为记录API Key
+**认证要求**：无需认证
 
 **认证方式**：
 ```http
-X-API-Key: ubrec_your_48_character_hex_string_here
+无需任何认证头部
 ```
 
 **频率限制**：
@@ -1318,10 +1318,9 @@ X-API-Key: ubrec_your_48_character_hex_string_here
 
 **使用示例**：
 ```bash
-# 正确的请求示例
+# 简单的请求示例（无需API Key）
 curl -X POST "https://api-g.lacs.cc/api/user-behavior/usage" \
   -H "Content-Type: application/json" \
-  -H "X-API-Key: ubrec_5fc4a91f2048db7d6315731e344799de45c21916d559386c" \
   -d '{
     "softwareId": 1,
     "softwareName": "玩机管家",
@@ -1330,14 +1329,8 @@ curl -X POST "https://api-g.lacs.cc/api/user-behavior/usage" \
     "used": 1
   }'
 
-# 错误示例：缺少API Key（将返回401）
-curl -X POST "https://api-g.lacs.cc/api/user-behavior/usage" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "softwareId": 1,
-    "deviceFingerprint": "device-123",
-    "used": 1
-  }'
+# 注意：无需任何认证头部，直接POST即可
+# 唯一的限制是频率限制：同一IP在10秒内只能访问一次
 ```
 
 ### 📊 获取使用统计
@@ -1414,11 +1407,11 @@ curl "https://api-g.lacs.cc/api/user-behavior/usage"
 
 **端点**：`POST /api/user-behavior/device-connections`
 
-**认证要求**：需要专用的用户行为记录API Key
+**认证要求**：无需认证
 
 **认证方式**：
 ```http
-X-API-Key: ubrec_your_48_character_hex_string_here
+无需任何认证头部
 ```
 
 **频率限制**：
@@ -1468,10 +1461,9 @@ X-API-Key: ubrec_your_48_character_hex_string_here
 
 **使用示例**：
 ```bash
-# 正确的请求示例
+# 简单的请求示例（无需API Key）
 curl -X POST "https://api-g.lacs.cc/api/user-behavior/device-connections" \
   -H "Content-Type: application/json" \
-  -H "X-API-Key: ubrec_5fc4a91f2048db7d6315731e344799de45c21916d559386c" \
   -d '{
     "deviceSerial": "SM-G991B-123456789",
     "softwareId": 1,
@@ -1481,15 +1473,8 @@ curl -X POST "https://api-g.lacs.cc/api/user-behavior/device-connections" \
     "osVersion": "Android 11"
   }'
 
-# 错误示例：使用错误的API Key（将返回401）
-curl -X POST "https://api-g.lacs.cc/api/user-behavior/device-connections" \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: wrong-api-key" \
-  -d '{
-    "deviceSerial": "device-123",
-    "softwareId": 1,
-    "userDeviceFingerprint": "fingerprint"
-  }'
+# 注意：无需任何认证头部，直接POST即可
+# 唯一的限制是频率限制：同一IP在10秒内只能访问一次
 ```
 
 ### 📱 获取设备连接统计

@@ -52,12 +52,9 @@ export async function POST(request: NextRequest) {
     // 移除API Key验证 - 现在只依赖频率限制进行访问控制
     console.log('ℹ️ [DEBUG] 跳过API Key验证，仅使用频率限制控制访问')
 
-    // 简化的安全检查（跳过API Key验证）
+    // 完全跳过安全检查 - POST记录端点只依赖频率限制
+    console.log('ℹ️ [DEBUG] 完全跳过安全检查，POST记录端点只使用频率限制')
     const bodyText = await request.text()
-    const securityCheck = await UserBehaviorSecurity.performBasicSecurityCheck(request, bodyText)
-    if (!securityCheck.success) {
-      return UserBehaviorSecurity.createSecurityErrorResponse(securityCheck)
-    }
 
     const body = JSON.parse(bodyText)
     const validatedData = deviceConnectionRequestSchema.parse(body)

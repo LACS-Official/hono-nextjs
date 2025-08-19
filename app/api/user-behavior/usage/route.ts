@@ -60,11 +60,8 @@ export async function POST(request: NextRequest) {
       }, { status: 400 }, origin, userAgent)
     }
 
-    // 简化的安全检查（跳过API Key验证）
-    const securityCheck = await UserBehaviorSecurity.performBasicSecurityCheck(request, bodyText)
-    if (!securityCheck.success) {
-      return UserBehaviorSecurity.createSecurityErrorResponse(securityCheck)
-    }
+    // 完全跳过安全检查 - POST记录端点只依赖频率限制
+    console.log('ℹ️ [DEBUG] 完全跳过安全检查，POST记录端点只使用频率限制')
 
     const body = JSON.parse(bodyText)
     const validatedData = usageRequestSchema.parse(body)

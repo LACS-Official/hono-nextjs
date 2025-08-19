@@ -52,6 +52,9 @@ export const deviceConnections = pgTable('device_connections', {
   // 用户设备指纹（关联到激活记录）
   userDeviceFingerprint: text('user_device_fingerprint'), // 用户设备指纹
 
+  // 连接统计
+  linked: integer('linked').notNull().default(1), // 连接次数，每次连接时自增
+
   // 时间戳
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),

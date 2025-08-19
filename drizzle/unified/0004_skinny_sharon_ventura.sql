@@ -1,0 +1,1 @@
+ALTER TABLE "device_connections" ADD COLUMN "linked" integer DEFAULT 1 NOT NULL;

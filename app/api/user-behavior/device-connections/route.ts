@@ -59,25 +59,52 @@ export async function POST(request: NextRequest) {
     const body = JSON.parse(bodyText)
     const validatedData = deviceConnectionRequestSchema.parse(body)
 
-    // 创建设备连接记录（简化版本）
-    const [newConnection] = await userBehaviorDb
-      .insert(deviceConnections)
-      .values({
-        deviceSerial: validatedData.deviceSerial,
-        softwareId: validatedData.softwareId,
-        userDeviceFingerprint: validatedData.userDeviceFingerprint,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .returning()
+    // 检查设备序列号是否已存在
+    const existingDevice = await userBehaviorDb
+      .select()
+      .from(deviceConnections)
+      .where(eq(deviceConnections.deviceSerial, validatedData.deviceSerial))
+      .limit(1)
+
+    let result
+    if (existingDevice.length > 0) {
+      // 设备已存在，更新 linked 字段自增
+      const [updatedConnection] = await userBehaviorDb
+        .update(deviceConnections)
+        .set({
+          linked: existingDevice[0].linked + 1,
+          updatedAt: new Date(),
+        })
+        .where(eq(deviceConnections.deviceSerial, validatedData.deviceSerial))
+        .returning()
+
+      result = updatedConnection
+    } else {
+      // 设备不存在，创建新记录
+      const [newConnection] = await userBehaviorDb
+        .insert(deviceConnections)
+        .values({
+          deviceSerial: validatedData.deviceSerial,
+          softwareId: validatedData.softwareId,
+          userDeviceFingerprint: validatedData.userDeviceFingerprint,
+          linked: 1, // 初始连接次数为1
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .returning()
+
+      result = newConnection
+    }
 
     return corsResponse({
       success: true,
-      message: '设备连接记录已保存',
+      message: existingDevice.length > 0 ? '设备连接次数已更新' : '设备连接记录已创建',
       data: {
-        id: newConnection.id,
-        deviceSerial: newConnection.deviceSerial,
-        softwareId: newConnection.softwareId
+        id: result.id,
+        deviceSerial: result.deviceSerial,
+        softwareId: result.softwareId,
+        linked: result.linked,
+        isNewDevice: existingDevice.length === 0
       }
     }, undefined, origin, userAgent)
 
@@ -115,7 +142,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 跳过额外的安全检查 - GET端点只需要GitHub OAuth认证
-    console.log('ℹ️ [DEBUG] GET端点跳过额外安全检查，只使用GitHub OAuth认证')
+    console.log('[DEBUG] GET端点跳过额外安全检查，只使用GitHub OAuth认证')
 
     const { searchParams } = new URL(request.url)
     const softwareId = searchParams.get('softwareId')
@@ -134,9 +161,12 @@ export async function GET(request: NextRequest) {
       conditions.push(lte(deviceConnections.createdAt, new Date(endDate)))
     }
 
-    // 获取总连接次数
+    // 获取总连接次数（基于 linked 字段的总和）
     const [totalConnectionsResult] = await userBehaviorDb
-      .select({ count: count() })
+      .select({
+        totalConnections: sql<number>`sum(${deviceConnections.linked})`,
+        totalRecords: count()
+      })
       .from(deviceConnections)
       .where(conditions.length > 0 ? and(...conditions) : undefined)
 
@@ -170,7 +200,7 @@ export async function GET(request: NextRequest) {
       .orderBy(desc(count()))
       .limit(10)
 
-    // 获取最近的连接记录（简化版本）
+    // 获取最近的连接记录（包含连接次数）
     const recentConnections = await userBehaviorDb
       .select({
         id: deviceConnections.id,
@@ -178,26 +208,31 @@ export async function GET(request: NextRequest) {
         deviceBrand: deviceConnections.deviceBrand,
         deviceModel: deviceConnections.deviceModel,
         softwareId: deviceConnections.softwareId,
+        linked: deviceConnections.linked,
         createdAt: deviceConnections.createdAt,
+        updatedAt: deviceConnections.updatedAt,
       })
       .from(deviceConnections)
       .where(conditions.length > 0 ? and(...conditions) : undefined)
-      .orderBy(desc(deviceConnections.createdAt))
+      .orderBy(desc(deviceConnections.updatedAt))
       .limit(20)
 
-    const totalConnections = totalConnectionsResult.count || 0
+    const totalConnections = totalConnectionsResult.totalConnections || 0
+    const totalRecords = totalConnectionsResult.totalRecords || 0
     const uniqueDevices = uniqueDevicesResult.length
 
     return corsResponse({
       success: true,
       data: {
-        totalConnections,
-        uniqueDevices,
+        totalConnections, // 总连接次数（基于 linked 字段）
+        totalRecords, // 总记录数（唯一设备数）
+        uniqueDevices, // 唯一设备数（与 totalRecords 相同）
         brandStats: brandStatsResult,
         deviceModelStats: deviceModelStatsResult,
         recentConnections,
         summary: {
           totalConnections,
+          totalRecords,
           uniqueDevices,
           averageConnectionsPerDevice: uniqueDevices > 0 ? (totalConnections / uniqueDevices).toFixed(2) : '0'
         }

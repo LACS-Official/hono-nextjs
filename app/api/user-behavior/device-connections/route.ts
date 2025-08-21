@@ -217,6 +217,14 @@ export async function GET(request: NextRequest) {
       .orderBy(desc(deviceConnections.updatedAt))
       .limit(20)
 
+    // 对 deviceSerial 进行脱敏处理
+    const maskedRecentConnections = recentConnections.map(connection => ({
+      ...connection,
+      deviceSerial: connection.deviceSerial.length > 4
+        ? `${connection.deviceSerial.substring(0, 2)}****${connection.deviceSerial.substring(connection.deviceSerial.length - 2)}`
+        : connection.deviceSerial
+    }));
+
     const totalConnections = totalConnectionsResult.totalConnections || 0
     const totalRecords = totalConnectionsResult.totalRecords || 0
     const uniqueDevices = uniqueDevicesResult.length
@@ -229,7 +237,7 @@ export async function GET(request: NextRequest) {
         uniqueDevices, // 唯一设备数（与 totalRecords 相同）
         brandStats: brandStatsResult,
         deviceModelStats: deviceModelStatsResult,
-        recentConnections,
+        recentConnections: maskedRecentConnections,
         summary: {
           totalConnections,
           totalRecords,

@@ -212,6 +212,14 @@ export async function GET(request: NextRequest) {
       .orderBy(desc(softwareUsage.usedAt))
       .limit(10)
 
+    // 对 deviceFingerprint 进行脱敏处理
+    const maskedRecentUsage = recentUsage.map(usage => ({
+      ...usage,
+      deviceFingerprint: usage.deviceFingerprint.length > 10 
+        ? `${usage.deviceFingerprint.substring(0, 5)}****${usage.deviceFingerprint.substring(usage.deviceFingerprint.length - 5)}`
+        : usage.deviceFingerprint
+    }));
+
     const totalUsage = totalUsageResult.totalUsed || 0
     const uniqueDevices = uniqueDevicesResult.length
 
@@ -220,7 +228,7 @@ export async function GET(request: NextRequest) {
       data: {
         totalUsage,
         uniqueDevices,
-        recentUsage,
+        recentUsage: maskedRecentUsage,
         summary: {
           totalUsage,
           uniqueDevices,

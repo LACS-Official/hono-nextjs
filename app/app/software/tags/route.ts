@@ -87,10 +87,18 @@ export async function GET(request: NextRequest) {
     }, undefined, origin, userAgent)
     
   } catch (error) {
-    console.error('获取软件标签失败:', error)
+    console.error('获取软件标签失败:', {
+      error: error instanceof Error ? error.stack : error,
+      request: {
+        url: request.url,
+        method: request.method,
+        headers: Object.fromEntries(request.headers.entries())
+      }
+    })
     return corsResponse({
       success: false,
-      error: '服务器内部错误'
+      error: '服务器内部错误',
+      requestId: Math.random().toString(36).substring(2, 15)
     }, { status: 500 }, origin, userAgent)
   }
 }

@@ -1,8 +1,7 @@
 import { NextRequest } from 'next/server'
 import { unifiedDb as db, software } from '@/lib/unified-db-connection'
-import { eq, like, and, desc, asc, sql } from 'drizzle-orm'
-import { corsResponse, handleOptions, validateUnifiedAuth } from '@/lib/cors'
-import { getLatestVersion, getLatestVersionWithId } from '@/lib/version-manager'
+import { and, eq, sql } from 'drizzle-orm'
+import { corsResponse, handleOptions } from '@/lib/cors'
 
 // OPTIONS 处理
 export async function OPTIONS(request: NextRequest) {
@@ -11,268 +10,62 @@ export async function OPTIONS(request: NextRequest) {
   return handleOptions(origin, userAgent)
 }
 
-// GET /app/software - 获取所有可用软件列表
+// GET /app/software - 根据标签过滤软件
 export async function GET(request: NextRequest) {
   const origin = request.headers.get('origin')
   const userAgent = request.headers.get('user-agent')
 
   try {
     const { searchParams } = new URL(request.url)
+    const tagsParam = searchParams.get('tags')
     
-    // 查询参数
-    const page = parseInt(searchParams.get('page') || '1')
-    const limit = parseInt(searchParams.get('limit') || '20')
-    const search = searchParams.get('search') || ''
-    const category = searchParams.get('category') || ''
-    const tags = searchParams.get('tags') || '' // 新增：标签筛选
-    const isActive = searchParams.get('active')
-    const sortBy = searchParams.get('sortBy') || 'sortOrder'
-    const sortOrder = searchParams.get('sortOrder') || 'asc'
-    
-    // 验证分页参数
-    if (page < 1 || limit < 1 || limit > 10000) {
+    if (!tagsParam) {
       return corsResponse({
         success: false,
-        error: '无效的分页参数'
+        error: '缺少tags参数'
       }, { status: 400 }, origin, userAgent)
     }
-    
-    const offset = (page - 1) * limit
-    
-    // 构建查询条件
-    let whereConditions = []
-    
-    // 活跃状态过滤
-    if (isActive !== null && isActive !== undefined) {
-      const activeValue = isActive === 'true' || isActive === '1'
-      whereConditions.push(eq(software.isActive, activeValue))
-    } else {
-      // 默认只显示活跃的软件
-      whereConditions.push(eq(software.isActive, true))
-    }
-    
-    // 分类过滤
-    if (category) {
-      whereConditions.push(eq(software.category, category))
-    }
-    
-    // 搜索过滤
-    if (search) {
-      whereConditions.push(
-        like(software.name, `%${search}%`)
-      )
-    }
 
-    // 标签过滤
-    if (tags) {
-      const tagList = tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0)
-      if (tagList.length > 0) {
-        // 使用 PostgreSQL 的 jsonb 操作符来检查标签
-        // 支持多个标签的 OR 查询：任何一个标签匹配即可
-        const tagConditions = tagList.map(tag =>
-          sql`${software.tags} @> ${JSON.stringify([tag])}`
-        )
-
-        if (tagConditions.length === 1) {
-          whereConditions.push(tagConditions[0])
-        } else {
-          // 多个标签使用 OR 连接
-          whereConditions.push(sql`(${tagConditions.join(' OR ')})`)
-        }
-      }
-    }
+    // 解析标签参数，支持逗号分隔的多个标签
+    const tags = tagsParam.split(',').map(tag => tag.trim()).filter(Boolean)
     
-    // 构建排序
-    let orderBy
-    switch (sortBy) {
-      case 'name':
-        orderBy = sortOrder === 'desc' ? desc(software.name) : asc(software.name)
-        break
-      case 'createdAt':
-        orderBy = sortOrder === 'desc' ? desc(software.createdAt) : asc(software.createdAt)
-        break
-      case 'updatedAt':
-        orderBy = sortOrder === 'desc' ? desc(software.updatedAt) : asc(software.updatedAt)
-        break
-      default:
-        orderBy = sortOrder === 'desc' ? desc(software.sortOrder) : asc(software.sortOrder)
-    }
-    
-    // 查询软件列表
-    const softwareList = await db
-      .select()
-      .from(software)
-      .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
-      .orderBy(orderBy)
-      .limit(limit)
-      .offset(offset)
-
-    // 为每个软件添加最新版本信息和版本ID
-    const enhancedSoftwareList = await Promise.all(
-      softwareList.map(async (sw) => {
-        // 确保日期字段是有效的Date对象
-        const processedSoftware = {
-          ...sw,
-          createdAt: sw.createdAt instanceof Date ? sw.createdAt : new Date(sw.createdAt),
-          updatedAt: sw.updatedAt instanceof Date ? sw.updatedAt : new Date(sw.updatedAt)
-        };
-        
-        try {
-          const latestVersionInfo = await getLatestVersionWithId(processedSoftware.id)
-          return {
-            ...processedSoftware,
-            currentVersionId: latestVersionInfo?.id || null,
-            latestVersion: latestVersionInfo?.version || processedSoftware.currentVersion
-          }
-        } catch (error) {
-          console.warn(`获取软件 ${processedSoftware.id} 最新版本失败:`, error)
-          return {
-            ...processedSoftware,
-            currentVersionId: null,
-            latestVersion: processedSoftware.currentVersion
-          }
-        }
-      })
+    // 构建查询条件 - 要求软件包含所有指定的标签
+    const conditions = tags.map(tag => 
+      sql`${software.tags}::jsonb @> '["${tag}"]'::jsonb`
     )
 
-    // 查询总数
-    const totalCountResult = await db
-      .select({ count: software.id })
+    // 查询符合条件的软件
+    const filteredSoftware = await db
+      .select()
       .from(software)
-      .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
-
-    const totalCount = totalCountResult.length
-    const totalPages = Math.ceil(totalCount / limit)
+      .where(
+        and(
+          eq(software.isActive, true),
+          ...conditions
+        )
+      )
 
     return corsResponse({
       success: true,
       data: {
-        software: enhancedSoftwareList,
-        pagination: {
-          page,
-          limit,
-          total: totalCount,
-          totalPages,
-          hasNext: page < totalPages,
-          hasPrev: page > 1
-        }
+        software: filteredSoftware,
+        count: filteredSoftware.length
       }
     }, undefined, origin, userAgent)
     
   } catch (error) {
-    console.error('获取软件列表失败:', error)
+    console.error('根据标签过滤软件失败:', {
+      error: error instanceof Error ? error.stack : error,
+      request: {
+        url: request.url,
+        method: request.method,
+        headers: Object.fromEntries(request.headers.entries())
+      }
+    })
     return corsResponse({
       success: false,
-      error: '服务器内部错误'
-    }, { status: 500 }, origin, userAgent)
-  }
-}
-
-// POST /app/software - 创建新软件（管理员功能）
-export async function POST(request: NextRequest) {
-  const origin = request.headers.get('origin')
-  const userAgent = request.headers.get('user-agent')
-
-  try {
-    // 统一认证验证（支持GitHub OAuth或API Key）
-    const authValidation = validateUnifiedAuth(request)
-    if (!authValidation.isValid) {
-      return corsResponse({
-        success: false,
-        error: authValidation.error || 'Authentication required for software management operations',
-        authType: authValidation.authType
-      }, { status: 401 }, origin, userAgent)
-    }
-
-    // 记录操作日志
-    const logInfo = authValidation.authType === 'github-oauth'
-      ? `User: ${authValidation.user?.login} (${authValidation.user?.email})`
-      : `API Key authentication`
-    console.log(`[SOFTWARE_CREATE] ${logInfo} - IP: ${request.headers.get('x-forwarded-for') || 'unknown'} - Time: ${new Date().toISOString()}`)
-
-    const body = await request.json()
-    
-    // 基本字段验证
-    const {
-      name,
-      nameEn,
-      description,
-      descriptionEn,
-      currentVersion,
-      officialWebsite,
-      category,
-      tags,
-      systemRequirements,
-      openname,
-      filetype,
-      isActive = true,
-      sortOrder = 0,
-      metadata = {}
-    } = body
-
-    // 必填字段验证
-    if (!name || !currentVersion) {
-      return corsResponse({
-        success: false,
-        error: '软件名称和当前版本为必填字段'
-      }, { status: 400 }, origin, userAgent)
-    }
-    
-    // 检查软件名称是否已存在
-    const existingSoftware = await db
-      .select()
-      .from(software)
-      .where(eq(software.name, name))
-      .limit(1)
-    
-    if (existingSoftware.length > 0) {
-      return corsResponse({
-        success: false,
-        error: '软件名称已存在'
-      }, { status: 409 }, origin, userAgent)
-    }
-    
-    // 创建新软件记录
-    const [newSoftware] = await db
-      .insert(software)
-      .values({
-        name,
-        nameEn,
-        description,
-        descriptionEn,
-        currentVersion,
-        officialWebsite,
-        category,
-        tags,
-        systemRequirements,
-        openname,
-        filetype,
-        isActive,
-        sortOrder,
-        metadata,
-        // 确保日期字段正确处理
-        createdAt: new Date(),
-        updatedAt: new Date()
-      })
-      .returning()
-    
-    // 确保返回的日期字段是有效的Date对象
-    const processedNewSoftware = {
-      ...newSoftware,
-      createdAt: newSoftware.createdAt instanceof Date ? newSoftware.createdAt : new Date(newSoftware.createdAt),
-      updatedAt: newSoftware.updatedAt instanceof Date ? newSoftware.updatedAt : new Date(newSoftware.updatedAt)
-    };
-    
-    return corsResponse({
-      success: true,
-      data: processedNewSoftware
-    }, { status: 201 }, origin, userAgent)
-    
-  } catch (error) {
-    console.error('创建软件失败:', error)
-    return corsResponse({
-      success: false,
-      error: '服务器内部错误'
+      error: '服务器内部错误',
+      requestId: Math.random().toString(36).substring(2, 15)
     }, { status: 500 }, origin, userAgent)
   }
 }

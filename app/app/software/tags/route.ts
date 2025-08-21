@@ -69,10 +69,6 @@ export async function GET(request: NextRequest) {
     return corsResponse({
       success: false,
       error: '服务器内部错误',
-<<<<<<< HEAD
-=======
-      requestId: Math.random().toString(36).substring(2, 15)
->>>>>>> e29c0d3907d48af3593e9d1a26127413414d7fd9
     }, { status: 500 }, origin, userAgent)
   }
 }

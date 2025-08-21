@@ -15,8 +15,8 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const origin = request.headers.get('origin')
-  const userAgent = request.headers.get('user-agent')
+  const origin = request.headers.get('Origin')
+  const userAgent = request.headers.get('User-Agent')
 
   try {
     const { id } = params
@@ -87,8 +87,8 @@ export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const origin = request.headers.get('origin')
-  const userAgent = request.headers.get('user-agent')
+  const origin = request.headers.get('Origin')
+  const userAgent = request.headers.get('User-Agent')
 
   try {
     // 统一认证验证（支持GitHub OAuth或API Key）

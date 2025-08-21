@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { unifiedDb as db, software, softwareAnnouncements } from '@/lib/unified-db-connection'
-import { eq, and } from 'drizzle-orm'
+import { eq, and, desc } from 'drizzle-orm'
 import { corsResponse, handleOptions, validateUnifiedAuth } from '@/lib/cors'
 
 // OPTIONS 处理
@@ -15,8 +15,8 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { id: string; announcementId: string } }
 ) {
-  const origin = request.headers.get('origin')
-  const userAgent = request.headers.get('user-agent')
+  const origin = request.headers.get('Origin')
+  const userAgent = request.headers.get('User-Agent')
 
   try {
     const { id, announcementId } = params
@@ -74,8 +74,8 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string; announcementId: string } }
 ) {
-  const origin = request.headers.get('origin')
-  const userAgent = request.headers.get('user-agent')
+  const origin = request.headers.get('Origin')
+  const userAgent = request.headers.get('User-Agent')
 
   try {
     // 统一认证验证（支持GitHub OAuth或API Key）
@@ -186,8 +186,8 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string; announcementId: string } }
 ) {
-  const origin = request.headers.get('origin')
-  const userAgent = request.headers.get('user-agent')
+  const origin = request.headers.get('Origin')
+  const userAgent = request.headers.get('User-Agent')
 
   try {
     // 统一认证验证（支持GitHub OAuth或API Key）

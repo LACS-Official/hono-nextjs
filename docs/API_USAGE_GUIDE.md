@@ -1418,29 +1418,49 @@ curl "https://api-g.lacs.cc/api/user-behavior/usage"
 - 同一IP地址在10秒内只能访问此端点一次
 - 超出限制返回429状态码和Retry-After头部
 
+**功能说明**：
+- 如果设备序列号不存在，将创建新记录，`linked` 连接次数初始为 1
+- 如果设备序列号已存在，将更新 `linked` 字段自增，以设备序列号为主要标识符
+- 每次连接都会更新 `updatedAt` 时间戳
+
 **请求参数**：
 ```json
 {
-  "deviceSerial": "device-serial-123",     // 设备序列号（必需）
+  "deviceSerial": "device-serial-123",     // 设备序列号（必需，作为主要标识符）
   "softwareId": 1,                         // 软件ID（必需）
-  "userDeviceFingerprint": "fingerprint", // 用户设备指纹（必需）
-  "deviceBrand": "Samsung",                // 设备品牌（可选）
-  "deviceModel": "Galaxy S21",             // 设备型号（可选）
-  "osVersion": "Android 11"                // 操作系统版本（可选）
+  "userDeviceFingerprint": "fingerprint"  // 用户设备指纹（可选）
 }
 ```
 
 **成功响应示例**：
+
+新设备首次连接：
 ```json
 {
   "success": true,
+  "message": "设备连接记录已创建",
   "data": {
     "id": "uuid-456",
     "deviceSerial": "device-serial-123",
     "softwareId": 1,
-    "createdAt": "2025-08-01T00:00:00.000Z"
-  },
-  "message": "设备连接记录已保存"
+    "linked": 1,
+    "isNewDevice": true
+  }
+}
+```
+
+已存在设备再次连接：
+```json
+{
+  "success": true,
+  "message": "设备连接次数已更新",
+  "data": {
+    "id": "uuid-456",
+    "deviceSerial": "device-serial-123",
+    "softwareId": 1,
+    "linked": 3,
+    "isNewDevice": false
+  }
 }
 ```
 
@@ -1467,14 +1487,13 @@ curl -X POST "https://api-g.lacs.cc/api/user-behavior/device-connections" \
   -d '{
     "deviceSerial": "SM-G991B-123456789",
     "softwareId": 1,
-    "userDeviceFingerprint": "user-device-fingerprint-456",
-    "deviceBrand": "Samsung",
-    "deviceModel": "Galaxy S21",
-    "osVersion": "Android 11"
+    "userDeviceFingerprint": "user-device-fingerprint-456"
   }'
 
 # 注意：无需任何认证头部，直接POST即可
 # 唯一的限制是频率限制：同一IP在10秒内只能访问一次
+# 如果设备序列号已存在，linked 字段会自增
+# 如果设备序列号不存在，会创建新记录，linked 初始为 1
 ```
 
 ### 📱 获取设备连接统计
@@ -1499,9 +1518,14 @@ Authorization: Bearer your_jwt_token_here
 ?softwareId=1        # 软件ID（可选）
 &startDate=2025-01-01 # 开始日期（可选）
 &endDate=2025-01-31   # 结束日期（可选）
-&page=1              # 页码（默认：1）
-&limit=10            # 每页数量（默认：10）
 ```
+
+**统计说明**：
+- `totalConnections`: 总连接次数（基于所有设备的 `linked` 字段总和）
+- `totalRecords`: 总记录数（等于唯一设备数）
+- `uniqueDevices`: 唯一设备数（基于设备序列号去重）
+- `averageConnectionsPerDevice`: 平均每设备连接次数
+- `recentConnections`: 最近的连接记录（按 `updatedAt` 排序，包含 `linked` 连接次数）
 
 **成功响应示例**：
 ```json
@@ -1509,14 +1533,15 @@ Authorization: Bearer your_jwt_token_here
   "success": true,
   "data": {
     "totalConnections": 800,
+    "totalRecords": 600,
     "uniqueDevices": 600,
     "brandStats": [
       {"brand": "Samsung", "count": 200},
       {"brand": "Xiaomi", "count": 150}
     ],
     "deviceModelStats": [
-      {"model": "Galaxy S21", "count": 100},
-      {"model": "Mi 11", "count": 80}
+      {"deviceModel": "Galaxy S21", "count": 100},
+      {"deviceModel": "Mi 11", "count": 80}
     ],
     "recentConnections": [
       {
@@ -1524,12 +1549,15 @@ Authorization: Bearer your_jwt_token_here
         "deviceSerial": "device-serial-123",
         "deviceBrand": "Samsung",
         "deviceModel": "Galaxy S21",
-        "osVersion": "Android 11",
-        "connectedAt": "2025-08-01T00:00:00.000Z"
+        "softwareId": 1,
+        "linked": 5,
+        "createdAt": "2025-08-01T00:00:00.000Z",
+        "updatedAt": "2025-08-01T12:30:00.000Z"
       }
     ],
     "summary": {
       "totalConnections": 800,
+      "totalRecords": 600,
       "uniqueDevices": 600,
       "averageConnectionsPerDevice": "1.33"
     }
@@ -1550,7 +1578,11 @@ Authorization: Bearer your_jwt_token_here
 ```bash
 # 需要先通过前端管理页面登录获取JWT Token
 # 然后使用Token访问API
-curl "https://api-g.lacs.cc/api/user-behavior/device-connections?softwareId=1&limit=20" \
+curl "https://api-g.lacs.cc/api/user-behavior/device-connections?softwareId=1" \
+  -H "Authorization: Bearer your_jwt_token_here"
+
+# 获取指定时间范围的统计
+curl "https://api-g.lacs.cc/api/user-behavior/device-connections?startDate=2025-01-01&endDate=2025-01-31" \
   -H "Authorization: Bearer your_jwt_token_here"
 
 # 错误示例：未提供认证信息（将返回401）

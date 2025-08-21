@@ -65,10 +65,10 @@ export async function GET(request: NextRequest) {
 
     // 标签过滤
     if (tags) {
-      const tagList = tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0)
+      const tagList = tags.split(',').map(tag => decodeURIComponent(tag.trim())).filter(tag => tag.length > 0)
       if (tagList.length > 0) {
         // 使用 PostgreSQL 的 jsonb 操作符来检查标签
-        // 支持多个标签的 OR 查询：任何一个标签匹配即可
+        // 支持多个标签的 AND 查询：必须同时具有所有标签
         const tagConditions = tagList.map(tag =>
           sql`${software.tags} @> ${JSON.stringify([tag])}`
         )
@@ -76,8 +76,8 @@ export async function GET(request: NextRequest) {
         if (tagConditions.length === 1) {
           whereConditions.push(tagConditions[0])
         } else {
-          // 多个标签使用 OR 连接
-          whereConditions.push(sql`(${tagConditions.join(' OR ')})`)
+          // 多个标签使用 AND 连接
+          whereConditions.push(and(...tagConditions))
         }
       }
     }

@@ -225,12 +225,12 @@ const userBehaviorRateLimits = new Map<string, { lastRequestTime: number }>()
 
 /**
  * 用户行为记录API的频率限制检查
- * 限制同一IP在10秒内只能访问每个POST记录API一次
+ * 限制同一IP在1秒内只能访问每个POST记录API一次
  */
 export function checkUserBehaviorRateLimit(
   clientIp: string,
   endpoint: string,
-  windowMs = 10000
+  windowMs = 1000
 ): { allowed: boolean; error?: string; retryAfter?: number } {
   if (!clientIp) {
     console.warn('User behavior rate limit check: clientIp is empty')

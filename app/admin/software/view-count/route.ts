@@ -94,10 +94,7 @@ export async function GET(request: NextRequest) {
       return new Response(csvContent, {
         headers: {
           'Content-Type': 'text/csv; charset=utf-8',
-          'Content-Disposition': `attachment; filename="software-view-stats-${new Date().toISOString().split('T')[0]}.csv"`,
-          'Access-Control-Allow-Origin': origin || '*',
-          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-API-Key'
+          'Content-Disposition': `attachment; filename="software-view-stats-${new Date().toISOString().split('T')[0]}.csv"`
         }
       })
     }

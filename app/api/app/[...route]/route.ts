@@ -1,6 +1,5 @@
 import { Hono } from 'hono'
 import { handle } from 'hono/vercel'
-import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
 import { prettyJSON } from 'hono/pretty-json'
 // import { HTTPException } from 'hono/http-exception' // 暂时不使用
@@ -19,14 +18,7 @@ import {
 // 创建 Hono 应用实例
 const app = new Hono().basePath('/api/app')
 
-// 全局中间件
-app.use('*', cors({
-  origin: ['*'],
-  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'X-Request-ID'],
-  credentials: false,
-  maxAge: 86400,
-}))
+// 全局中间件（CORS 由 Next.js 根级 middleware 统一处理）
 
 // 安全和日志中间件
 app.use('*', securityHeaders())

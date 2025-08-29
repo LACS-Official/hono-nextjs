@@ -12,7 +12,10 @@ const getAllowedOrigins = (): string[] => {
   return [
     'https://admin.lacs.cc',
     'http://localhost:3000', // 开发环境
+    'http://localhost:1420', // 开发环境
     'http://localhost:3001', // 开发环境备用端口
+    'tauri://localhost', // Tauri 桌面应用
+  
     // API 测试工具支持
     'https://app.apifox.com', // Apifox Web 版
     'https://web.postman.co', // Postman Web 版
@@ -45,23 +48,35 @@ function isApiTestingTool(origin?: string | null, userAgent?: string | null): bo
 }
 
 // 根据请求来源动态设置CORS头部
-function getCorsHeaders(origin?: string | null, userAgent?: string | null) {
+export function getCorsHeaders(origin?: string | null, userAgent?: string | null) {
   const allowedOrigins = getAllowedOrigins()
   const isDevelopment = process.env.NODE_ENV === 'development'
 
-  // 在开发环境或API测试工具中允许所有来源
-  let allowedOrigin = '*'
+  // 默认允许来源，优先严格回显实际 Origin
+  let allowedOrigin = 'null'
 
-  // 在生产环境中进行严格的来源检查
-  if (!isDevelopment && origin) {
-    const isAllowed = allowedOrigins.includes(origin) || isApiTestingTool(origin, userAgent)
+  // 如果存在 Origin，按白名单或常见测试工具策略放行并回显 Origin
+  if (origin) {
+    const isAllowed = allowedOrigins.includes(origin) || isApiTestingTool(origin, userAgent) || isDevelopment
     allowedOrigin = isAllowed ? origin : 'null'
+  } else {
+    // 无 Origin 的场景（如原生应用、某些环境），在开发模式下允许 tauri://localhost
+    if (isDevelopment) {
+      allowedOrigin = 'tauri://localhost'
+    }
+  }
+
+  // 如果允许凭证，绝不使用通配符“*”
+  if (allowedOrigin === '*') {
+    allowedOrigin = 'null'
   }
 
   return {
     'Access-Control-Allow-Origin': allowedOrigin,
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-API-Key, X-Request-ID, Cookie',
+    // 优先使用浏览器预检头 Access-Control-Request-Headers，以覆盖自定义头
+    'Access-Control-Allow-Headers': (typeof Headers !== 'undefined' && (globalThis as any).request?.headers?.get?.('access-control-request-headers'))
+      || 'Content-Type, Authorization, X-API-Key, X-Request-ID, Cookie',
     'Access-Control-Allow-Credentials': 'true', // 启用凭据传输以支持Cookie认证
     'Access-Control-Max-Age': '86400', // 预检请求缓存24小时
     'Vary': 'Origin', // 告诉缓存根据Origin头部变化
@@ -87,7 +102,7 @@ export function corsResponse(data: any, init?: ResponseInit, origin?: string | n
 export function handleOptions(origin?: string | null, userAgent?: string | null) {
   const headers = getCorsHeaders(origin, userAgent)
   return new NextResponse(null, {
-    status: 200,
+    status: 204,
     headers,
   })
 }

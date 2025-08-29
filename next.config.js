@@ -22,59 +22,8 @@ const nextConfig = {
       {
         // 匹配所有 API 路由
         source: "/api/:path*",
-        headers: [
-          {
-            key: "Access-Control-Allow-Origin",
-            value: process.env.NODE_ENV === 'production' ?
-              (process.env.ALLOWED_ORIGINS || "https://admin.lacs.cc") : "*",
-          },
-          {
-            key: "Access-Control-Allow-Methods",
-            value: "GET, POST, PUT, DELETE, OPTIONS",
-          },
-          {
-            key: "Access-Control-Allow-Headers",
-            value: "Content-Type, Authorization, X-API-Key, X-Request-ID",
-          },
-          {
-            key: "Access-Control-Allow-Credentials",
-            value: "false",
-          },
-          {
-            key: "Access-Control-Max-Age",
-            value: "86400",
-          },
-          {
-            key: "Vary",
-            value: "Origin",
-          },
-          // 安全头部
-          {
-            key: "X-Content-Type-Options",
-            value: "nosniff",
-          },
-          {
-            key: "X-Frame-Options",
-            value: "DENY",
-          },
-          {
-            key: "X-XSS-Protection",
-            value: "1; mode=block",
-          },
-          {
-            key: "Referrer-Policy",
-            value: "strict-origin-when-cross-origin",
-          },
-          {
-            key: "Permissions-Policy",
-            value: "camera=(), microphone=(), geolocation=()",
-          },
-          // 性能头部
-          {
-            key: "Cache-Control",
-            value: "no-cache, no-store, must-revalidate",
-          },
-        ],
+        // 由运行时 middleware 统一注入 CORS 和安全头
+        headers: [],
       },
       {
         // 匹配所有页面

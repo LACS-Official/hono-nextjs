@@ -20,12 +20,6 @@ const nextConfig = {
   async headers() {
     return [
       {
-        // 匹配所有 API 路由
-        source: "/api/:path*",
-        // 由运行时 middleware 统一注入 CORS 和安全头
-        headers: [],
-      },
-      {
         // 匹配所有页面
         source: "/(.*)",
         headers: [

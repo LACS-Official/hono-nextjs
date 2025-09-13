@@ -100,7 +100,18 @@ export async function PUT(
     console.log(`[VERSION_SPECIFIC_UPDATE] ${logInfo} - IP: ${request.headers.get('x-forwarded-for') || 'unknown'} - Time: ${new Date().toISOString()}`)
 
     const { id, versionId } = params
-    const body = await request.json()
+    
+    // 解析请求体并保存以便错误处理时使用
+    let body: any
+    try {
+      body = await request.json()
+    } catch (parseError) {
+      console.error('JSON解析失败:', parseError)
+      return corsResponse({
+        success: false,
+        error: '请求体格式错误'
+      }, { status: 400 }, origin, userAgent)
+    }
 
     if (!id || !versionId) {
       return corsResponse({
@@ -119,7 +130,9 @@ export async function PUT(
       }, { status: 400 }, origin, userAgent)
     }
 
-    // 验证版本是否存在
+    // 验证版本是否存在 - PUT方法中添加更详细的日志
+    console.log(`[VERSION_UPDATE] 查询版本记录: softwareId=${softwareId}, versionId=${versionIdNum}`)
+    
     const [existingVersion] = await db
       .select()
       .from(softwareVersionHistory)
@@ -130,31 +143,47 @@ export async function PUT(
       .limit(1)
     
     if (!existingVersion) {
+      console.log(`[VERSION_UPDATE] 版本记录不存在: softwareId=${softwareId}, versionId=${versionIdNum}`)
       return corsResponse({
         success: false,
-        error: '未找到指定的版本'
+        error: '未找到指定的版本',
+        details: `软件ID: ${softwareId}, 版本ID: ${versionIdNum}`
       }, { status: 404 }, origin, userAgent)
     }
+    
+    console.log(`[VERSION_UPDATE] 找到版本记录:`, {
+      id: existingVersion.id,
+      version: existingVersion.version,
+      softwareId: existingVersion.softwareId
+    })
 
-    // 更新版本信息
-    const updateData = {
-      version: body.version,
-      releaseDate: body.releaseDate,
-      releaseNotes: body.releaseNotes,
-      releaseNotesEn: body.releaseNotesEn,
-      downloadLinks: body.downloadLinks,
-      fileSize: body.fileSize,
-      fileSizeBytes: body.fileSizeBytes,
-      fileHash: body.fileHash,
-      isStable: body.isStable,
-      isBeta: body.isBeta,
-      isPrerelease: body.isPrerelease,
-      versionType: body.versionType,
-      changelogCategory: body.changelogCategory,
-      metadata: body.metadata,
+    // 更新版本信息 - 添加数据验证和类型转换
+    const updateData: any = {
       updatedAt: new Date()
     }
 
+    // 只更新提供的字段，避免undefined值导致的数据库错误
+    if (body.version !== undefined) updateData.version = body.version
+    if (body.releaseDate !== undefined) {
+      updateData.releaseDate = typeof body.releaseDate === 'string' 
+        ? new Date(body.releaseDate) 
+        : body.releaseDate
+    }
+    if (body.releaseNotes !== undefined) updateData.releaseNotes = body.releaseNotes
+    if (body.releaseNotesEn !== undefined) updateData.releaseNotesEn = body.releaseNotesEn
+    if (body.downloadLinks !== undefined) updateData.downloadLinks = body.downloadLinks
+    if (body.fileSize !== undefined) updateData.fileSize = body.fileSize
+    if (body.fileSizeBytes !== undefined) updateData.fileSizeBytes = body.fileSizeBytes
+    if (body.fileHash !== undefined) updateData.fileHash = body.fileHash
+    if (body.isStable !== undefined) updateData.isStable = Boolean(body.isStable)
+    if (body.isBeta !== undefined) updateData.isBeta = Boolean(body.isBeta)
+    if (body.isPrerelease !== undefined) updateData.isPrerelease = Boolean(body.isPrerelease)
+    if (body.versionType !== undefined) updateData.versionType = body.versionType
+    if (body.changelogCategory !== undefined) updateData.changelogCategory = body.changelogCategory
+    if (body.metadata !== undefined) updateData.metadata = body.metadata
+
+    console.log(`[VERSION_UPDATE] 更新数据:`, updateData)
+    
     const [updatedVersion] = await db
       .update(softwareVersionHistory)
       .set(updateData)
@@ -164,6 +193,20 @@ export async function PUT(
       ))
       .returning()
 
+    if (!updatedVersion) {
+      console.error(`[VERSION_UPDATE] 数据库更新失败，未返回更新后的记录`)
+      return corsResponse({
+        success: false,
+        error: '更新失败，未找到指定的版本记录'
+      }, { status: 404 }, origin, userAgent)
+    }
+    
+    console.log(`[VERSION_UPDATE] 更新成功:`, {
+      id: updatedVersion.id,
+      version: updatedVersion.version,
+      updatedAt: updatedVersion.updatedAt
+    })
+
     return corsResponse({
       success: true,
       data: updatedVersion,
@@ -171,10 +214,16 @@ export async function PUT(
     }, undefined, origin, userAgent)
     
   } catch (error) {
-    console.error('更新版本失败:', error)
+    console.error('更新版本失败:', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      softwareId: params.id,
+      versionId: params.versionId
+    })
     return corsResponse({
       success: false,
-      error: '服务器内部错误'
+      error: '服务器内部错误',
+      details: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.message : String(error)) : undefined
     }, { status: 500 }, origin, userAgent)
   }
 }

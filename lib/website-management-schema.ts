@@ -10,6 +10,9 @@ export const websites = pgTable('websites', {
   id: serial('id').primaryKey(),
   name: varchar('name', { length: 255 }).notNull(), // 网站名称
   domain: varchar('domain', { length: 255 }).notNull().unique(), // 网站域名
+  description: text('description'), // 网站描述
+  category: varchar('category', { length: 100 }), // 网站类型/分类
+  logo: text('logo'), // 网站logo图片URL
 
   // 网站状态
   isActive: boolean('is_active').default(true).notNull(), // 是否启用

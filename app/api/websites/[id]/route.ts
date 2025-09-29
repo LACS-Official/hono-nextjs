@@ -22,6 +22,9 @@ export async function OPTIONS(request: NextRequest) {
 const updateWebsiteSchema = z.object({
   name: z.string().min(1, '网站名称不能为空').optional(),
   domain: z.string().min(1, '域名不能为空').optional(),
+  description: z.string().optional(),
+  category: z.string().optional(),
+  logo: z.string().url('请输入有效的logo图片URL').optional().or(z.literal('')),
   isActive: z.boolean().optional(),
 })
 
@@ -166,6 +169,9 @@ export async function PUT(
 
     if (validatedData.name !== undefined) updateData.name = validatedData.name
     if (validatedData.domain !== undefined) updateData.domain = validatedData.domain
+    if (validatedData.description !== undefined) updateData.description = validatedData.description || null
+    if (validatedData.category !== undefined) updateData.category = validatedData.category || null
+    if (validatedData.logo !== undefined) updateData.logo = validatedData.logo || null
     if (validatedData.isActive !== undefined) updateData.isActive = validatedData.isActive
 
     const [updatedWebsite] = await db

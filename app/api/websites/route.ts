@@ -21,6 +21,9 @@ export async function OPTIONS(request: NextRequest) {
 const createWebsiteSchema = z.object({
   name: z.string().min(1, '网站名称不能为空'),
   domain: z.string().min(1, '域名不能为空'),
+  description: z.string().optional(),
+  category: z.string().optional(),
+  logo: z.string().url('请输入有效的logo图片URL').optional().or(z.literal('')),
   isActive: z.boolean().optional(),
 })
 
@@ -144,6 +147,9 @@ export async function POST(request: NextRequest) {
       .values({
         name: validatedData.name,
         domain: validatedData.domain,
+        description: validatedData.description || null,
+        category: validatedData.category || null,
+        logo: validatedData.logo || null,
         isActive: validatedData.isActive ?? true,
       })
       .returning()

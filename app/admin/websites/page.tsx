@@ -42,13 +42,10 @@ interface Website {
   id: number
   name: string
   domain: string
-  title?: string
   description?: string
+  category?: string
   logo?: string
-  favicon?: string
-  config?: any
   isActive: boolean
-  isPublic: boolean
   createdAt: string
   updatedAt: string
 }
@@ -140,6 +137,9 @@ export default function WebsitesPage() {
       const submitData = {
         name: values.name,
         domain: values.domain,
+        description: values.description,
+        category: values.category,
+        logo: values.logo,
         isActive: values.isActive
       }
 
@@ -185,14 +185,46 @@ export default function WebsitesPage() {
       key: 'info',
       render: (_, record) => (
         <div>
-          <div style={{ fontWeight: 500, marginBottom: 4 }}>
+          <div style={{ fontWeight: 500, marginBottom: 4, display: 'flex', alignItems: 'center' }}>
+            {record.logo && (
+              <img 
+                src={record.logo} 
+                alt={record.name}
+                style={{ 
+                  width: 24, 
+                  height: 24, 
+                  marginRight: 8, 
+                  borderRadius: 4,
+                  objectFit: 'cover'
+                }}
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none'
+                }}
+              />
+            )}
             <GlobalOutlined style={{ marginRight: 8, color: '#1890ff' }} />
             {record.name}
           </div>
-          <div style={{ fontSize: '12px', color: '#666' }}>
+          <div style={{ fontSize: '12px', color: '#666', marginBottom: 2 }}>
             {record.domain}
           </div>
+          {record.description && (
+            <div style={{ fontSize: '11px', color: '#999', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {record.description}
+            </div>
+          )}
         </div>
+      )
+    },
+    {
+      title: '分类',
+      dataIndex: 'category',
+      key: 'category',
+      width: 100,
+      render: (category) => category ? (
+        <Tag color="blue">{category}</Tag>
+      ) : (
+        <Text type="secondary">未分类</Text>
       )
     },
     {
@@ -364,6 +396,50 @@ export default function WebsitesPage() {
               </Form.Item>
             </Col>
           </Row>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                label="网站分类"
+                name="category"
+              >
+                <Select placeholder="请选择网站分类" allowClear>
+                  <Option value="blog">博客</Option>
+                  <Option value="forum">论坛</Option>
+                  <Option value="shop">商店</Option>
+                  <Option value="service">服务</Option>
+                  <Option value="portfolio">作品集</Option>
+                  <Option value="news">新闻</Option>
+                  <Option value="education">教育</Option>
+                  <Option value="entertainment">娱乐</Option>
+                  <Option value="other">其他</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                label="Logo图片URL"
+                name="logo"
+                rules={[
+                  { type: 'url', message: '请输入有效的图片URL' }
+                ]}
+              >
+                <Input placeholder="https://example.com/logo.png" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Form.Item
+            label="网站描述"
+            name="description"
+          >
+            <TextArea 
+              rows={3} 
+              placeholder="请输入网站描述，简要介绍网站的功能和特色"
+              maxLength={500}
+              showCount
+            />
+          </Form.Item>
 
           <Form.Item
             label="启用状态"

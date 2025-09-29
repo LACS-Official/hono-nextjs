@@ -10,7 +10,8 @@ export default {
     './lib/software-schema.ts',
     './lib/user-behavior-schema.ts',
     './lib/donors-schema.ts',
-    './lib/website-management-schema.ts'
+    './lib/website-management-schema.ts',
+    './lib/info-management-schema.ts'
   ],
   out: './drizzle/unified',
   dialect: 'postgresql',

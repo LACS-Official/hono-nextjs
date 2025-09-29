@@ -17,7 +17,8 @@ import {
   MenuUnfoldOutlined,
   HeartOutlined,
   GlobalOutlined,
-  BarChartOutlined
+  BarChartOutlined,
+  InfoCircleOutlined
 } from '@ant-design/icons'
 import type { MenuProps } from 'antd'
 import { useAuth } from '@/contexts/AuthContext'
@@ -74,6 +75,9 @@ export default function Navigation({ className }: NavigationProps) {
     if (pathname.includes('/donors')) {
       return ['donors']
     }
+    if (pathname.includes('/about-us')) {
+      return ['about-us']
+    }
     if (pathname === '/admin') {
       return ['dashboard']
     }
@@ -117,6 +121,12 @@ export default function Navigation({ className }: NavigationProps) {
       icon: <HeartOutlined />,
       label: '捐赠人员管理',
       onClick: () => router.push('/admin/donors'),
+    },
+    {
+      key: 'about-us',
+      icon: <InfoCircleOutlined />,
+      label: '关于我们管理',
+      onClick: () => router.push('/admin/about-us'),
     },
   ]
 

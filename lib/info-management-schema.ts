@@ -58,6 +58,19 @@ export const projectsList = pgTable('projects_list', {
   updatedAt: timestamp('updated_at').default(sql`CURRENT_TIMESTAMP`)
 });
 
+// 关于我们信息表
+export const aboutUsInfo = pgTable('about_us_info', {
+  id: serial('id').primaryKey(),
+  title: text('title').notNull(),
+  content: text('content').notNull(),
+  category: text('category').notNull(), // 分类：介绍、团队、历史、愿景等
+  displayOrder: integer('display_order').default(0), // 显示顺序
+  isPublished: integer('is_published').default(1), // 是否发布：1-是，0-否
+  metadata: jsonb('metadata').$type<Record<string, any>>(), // 额外的元数据
+  createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: timestamp('updated_at').default(sql`CURRENT_TIMESTAMP`)
+});
+
 // TypeScript 类型定义
 export type ContactInfo = typeof contactInfo.$inferSelect;
 export type NewContactInfo = typeof contactInfo.$inferInsert;
@@ -70,3 +83,6 @@ export type NewMediaPlatform = typeof mediaPlatforms.$inferInsert;
 
 export type Project = typeof projectsList.$inferSelect;
 export type NewProject = typeof projectsList.$inferInsert;
+
+export type AboutUsInfo = typeof aboutUsInfo.$inferSelect;
+export type NewAboutUsInfo = typeof aboutUsInfo.$inferInsert;

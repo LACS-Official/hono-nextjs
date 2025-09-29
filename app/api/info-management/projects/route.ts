@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/unified-db-connection';
+import { unifiedDb as db } from '@/lib/unified-db-connection';
 import { projectsList } from '@/lib/info-management-schema';
 
 // GET - 获取所有项目
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
       link,
       icon,
       pLanguage,
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date()
     }).returning();
 
     return NextResponse.json({ success: true, data: newProject[0] });

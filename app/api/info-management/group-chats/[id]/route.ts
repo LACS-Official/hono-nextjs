@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/unified-db-connection';
+import { unifiedDb as db } from '@/lib/unified-db-connection';
 import { groupChats } from '@/lib/info-management-schema';
 import { eq } from 'drizzle-orm';
 
@@ -62,7 +62,7 @@ export async function PUT(
         qrcode,
         joinLink,
         analyticsEvent,
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date()
       })
       .where(eq(groupChats.id, id))
       .returning();

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/unified-db-connection';
+import { unifiedDb as db } from '@/lib/unified-db-connection';
 import { contactInfo } from '@/lib/info-management-schema';
 import { eq } from 'drizzle-orm';
 
@@ -61,7 +61,7 @@ export async function PUT(
         info,
         action,
         analyticsEvent,
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date()
       })
       .where(eq(contactInfo.id, id))
       .returning();

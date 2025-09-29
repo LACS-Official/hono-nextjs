@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/unified-db-connection';
+import { unifiedDb as db } from '@/lib/unified-db-connection';
 import { contactInfo } from '@/lib/info-management-schema';
 import { eq } from 'drizzle-orm';
 
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
       info,
       action,
       analyticsEvent,
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date()
     }).returning();
 
     return NextResponse.json({ success: true, data: newContact[0] });

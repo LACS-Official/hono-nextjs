@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/unified-db-connection';
+import { unifiedDb as db } from '@/lib/unified-db-connection';
 import { mediaPlatforms } from '@/lib/info-management-schema';
 import { eq } from 'drizzle-orm';
 
@@ -59,7 +59,7 @@ export async function PUT(
         qrcodeDesc,
         link,
         analyticsEvent,
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date()
       })
       .where(eq(mediaPlatforms.id, params.id))
       .returning();

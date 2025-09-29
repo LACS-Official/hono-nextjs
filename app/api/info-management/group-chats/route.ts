@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/unified-db-connection';
+import { unifiedDb as db } from '@/lib/unified-db-connection';
 import { groupChats } from '@/lib/info-management-schema';
 
 // GET - 获取所有群聊
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
       qrcode,
       joinLink,
       analyticsEvent,
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date()
     }).returning();
 
     return NextResponse.json({ success: true, data: newChat[0] });

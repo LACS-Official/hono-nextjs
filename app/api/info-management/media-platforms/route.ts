@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/unified-db-connection';
+import { unifiedDb as db } from '@/lib/unified-db-connection';
 import { mediaPlatforms } from '@/lib/info-management-schema';
 
 // GET - 获取所有媒体平台
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
       qrcodeDesc,
       link,
       analyticsEvent,
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date()
     }).returning();
 
     return NextResponse.json({ success: true, data: newPlatform[0] });

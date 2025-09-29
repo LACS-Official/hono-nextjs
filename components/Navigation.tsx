@@ -75,8 +75,8 @@ export default function Navigation({ className }: NavigationProps) {
     if (pathname.includes('/donors')) {
       return ['donors']
     }
-    if (pathname.includes('/about-us')) {
-      return ['about-us']
+    if (pathname.includes('/info-management')) {
+      return ['info-management']
     }
     if (pathname === '/admin') {
       return ['dashboard']
@@ -123,10 +123,10 @@ export default function Navigation({ className }: NavigationProps) {
       onClick: () => router.push('/admin/donors'),
     },
     {
-      key: 'about-us',
+      key: 'info-management',
       icon: <InfoCircleOutlined />,
       label: '关于我们管理',
-      onClick: () => router.push('/admin/about-us'),
+      onClick: () => router.push('/admin/info-management'),
     },
   ]
 
@@ -200,10 +200,9 @@ export default function Navigation({ className }: NavigationProps) {
                 color: '#1890ff',
               }}
             >
-              <GithubOutlined style={{ fontSize: '20px' }} />
               {!collapsed && (
                 <Text strong style={{ fontSize: '18px', color: '#1890ff' }}>
-                  LACS Admin
+                  领创全栈管理平台
                 </Text>
               )}
             </Button>

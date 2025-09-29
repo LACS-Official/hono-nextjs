@@ -14,6 +14,7 @@ import * as softwareSchema from './software-schema'
 import * as userBehaviorSchema from './user-behavior-schema'
 import * as donorsSchema from './donors-schema'
 import * as websiteManagementSchema from './website-management-schema'
+import * as infoManagementSchema from './info-management-schema'
 
 // 合并所有模式
 const unifiedSchema = {
@@ -22,6 +23,7 @@ const unifiedSchema = {
   ...userBehaviorSchema,
   ...donorsSchema,
   ...websiteManagementSchema,
+  ...infoManagementSchema,
 }
 
 // 统一数据库连接字符串
@@ -62,6 +64,12 @@ export const {
   websites,
   announcements,
   banners,
+
+  // 信息管理相关表
+  contactInfo,
+  groupChats,
+  mediaPlatforms,
+  projectsList,
 } = unifiedSchema
 
 // 数据库健康检查函数

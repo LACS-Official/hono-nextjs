@@ -27,21 +27,12 @@ const createWebsiteSchema = z.object({
   isActive: z.boolean().optional(),
 })
 
-// GET - 获取网站列表
+// GET - 获取网站列表（公开访问，无需API key）
 export async function GET(request: NextRequest) {
   const origin = request.headers.get('Origin')
   const userAgent = request.headers.get('User-Agent')
 
   try {
-    // 验证管理员权限
-    const authResult = validateUnifiedAuth(request)
-    if (!authResult.isValid) {
-      return corsResponse({
-        success: false,
-        error: authResult.error || '认证失败'
-      }, { status: 401 }, origin, userAgent)
-    }
-
     const url = new URL(request.url)
     const page = parseInt(url.searchParams.get('page') || '1')
     const limit = parseInt(url.searchParams.get('limit') || '10')

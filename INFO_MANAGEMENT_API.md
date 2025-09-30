@@ -256,7 +256,11 @@
 #### PUT /api/info-management/projects/:id
 更新特定项目信息
 
-**请求体：** 同 POST（不包含 id 字段）
+**请求体：** 同 POST（可包含 id 字段以修改项目ID）
+
+**注意：** 
+- 如果请求体中包含新的 `id` 字段且与URL中的 `:id` 不同，系统将删除旧记录并创建新记录
+- 如果新ID已被占用，将返回 409 状态码
 
 #### DELETE /api/info-management/projects/:id
 删除特定项目信息

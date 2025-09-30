@@ -1169,8 +1169,9 @@ export default function InfoManagementPage() {
             name="id"
             label="项目ID"
             rules={[{ required: true, message: '请输入项目ID' }]}
+            tooltip={editingProject ? "修改ID后将创建新记录并删除旧记录" : undefined}
           >
-            <Input type="number" placeholder="例如：1" disabled={!!editingProject} />
+            <Input type="number" placeholder="例如：1" />
           </Form.Item>
           <Form.Item
             name="title"

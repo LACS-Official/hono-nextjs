@@ -14,20 +14,6 @@ export async function OPTIONS(request: NextRequest) {
 export async function GET(request: NextRequest) {
   const origin = request.headers.get('Origin')
   const userAgent = request.headers.get('User-Agent')
-  const referer = request.headers.get('Referer')
-  const host = request.headers.get('Host')
-
-  // 检查请求来源是否为 admt.lacs.cc
-  const isAllowedOrigin = origin?.includes('admt.lacs.cc') || 
-                          referer?.includes('admt.lacs.cc') || 
-                          host === 'admt.lacs.cc'
-
-  if (!isAllowedOrigin) {
-    return corsResponse({
-      success: false,
-      error: 'Access denied. Only admt.lacs.cc is allowed.'
-    }, { status: 403 }, origin, userAgent)
-  }
 
   try {
     // 获取软件使用总次数

@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
-    const authResult = authenticateRequest(request)
+    const authResult = await authenticateRequest(request)
     
     if (!authResult.success || !authResult.user) {
       return NextResponse.json({

@@ -261,7 +261,7 @@ export default function Navigation({ className }: NavigationProps) {
                 }}
                 role="button"
                 tabIndex={0}
-                aria-label={`用户菜单 - ${user?.name || user?.login || '管理员'}`}
+                aria-label={`用户菜单 - ${user?.name || '管理员'}`}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.backgroundColor = '#f5f5f5'
                 }}
@@ -273,7 +273,7 @@ export default function Navigation({ className }: NavigationProps) {
                   src={user?.avatar_url}
                   icon={!user?.avatar_url && <UserOutlined />}
                   size="default"
-                  alt={`${user?.name || user?.login || '管理员'}的头像`}
+                  alt={`${user?.name || '管理员'}的头像`}
                 />
                 {!collapsed && (
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -288,7 +288,7 @@ export default function Navigation({ className }: NavigationProps) {
                         whiteSpace: 'nowrap',
                       }}
                     >
-                      {user?.name || user?.login || '管理员'}
+                      {user?.name || '管理员'}
                     </Text>
                     <Text
                       type="secondary"
@@ -441,28 +441,28 @@ export default function Navigation({ className }: NavigationProps) {
               }}
               role="button"
               tabIndex={0}
-              aria-label={`用户菜单 - ${user?.name || user?.login || '管理员'}`}
+              aria-label={`用户菜单 - ${user?.name || '管理员'}`}
             >
               <Avatar
                 src={user?.avatar_url}
                 icon={!user?.avatar_url && <UserOutlined />}
                 size="large"
-                alt={`${user?.name || user?.login || '管理员'}的头像`}
+                alt={`${user?.name || '管理员'}的头像`}
               />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <Text
-                  strong
-                  style={{
-                    display: 'block',
-                    fontSize: '16px',
-                    lineHeight: '22px',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {user?.name || user?.login || '管理员'}
-                </Text>
+                      strong
+                      style={{
+                        display: 'block',
+                        fontSize: '16px',
+                        lineHeight: '22px',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {user?.name || '管理员'}
+                    </Text>
                 <Text
                   type="secondary"
                   style={{

@@ -174,10 +174,10 @@ export async function POST(request: NextRequest) {
   const origin = request.headers.get('origin')
   const userAgent = request.headers.get('user-agent')
 
-  try {
-    // Supabase认证检查（需要管理员权限）
+   try {
+    // Supabase认证检查（仅需登录权限）
     const authResult = await authenticateRequest(request)
-    if (!authResult.success || !authResult.user || !isAuthorizedAdmin(authResult.user)) {
+    if (!authResult.success || !authResult.user) {
       return corsResponse({
         success: false,
         error: authResult.error || 'Authentication required for software management operations'

@@ -119,6 +119,25 @@ export interface CleanupUnusedCodesResponse {
   }>
 }
 
+// 清理过期激活码请求接口
+export interface CleanupExpiredCodesRequest {
+  daysOld?: number
+}
+
+// 清理过期激活码响应接口
+export interface CleanupExpiredCodesResponse {
+  message: string
+  deletedCount: number
+  cleanupTime: string
+  deletedCodes: Array<{
+    id: string
+    code: string
+    createdAt: string
+    expiresAt: string
+    isUsed: boolean
+  }>
+}
+
 // 激活码状态枚举
 export type ActivationCodeStatus = 'all' | 'used' | 'unused' | 'expired' | 'active'
 
@@ -302,22 +321,6 @@ export class ActivationCodeApiClient {
   }
 
   /**
-   * 清理过期激活码
-   */
-  async cleanupExpiredCodes(request: CleanupExpiredCodesRequest = {}): Promise<{
-    message: string
-    deletedCount: number
-  }> {
-    const response = await fetch(`${this.baseUrl}/activation-codes/cleanup`, {
-      method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify(request),
-    })
-
-    return this.handleResponse<{ message: string; deletedCount: number }>(response)
-  }
-
-  /**
    * 清理未使用的激活码
    */
   async cleanupUnusedCodes(request: CleanupUnusedCodesRequest = {}): Promise<CleanupUnusedCodesResponse> {
@@ -362,6 +365,51 @@ export class ActivationCodeApiClient {
         createdAt: string
         expiresAt: string
         minutesSinceCreation: number
+      }>
+    }>(response)
+  }
+
+  /**
+   * 清理过期激活码
+   */
+  async cleanupExpiredCodes(request: CleanupExpiredCodesRequest = {}): Promise<CleanupExpiredCodesResponse> {
+    const response = await fetch(`${this.baseUrl}/activation-codes/cleanup-expired`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify(request),
+    })
+
+    return this.handleResponse<CleanupExpiredCodesResponse>(response)
+  }
+
+  /**
+   * 预览将要清理的过期激活码
+   */
+  async previewExpiredCodesCleanup(): Promise<{
+    message: string
+    count: number
+    codes: Array<{
+      id: string
+      code: string
+      createdAt: string
+      expiresAt: string
+      isUsed: boolean
+    }>
+  }> {
+    const response = await fetch(`${this.baseUrl}/activation-codes/cleanup-expired`, {
+      method: 'GET',
+      headers: this.getHeaders(),
+    })
+
+    return this.handleResponse<{
+      message: string
+      count: number
+      codes: Array<{
+        id: string
+        code: string
+        createdAt: string
+        expiresAt: string
+        isUsed: boolean
       }>
     }>(response)
   }
@@ -422,4 +470,4 @@ export function getDaysUntilExpiration(expiresAt: string): number {
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
   return Math.max(0, diffDays)
 }
-
+

@@ -38,9 +38,9 @@ export async function GET(
   const userAgent = request.headers.get('User-Agent')
 
   try {
-    // Supabase认证检查（需要管理员权限）
+    // Supabase认证检查（仅需登录权限）
     const authResult = await authenticateRequest(request)
-    if (!authResult.success || !authResult.user || !isAuthorizedAdmin(authResult.user)) {
+    if (!authResult.success || !authResult.user) {
       return corsResponse({
         success: false,
         error: authResult.error || 'Authentication required for website management operations'
@@ -115,9 +115,9 @@ export async function PUT(
   const userAgent = request.headers.get('User-Agent')
 
   try {
-    // Supabase认证检查（需要管理员权限）
+    // Supabase认证检查（仅需登录权限）
     const authResult = await authenticateRequest(request)
-    if (!authResult.success || !authResult.user || !isAuthorizedAdmin(authResult.user)) {
+    if (!authResult.success || !authResult.user) {
       return corsResponse({
         success: false,
         error: authResult.error || 'Authentication required for website management operations'

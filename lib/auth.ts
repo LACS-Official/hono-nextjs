@@ -22,7 +22,7 @@ export interface AuthResult {
 // 从请求中获取用户信息
 export async function authenticateRequest(request: NextRequest): Promise<AuthResult> {
   try {
-    const supabase = createClient()
+    const supabase = await createClient()
     const { data: { user }, error } = await supabase.auth.getUser()
 
     if (error || !user) {
@@ -123,6 +123,28 @@ export function requireAuth(handler: (request: NextRequest, user: User) => Promi
   }
 }
 
+// 仅需登录的认证中间件
+export function requireLoggedInUser(handler: (request: NextRequest, user: User) => Promise<Response>) {
+  return async (request: NextRequest): Promise<Response> => {
+    const authResult = await authenticateRequest(request)
+
+    if (!authResult.success || !authResult.user) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: authResult.error || 'Authentication required'
+        }),
+        {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' }
+        }
+      )
+    }
+
+    return handler(request, authResult.user)
+  }
+}
+
 // 网站用户认证中间件
 export function requireWebsiteAuth(websiteId?: number) {
   return (handler: (request: NextRequest, user: User) => Promise<Response>) => {
@@ -158,4 +180,11 @@ export function requireWebsiteAuth(websiteId?: number) {
       return handler(request, authResult.user)
     }
   }
+}
+
+// 创建登出响应头
+export function createLogoutHeaders(): Headers {
+  const headers = new Headers();
+  // 这里添加登出相关的响应头
+  return headers;
 }

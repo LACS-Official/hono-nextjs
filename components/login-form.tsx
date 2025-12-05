@@ -25,7 +25,7 @@ export default function LoginForm() {
       }
 
       message.success('登录成功');
-      router.push('/admin/dashboard');
+      router.push('/admin');
     } catch (error) {
       message.error('登录过程中发生错误');
     } finally {

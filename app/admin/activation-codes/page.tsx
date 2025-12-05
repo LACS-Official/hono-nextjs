@@ -175,13 +175,13 @@ export default function ActivationCodesPage() {
     confirm({
       title: '清理过期激活码',
       icon: <ClearOutlined />,
-      content: '确定要清理所有过期超过30天的激活码吗？此操作无法撤销。',
+      content: '确定要清理所有已过期的激活码吗？此操作无法撤销。',
       okText: '清理',
       okType: 'danger',
       cancelText: '取消',
       onOk: async () => {
         try {
-          const result = await activationCodeApi.cleanupExpiredCodes({ daysOld: 30 })
+          const result = await activationCodeApi.cleanupExpiredCodes()
           message.success(result.message)
           loadActivationCodes()
           loadStats()
@@ -493,6 +493,16 @@ export default function ActivationCodesPage() {
                           value={stats.active}
                           prefix={<ClockCircleOutlined />}
                           valueStyle={{ color: '#1890ff' }}
+                        />
+                      </Card>
+                    </Col>
+                    <Col xs={24} sm={12} md={6}>
+                      <Card className="responsive-statistic-card">
+                        <Statistic
+                          title="已过期"
+                          value={stats.expired}
+                          prefix={<ExclamationCircleOutlined />}
+                          valueStyle={{ color: '#ff4d4f' }}
                         />
                       </Card>
                     </Col>

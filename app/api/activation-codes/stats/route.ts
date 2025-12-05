@@ -36,10 +36,7 @@ export async function GET(request: NextRequest) {
       // 过期数量
       db.select({ count: count() })
         .from(activationCodes)
-        .where(and(
-          eq(activationCodes.isUsed, false),
-          lt(activationCodes.expiresAt, now)
-        )),
+        .where(lt(activationCodes.expiresAt, now)),
       
       // 活跃数量
       db.select({ count: count() })

@@ -83,7 +83,8 @@ export async function POST(request: NextRequest) {
 
     // 首先尝试Supabase认证
     const supabaseAuth = await authenticateRequest(request)
-    if (supabaseAuth.success && supabaseAuth.user && isAuthorizedAdmin(supabaseAuth.user)) {
+    if (supabaseAuth.success && supabaseAuth.user) {
+      // 仅需登录权限，不需要管理员权限
       isAuthenticated = true
     } else {
       // 如果Supabase认证失败，尝试API Key认证
@@ -240,10 +241,7 @@ export async function GET(request: NextRequest) {
         whereCondition = eq(activationCodes.isUsed, false)
         break
       case 'expired':
-        whereCondition = and(
-          eq(activationCodes.isUsed, false),
-          lt(activationCodes.expiresAt, now)
-        )
+        whereCondition = lt(activationCodes.expiresAt, now)
         break
       case 'active':
         whereCondition = and(

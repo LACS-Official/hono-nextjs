@@ -53,10 +53,13 @@ export default function HomePage() {
         <div style={{ textAlign: 'center', marginBottom: '50px' }}>
           <RocketOutlined style={{ fontSize: '72px', color: '#1890ff', marginBottom: '20px' }} />
           <Title level={1} style={{ color: '#1890ff', marginBottom: '10px' }}>
-            LACS API Server
+            领创一站式管理系统
           </Title>
           <Paragraph style={{ fontSize: '18px', color: '#666', maxWidth: '600px', margin: '0 auto' }}>
             基于 Next.js + Hono 构建的现代化 API 服务器，提供软件管理、激活码系统和公告管理功能
+          </Paragraph>
+          <Paragraph style={{ fontSize: '26px', color: '#ff4d4f', maxWidth: '600px', margin: '20px auto 0' }}>
+            定制此类管理系统请联系 微信 LACS177，备注“定制管理系统网站”
           </Paragraph>
         </div>
 
@@ -74,49 +77,6 @@ export default function HomePage() {
           </Col>
         </Row>
 
-        {/* 统计数据 */}
-        <Row gutter={[24, 24]} style={{ marginBottom: '40px' }}>
-          <Col xs={24} sm={12} md={6}>
-            <Card>
-              <Statistic
-                title="软件总数"
-                value={stats.totalSoftware}
-                prefix={<ApiOutlined />}
-                loading={loading}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} md={6}>
-            <Card>
-              <Statistic
-                title="激活码总数"
-                value={stats.totalActivationCodes}
-                prefix={<SafetyOutlined />}
-                loading={loading}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} md={6}>
-            <Card>
-              <Statistic
-                title="公告总数"
-                value={stats.totalAnnouncements}
-                prefix={<WarningOutlined />}
-                loading={loading}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} md={6}>
-            <Card>
-              <Statistic
-                title="数据库状态"
-                value="正常"
-                prefix={<DatabaseOutlined />}
-                valueStyle={{ color: '#3f8600' }}
-              />
-            </Card>
-          </Col>
-        </Row>
 
         {/* 功能特性 */}
         <Row gutter={[24, 24]} style={{ marginBottom: '40px' }}>

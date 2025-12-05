@@ -1,7 +1,8 @@
 import { NextRequest } from 'next/server'
 import { unifiedDb as db, software } from '@/lib/unified-db-connection'
 import { eq, like, and, desc, asc, sql } from 'drizzle-orm'
-import { corsResponse, handleOptions, validateUnifiedAuth } from '@/lib/cors'
+import { corsResponse, handleOptions } from '@/lib/cors'
+import { authenticateRequest, isAuthorizedAdmin } from '@/lib/auth'
 import { getLatestVersion, getLatestVersionWithId } from '@/lib/version-manager'
 
 // OPTIONS 处理
@@ -174,20 +175,17 @@ export async function POST(request: NextRequest) {
   const userAgent = request.headers.get('user-agent')
 
   try {
-    // 统一认证验证（支持GitHub OAuth或API Key）
-    const authValidation = validateUnifiedAuth(request)
-    if (!authValidation.isValid) {
+    // Supabase认证检查（需要管理员权限）
+    const authResult = await authenticateRequest(request)
+    if (!authResult.success || !authResult.user || !isAuthorizedAdmin(authResult.user)) {
       return corsResponse({
         success: false,
-        error: authValidation.error || 'Authentication required for software management operations',
-        authType: authValidation.authType
+        error: authResult.error || 'Authentication required for software management operations'
       }, { status: 401 }, origin, userAgent)
     }
 
     // 记录操作日志
-    const logInfo = authValidation.authType === 'github-oauth'
-      ? `User: ${authValidation.user?.login} (${authValidation.user?.email})`
-      : `API Key authentication`
+    const logInfo = `User: ${authResult.user.email}`
     console.log(`[SOFTWARE_CREATE] ${logInfo} - IP: ${request.headers.get('x-forwarded-for') || 'unknown'} - Time: ${new Date().toISOString()}`)
 
     const body = await request.json()

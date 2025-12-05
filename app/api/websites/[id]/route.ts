@@ -8,7 +8,8 @@
 import { NextRequest } from 'next/server'
 import { unifiedDb as db, websites, banners, announcements } from '@/lib/unified-db-connection'
 import { eq } from 'drizzle-orm'
-import { corsResponse, handleOptions, validateUnifiedAuth } from '@/lib/cors'
+import { corsResponse, handleOptions } from '@/lib/cors'
+import { authenticateRequest, isAuthorizedAdmin } from '@/lib/auth'
 import { z } from 'zod'
 
 // OPTIONS 方法处理 CORS 预检请求
@@ -37,14 +38,18 @@ export async function GET(
   const userAgent = request.headers.get('User-Agent')
 
   try {
-    // 验证管理员权限
-    const authResult = validateUnifiedAuth(request)
-    if (!authResult.isValid) {
+    // Supabase认证检查（需要管理员权限）
+    const authResult = await authenticateRequest(request)
+    if (!authResult.success || !authResult.user || !isAuthorizedAdmin(authResult.user)) {
       return corsResponse({
         success: false,
-        error: authResult.error || '认证失败'
+        error: authResult.error || 'Authentication required for website management operations'
       }, { status: 401 }, origin, userAgent)
     }
+
+    // 记录操作日志
+    const logInfo = `User: ${authResult.user.email}`
+    console.log(`[WEBSITES] ${logInfo} - IP: ${request.headers.get('x-forwarded-for') || 'unknown'} - Time: ${new Date().toISOString()}`)
 
     const { id } = params
     const websiteId = parseInt(id)
@@ -110,14 +115,18 @@ export async function PUT(
   const userAgent = request.headers.get('User-Agent')
 
   try {
-    // 验证管理员权限
-    const authResult = validateUnifiedAuth(request)
-    if (!authResult.isValid) {
+    // Supabase认证检查（需要管理员权限）
+    const authResult = await authenticateRequest(request)
+    if (!authResult.success || !authResult.user || !isAuthorizedAdmin(authResult.user)) {
       return corsResponse({
         success: false,
-        error: authResult.error || '认证失败'
+        error: authResult.error || 'Authentication required for website management operations'
       }, { status: 401 }, origin, userAgent)
     }
+
+    // 记录操作日志
+    const logInfo = `User: ${authResult.user.email}`
+    console.log(`[WEBSITES] ${logInfo} - IP: ${request.headers.get('x-forwarded-for') || 'unknown'} - Time: ${new Date().toISOString()}`)
 
     const { id } = params
     const websiteId = parseInt(id)
@@ -212,14 +221,18 @@ export async function DELETE(
   const userAgent = request.headers.get('User-Agent')
 
   try {
-    // 验证管理员权限
-    const authResult = validateUnifiedAuth(request)
-    if (!authResult.isValid) {
+    // Supabase认证检查（需要管理员权限）
+    const authResult = await authenticateRequest(request)
+    if (!authResult.success || !authResult.user || !isAuthorizedAdmin(authResult.user)) {
       return corsResponse({
         success: false,
-        error: authResult.error || '认证失败'
+        error: authResult.error || 'Authentication required for website management operations'
       }, { status: 401 }, origin, userAgent)
     }
+
+    // 记录操作日志
+    const logInfo = `User: ${authResult.user.email}`
+    console.log(`[WEBSITES] ${logInfo} - IP: ${request.headers.get('x-forwarded-for') || 'unknown'} - Time: ${new Date().toISOString()}`)
 
     const { id } = params
     const websiteId = parseInt(id)

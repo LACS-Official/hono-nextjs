@@ -1,8 +1,9 @@
 import { NextRequest } from 'next/server'
 import { unifiedDb as db, software, softwareAnnouncements } from '@/lib/unified-db-connection'
 import { eq, and, desc, or } from 'drizzle-orm'
-import { corsResponse, handleOptions, validateUnifiedAuth } from '@/lib/cors'
+import { corsResponse, handleOptions } from '@/lib/cors'
 import { getLatestVersionWithId, getLatestVersionWithDownloadUrl } from '@/lib/version-manager'
+import { authenticateRequest, isAuthorizedAdmin } from '@/lib/auth'
 
 // OPTIONS 处理
 export async function OPTIONS(request: NextRequest) {
@@ -106,21 +107,25 @@ export async function PUT(
   const userAgent = request.headers.get('user-agent')
 
   try {
-    // 统一认证验证（支持GitHub OAuth或API Key）
-    const authValidation = validateUnifiedAuth(request)
-    if (!authValidation.isValid) {
+    // Supabase认证检查
+    const authResult = await authenticateRequest(request)
+    if (!authResult.success || !authResult.user) {
       return corsResponse({
         success: false,
-        error: authValidation.error || 'Authentication required for software management operations',
-        authType: authValidation.authType
+        error: authResult.error || 'Authentication required for software management operations'
       }, { status: 401 }, origin, userAgent)
     }
 
+    // 检查管理员权限
+    if (!isAuthorizedAdmin(authResult.user)) {
+      return corsResponse({
+        success: false,
+        error: 'Insufficient permissions - admin access required'
+      }, { status: 403 }, origin, userAgent)
+    }
+
     // 记录操作日志
-    const logInfo = authValidation.authType === 'github-oauth'
-      ? `User: ${authValidation.user?.login} (${authValidation.user?.email})`
-      : `API Key authentication`
-    console.log(`[SOFTWARE_UPDATE_BY_NAME] ${logInfo} - IP: ${request.headers.get('x-forwarded-for') || 'unknown'} - Time: ${new Date().toISOString()}`)
+    console.log(`[SOFTWARE_UPDATE_BY_NAME] User: ${authResult.user.email} - IP: ${request.headers.get('x-forwarded-for') || 'unknown'} - Time: ${new Date().toISOString()}`)
 
     const { name } = params
     const body = await request.json()
@@ -187,21 +192,25 @@ export async function DELETE(
   const userAgent = request.headers.get('user-agent')
 
   try {
-    // 统一认证验证（支持GitHub OAuth或API Key）
-    const authValidation = validateUnifiedAuth(request)
-    if (!authValidation.isValid) {
+    // Supabase认证检查
+    const authResult = await authenticateRequest(request)
+    if (!authResult.success || !authResult.user) {
       return corsResponse({
         success: false,
-        error: authValidation.error || 'Authentication required for software management operations',
-        authType: authValidation.authType
+        error: authResult.error || 'Authentication required for software management operations'
       }, { status: 401 }, origin, userAgent)
     }
 
+    // 检查管理员权限
+    if (!isAuthorizedAdmin(authResult.user)) {
+      return corsResponse({
+        success: false,
+        error: 'Insufficient permissions - admin access required'
+      }, { status: 403 }, origin, userAgent)
+    }
+
     // 记录操作日志
-    const logInfo = authValidation.authType === 'github-oauth'
-      ? `User: ${authValidation.user?.login} (${authValidation.user?.email})`
-      : `API Key authentication`
-    console.log(`[SOFTWARE_DELETE_BY_NAME] ${logInfo} - IP: ${request.headers.get('x-forwarded-for') || 'unknown'} - Time: ${new Date().toISOString()}`)
+    console.log(`[SOFTWARE_DELETE_BY_NAME] User: ${authResult.user.email} - IP: ${request.headers.get('x-forwarded-for') || 'unknown'} - Time: ${new Date().toISOString()}`)
 
     const { name } = params
     

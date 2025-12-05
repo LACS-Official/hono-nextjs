@@ -3,7 +3,6 @@
 import { useRouter, usePathname } from 'next/navigation'
 import { Layout, Menu, Avatar, Dropdown, Space, Button, Typography, Drawer } from 'antd'
 import {
-  GithubOutlined,
   HomeOutlined,
   FileTextOutlined,
   UserOutlined,
@@ -302,7 +301,7 @@ export default function Navigation({ className }: NavigationProps) {
                         whiteSpace: 'nowrap',
                       }}
                     >
-                      {user?.email || 'GitHub 用户'}
+                      {user?.email || '系统用户'}
                     </Text>
                   </div>
                 )}
@@ -362,7 +361,7 @@ export default function Navigation({ className }: NavigationProps) {
               color: '#1890ff',
             }}
           >
-            <GithubOutlined style={{ fontSize: '20px' }} />
+
             <Text strong style={{ fontSize: '18px', color: '#1890ff' }}>
               LACS Admin
             </Text>
@@ -384,7 +383,7 @@ export default function Navigation({ className }: NavigationProps) {
       <Drawer
         title={
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <GithubOutlined style={{ fontSize: '20px', color: '#1890ff' }} />
+            <AppstoreOutlined style={{ fontSize: '20px', color: '#1890ff' }} />
             <Text strong style={{ fontSize: '18px', color: '#1890ff' }}>
               LACS Admin
             </Text>
@@ -475,7 +474,7 @@ export default function Navigation({ className }: NavigationProps) {
                     whiteSpace: 'nowrap',
                   }}
                 >
-                  {user?.email || 'GitHub 用户'}
+                  {user?.email || '系统用户'}
                 </Text>
               </div>
             </div>

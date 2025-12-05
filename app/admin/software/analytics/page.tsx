@@ -70,7 +70,7 @@ export default function SoftwareAnalytics() {
     maxViewCount: ''
   })
 
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:29351'
 
   // 获取统计数据
   const fetchStats = async () => {

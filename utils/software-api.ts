@@ -146,9 +146,9 @@ export class SoftwareApiClient {
     // 优先使用传入的baseUrl，然后是环境变量，最后是默认值
     const defaultUrl = typeof window !== 'undefined' 
       ? `${window.location.origin}/app`  // 浏览器环境使用当前域名
-      : process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/app'
+      : process.env.NEXT_PUBLIC_API_URL
     
-    this.baseUrl = (baseUrl || defaultUrl).replace(/\/$/, '') // 移除末尾斜杠
+    this.baseUrl = (baseUrl || defaultUrl || '').replace(/\/$/, '') // 移除末尾斜杠
   }
 
   private getHeaders(): HeadersInit {
@@ -302,3 +302,4 @@ export class SoftwareApiClient {
 
 // 创建全局实例 - 使用动态URL配置
 export const softwareApi = new SoftwareApiClient()
+

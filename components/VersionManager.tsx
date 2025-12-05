@@ -79,7 +79,7 @@ export default function VersionManager({ softwareId, softwareName, onVersionAdde
   const [form] = Form.useForm()
   const [stats, setStats] = useState<any>(null)
 
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/app'
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL
 
   // 获取版本历史
   const fetchVersions = async () => {
@@ -524,3 +524,4 @@ export default function VersionManager({ softwareId, softwareName, onVersionAdde
     </div>
   )
 }
+

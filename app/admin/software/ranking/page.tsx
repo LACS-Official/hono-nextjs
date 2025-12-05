@@ -83,7 +83,7 @@ export default function SoftwareRanking() {
     pageSize: 20
   })
 
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/app'
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL
 
   // 获取排行榜数据
   const fetchRanking = async (page = 1, pageSize = 20) => {
@@ -427,3 +427,4 @@ export default function SoftwareRanking() {
     </Layout>
   )
 }
+

@@ -129,7 +129,7 @@ export class ActivationCodeApiClient {
     // 优先使用传入的baseUrl，然后是环境变量，最后是默认值
     const defaultUrl = typeof window !== 'undefined'
       ? `${window.location.origin}/api`  // 浏览器环境使用当前域名
-      : process.env.NEXT_PUBLIC_API_URL?.replace('/app', '/api') || 'http://localhost:3000/api'
+      : process.env.NEXT_PUBLIC_API_URL?.replace('/app', '/api') || 'http://localhost:29351/api'
 
     this.baseUrl = (baseUrl || defaultUrl).replace(/\/$/, '') // 移除末尾斜杠
   }
@@ -422,3 +422,4 @@ export function getDaysUntilExpiration(expiresAt: string): number {
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
   return Math.max(0, diffDays)
 }
+

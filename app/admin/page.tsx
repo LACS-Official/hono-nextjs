@@ -111,10 +111,27 @@ export default function AdminDashboard() {
       setLoading(true)
       setError(null)
 
+      // 获取Supabase会话
+      const { createClient } = await import('@/utils/supabase/client')
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (!session) {
+        throw new Error('用户未登录')
+      }
+
       // 并行获取统计数据和活动记录
       const [statsResponse, activitiesResponse] = await Promise.all([
-        fetch('/api/admin/dashboard/stats'),
-        fetch('/api/admin/dashboard/activities?limit=10&days=7')
+        fetch('/api/admin/dashboard/stats', {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`
+          }
+        }),
+        fetch('/api/admin/dashboard/activities?limit=10&days=7', {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`
+          }
+        })
       ])
 
       if (!statsResponse.ok) {
@@ -143,6 +160,11 @@ export default function AdminDashboard() {
     } catch (error) {
       console.error('获取仪表板数据失败:', error)
       setError(error instanceof Error ? error.message : '数据获取失败')
+      
+      // 如果是认证错误，重定向到登录页面
+      if (error instanceof Error && error.message.includes('未登录')) {
+        router.push('/login')
+      }
     } finally {
       setLoading(false)
     }

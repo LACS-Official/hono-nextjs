@@ -68,7 +68,7 @@ const SoftwareAnnouncementManager: React.FC<SoftwareAnnouncementManagerProps> = 
   const [editingAnnouncement, setEditingAnnouncement] = useState<SoftwareAnnouncement | null>(null);
   const [form] = Form.useForm();
   
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/app';
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
   // 获取公告列表
   const fetchAnnouncements = async () => {

@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     
     // 转发到实际的激活码验证API
-    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
+    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:29351'
     const verifyUrl = `${baseUrl}/api/activation-codes/verify`
     
     // 复制所有请求头
@@ -69,3 +69,4 @@ export async function POST(request: NextRequest) {
     }, { status: 500 }, origin, userAgent)
   }
 }
+

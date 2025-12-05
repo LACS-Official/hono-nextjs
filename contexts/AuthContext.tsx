@@ -1,108 +1,95 @@
 'use client'
 
-import React, { createContext, useContext, useEffect, useState } from 'react'
-import { message } from 'antd'
+import { createContext, useContext, useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/utils/supabase/client'
+import type { User as SupabaseUser } from '@supabase/supabase-js'
 
-// 用户信息接口
-export interface User {
-  id: number
-  login: string
+interface User {
+  id: string
   name: string
   email: string
-  avatar_url: string
-  html_url: string
+  avatar_url?: string
 }
 
-// 认证上下文接口
 interface AuthContextType {
   user: User | null
   loading: boolean
   login: () => void
   logout: () => Promise<void>
-  checkAuth: () => Promise<void>
 }
 
-// 创建认证上下文
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-// 认证提供者组件
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const router = useRouter()
+  const supabase = createClient()
 
-  // 检查认证状态
-  const checkAuth = async () => {
-    try {
-      const response = await fetch('/api/auth/me', {
-        credentials: 'include'
-      })
-      
-      if (response.ok) {
-        const data = await response.json()
-        if (data.success && data.user) {
-          setUser(data.user)
+  useEffect(() => {
+    // 获取初始会话
+    const getInitialSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session?.user) {
+          setUser({
+            id: session.user.id,
+            email: session.user.email || '',
+            name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || '',
+            avatar_url: session.user.user_metadata?.avatar_url
+          })
+        }
+      } catch (error) {
+        console.error('获取会话失败:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    getInitialSession()
+
+    // 监听认证状态变化
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (session?.user) {
+          setUser({
+            id: session.user.id,
+            email: session.user.email || '',
+            name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || '',
+            avatar_url: session.user.user_metadata?.avatar_url
+          })
         } else {
           setUser(null)
         }
-      } else {
-        setUser(null)
+        setLoading(false)
       }
-    } catch (error) {
-      console.error('Check auth error:', error)
-      setUser(null)
-    } finally {
-      setLoading(false)
-    }
-  }
+    )
 
-  // 登录函数
-  const login = () => {
-    window.location.href = '/api/auth/github/login'
-  }
-
-  // 登出函数
-  const logout = async () => {
-    try {
-      const response = await fetch('/api/auth/logout', {
-        method: 'POST',
-        credentials: 'include'
-      })
-      
-      if (response.ok) {
-        setUser(null)
-        message.success('已成功登出')
-        // 重定向到登录页面
-        window.location.href = '/login'
-      } else {
-        message.error('登出失败')
-      }
-    } catch (error) {
-      console.error('Logout error:', error)
-      message.error('登出失败')
-    }
-  }
-
-  // 组件挂载时检查认证状态
-  useEffect(() => {
-    checkAuth()
+    return () => subscription.unsubscribe()
   }, [])
 
-  const value: AuthContextType = {
-    user,
-    loading,
-    login,
-    logout,
-    checkAuth
+  const login = () => {
+    router.push('/login')
+  }
+
+  const logout = async () => {
+    try {
+      await supabase.auth.signOut()
+      setUser(null)
+      router.push('/login')
+    } catch (error) {
+      console.error('登出失败:', error)
+    }
   }
 
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider value={{ user, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   )
 }
 
-// 使用认证上下文的 Hook
 export function useAuth() {
   const context = useContext(AuthContext)
   if (context === undefined) {

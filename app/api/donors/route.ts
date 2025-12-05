@@ -1,14 +1,15 @@
 /**
  * 捐赠人员管理API
- * POST /api/donors - 新增捐赠人员（需要GitHub OAuth或API Key认证）
+ * POST /api/donors - 新增捐赠人员（需要Supabase认证）
  * GET /api/donors - 获取所有捐赠人员列表（公开访问，通过ALLOWED_ORIGINS环境变量限制）
  */
 
 import { NextRequest } from 'next/server'
 import { unifiedDb as db, donors } from '@/lib/unified-db-connection'
 import { desc } from 'drizzle-orm'
-import { corsResponse, handleOptions, validateUnifiedAuth } from '@/lib/cors'
+import { corsResponse, handleOptions } from '@/lib/cors'
 import { z } from 'zod'
+import { authenticateRequest, isAuthorizedAdmin } from '@/lib/auth'
 
 // 标记为动态路由，避免静态生成
 export const dynamic = 'force-dynamic'
@@ -32,14 +33,21 @@ export async function POST(request: NextRequest) {
   const userAgent = request.headers.get('User-Agent')
 
   try {
-    // 统一认证验证 - 优先GitHub OAuth，其次API Key
-    const authResult = validateUnifiedAuth(request)
-    
-    if (!authResult.isValid) {
+    // Supabase认证检查
+    const authResult = await authenticateRequest(request)
+    if (!authResult.success || !authResult.user) {
       return corsResponse({
         success: false,
         error: authResult.error || '认证失败'
       }, { status: 401 }, origin, userAgent)
+    }
+
+    // 检查管理员权限
+    if (!isAuthorizedAdmin(authResult.user)) {
+      return corsResponse({
+        success: false,
+        error: 'Insufficient permissions - admin access required'
+      }, { status: 403 }, origin, userAgent)
     }
 
     // 解析请求体
@@ -53,7 +61,7 @@ export async function POST(request: NextRequest) {
     }).returning()
 
     // 记录操作日志
-    console.log(`[DONORS] 新增捐赠人员: ${validatedData.name} - 认证方式: ${authResult.authType} - IP: ${request.headers.get('x-forwarded-for') || 'unknown'}`)
+    console.log(`[DONORS] 新增捐赠人员: ${validatedData.name} - 用户: ${authResult.user.email} - IP: ${request.headers.get('x-forwarded-for') || 'unknown'}`)
 
     return corsResponse({
       success: true,

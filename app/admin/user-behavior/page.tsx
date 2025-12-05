@@ -93,8 +93,21 @@ export default function UserBehaviorPage() {
         params.append('endDate', dateRange[1].format('YYYY-MM-DD'))
       }
 
+      // 获取Supabase会话
+      const { createClient } = await import('@/utils/supabase/client')
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (!session) {
+        message.error('用户未登录')
+        return
+      }
+
       const response = await fetch(`/api/user-behavior/usage?${params}`, {
-        credentials: 'include'
+        credentials: 'include',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        }
       })
       const data = await response.json()
 
@@ -125,8 +138,21 @@ export default function UserBehaviorPage() {
         params.append('endDate', dateRange[1].format('YYYY-MM-DD'))
       }
 
+      // 获取Supabase会话
+      const { createClient } = await import('@/utils/supabase/client')
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (!session) {
+        message.error('用户未登录')
+        return
+      }
+
       const response = await fetch(`/api/user-behavior/device-connections?${params}`, {
-        credentials: 'include'
+        credentials: 'include',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        }
       })
       const data = await response.json()
 

@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { Layout, Card, Row, Col, Typography, Button, Statistic, Tag, Alert } from 'antd'
 import {
-  GithubOutlined,
   ApiOutlined,
   DatabaseOutlined,
   SafetyOutlined,
@@ -52,7 +51,7 @@ export default function HomePage() {
       <Content style={{ padding: '50px' }}>
         {/* 页面头部 */}
         <div style={{ textAlign: 'center', marginBottom: '50px' }}>
-          <GithubOutlined style={{ fontSize: '72px', color: '#1890ff', marginBottom: '20px' }} />
+          <RocketOutlined style={{ fontSize: '72px', color: '#1890ff', marginBottom: '20px' }} />
           <Title level={1} style={{ color: '#1890ff', marginBottom: '10px' }}>
             LACS API Server
           </Title>

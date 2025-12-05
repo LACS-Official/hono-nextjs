@@ -63,7 +63,7 @@ API_KEY=your-secret-api-key-here
 ENABLE_API_KEY_AUTH=true
 
 # CORS 配置
-ALLOWED_ORIGINS=https://your-domain.com,http://localhost:3000
+ALLOWED_ORIGINS=https://your-domain.com,http://localhost:29351
 ```
 
 ## 📚 API 文档
@@ -179,3 +179,4 @@ npm run db:studio        # 数据库管理界面
 **版本**: 2.2.0 | **最后更新**: 2025-08-19
 
 </div>
+

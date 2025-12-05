@@ -85,7 +85,7 @@ export default function SoftwareDetail() {
   const [deleteLoading, setDeleteLoading] = useState(false)
 
   const softwareId = params.id as string
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/app'
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL
 
   // 获取软件详情
   const fetchSoftwareDetail = async () => {

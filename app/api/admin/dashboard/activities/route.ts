@@ -6,7 +6,9 @@
 import { NextRequest } from 'next/server'
 import { unifiedDb as db, software, activationCodes, softwareUsage } from '@/lib/unified-db-connection'
 import { desc, gte, or, and, eq } from 'drizzle-orm'
-import { corsResponse, handleOptions, validateUnifiedAuth } from '@/lib/cors'
+import { corsResponse, handleOptions } from '@/lib/cors'
+import { createClient } from '@/utils/supabase/server'
+import { isAuthorizedAdmin } from '@/lib/auth'
 
 // 标记为动态路由，避免静态生成
 export const dynamic = 'force-dynamic'
@@ -34,69 +36,83 @@ interface Activity {
   }
 }
 
-// GET /api/admin/dashboard/activities - 获取最近的活动记录
+// GET /api/admin/dashboard/activities - 获取仪表板活动记录
 export async function GET(request: NextRequest) {
   const origin = request.headers.get('origin')
   const userAgent = request.headers.get('user-agent')
 
   try {
-    // 统一认证验证（需要管理员权限）
-    const authValidation = validateUnifiedAuth(request)
-    if (!authValidation.isValid) {
+    // 从请求头获取Authorization token
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return corsResponse({
         success: false,
-        error: authValidation.error || 'Authentication required for dashboard access',
-        authType: authValidation.authType
+        error: 'Authorization header is required'
       }, { status: 401 }, origin, userAgent)
     }
 
-    // 获取查询参数
-    const { searchParams } = new URL(request.url)
-    const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 100) // 最多100条
-    const days = Math.min(parseInt(searchParams.get('days') || '7'), 30) // 最多30天
+    const token = authHeader.split(' ')[1]
+    
+    // 使用token创建Supabase客户端并验证用户
+    const supabase = await createClient()
+    const { data: { user }, error } = await supabase.auth.getUser(token)
+    
+    if (error || !user) {
+      return corsResponse({
+        success: false,
+        error: 'Invalid authentication token'
+      }, { status: 401 }, origin, userAgent)
+    }
+
+    // 检查管理员权限
+    const userData = {
+      id: user.id,
+      email: user.email || '',
+      name: user.user_metadata?.full_name || user.email?.split('@')[0] || '',
+      avatar_url: user.user_metadata?.avatar_url,
+      role: user.user_metadata?.role
+    }
+    
+    if (!isAuthorizedAdmin(userData)) {
+      return corsResponse({
+        success: false,
+        error: 'Admin access required'
+      }, { status: 403 }, origin, userAgent)
+    }
 
     // 记录访问日志
-    const logInfo = authValidation.authType === 'github-oauth' 
-      ? `User: ${authValidation.user?.login} (${authValidation.user?.email})`
-      : `API Key authentication`
-    console.log(`[DASHBOARD_ACTIVITIES] ${logInfo} - Limit: ${limit}, Days: ${days} - IP: ${request.headers.get('x-forwarded-for') || 'unknown'} - Time: ${new Date().toISOString()}`)
+    const logInfo = `User: ${userData.email}`
+    console.log(`[DASHBOARD_ACTIVITIES] ${logInfo} - IP: ${request.headers.get('x-forwarded-for') || 'unknown'} - Time: ${new Date().toISOString()}`)
 
-    // 计算时间范围
-    const startDate = new Date()
-    startDate.setDate(startDate.getDate() - days)
+    // 获取查询参数
+    const { searchParams } = new URL(request.url)
+    const limit = parseInt(searchParams.get('limit') || '20')
+    const days = parseInt(searchParams.get('days') || '7')
 
-    // 并行获取各种活动记录
+    // 并行获取各种活动数据
     const [
       softwareActivities,
       activationCodeActivities,
       userActivationActivities
     ] = await Promise.all([
-      getSoftwareActivities(startDate, Math.ceil(limit / 3)),
-      getActivationCodeActivities(startDate, Math.ceil(limit / 3)),
-      getUserActivationActivities(startDate, Math.ceil(limit / 3))
+      getSoftwareActivities(limit, days),
+      getActivationCodeActivities(limit, days),
+      getUserActivationActivities(limit, days)
     ])
 
-    // 合并并排序所有活动
-    const allActivities: Activity[] = [
-      ...softwareActivities,
-      ...activationCodeActivities,
-      ...userActivationActivities
-    ]
-
-    // 按时间戳降序排序并限制数量
-    allActivities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-    const limitedActivities = allActivities.slice(0, limit)
+    // 合并所有活动并按时间排序
+    const allActivities = [
+      ...softwareActivities.map(activity => ({ ...activity, type: 'software' })),
+      ...activationCodeActivities.map(activity => ({ ...activity, type: 'activation_code' })),
+      ...userActivationActivities.map(activity => ({ ...activity, type: 'user_activation' }))
+    ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+     .slice(0, limit)
 
     return corsResponse({
       success: true,
       data: {
-        activities: limitedActivities,
-        total: limitedActivities.length,
-        timeRange: {
-          start: startDate.toISOString(),
-          end: new Date().toISOString(),
-          days: days
-        },
+        activities: allActivities,
+        total: allActivities.length,
         lastUpdated: new Date().toISOString()
       }
     }, undefined, origin, userAgent)
@@ -111,8 +127,12 @@ export async function GET(request: NextRequest) {
 }
 
 // 获取软件相关活动
-async function getSoftwareActivities(startDate: Date, limit: number): Promise<Activity[]> {
+async function getSoftwareActivities(limit: number, days: number): Promise<Activity[]> {
   try {
+    // 计算时间范围
+    const startDate = new Date()
+    startDate.setDate(startDate.getDate() - days)
+
     const recentSoftware = await db
       .select({
         id: software.id,
@@ -178,8 +198,12 @@ async function getSoftwareActivities(startDate: Date, limit: number): Promise<Ac
 }
 
 // 获取激活码相关活动
-async function getActivationCodeActivities(startDate: Date, limit: number): Promise<Activity[]> {
+async function getActivationCodeActivities(limit: number, days: number): Promise<Activity[]> {
   try {
+    // 计算时间范围
+    const startDate = new Date()
+    startDate.setDate(startDate.getDate() - days)
+
     const recentCodes = await db
       .select({
         id: activationCodes.id,
@@ -246,8 +270,12 @@ async function getActivationCodeActivities(startDate: Date, limit: number): Prom
 }
 
 // 获取用户激活相关活动
-async function getUserActivationActivities(startDate: Date, limit: number): Promise<Activity[]> {
+async function getUserActivationActivities(limit: number, days: number): Promise<Activity[]> {
   try {
+    // 计算时间范围
+    const startDate = new Date()
+    startDate.setDate(startDate.getDate() - days)
+
     const recentUsage = await db
       .select({
         id: softwareUsage.id,

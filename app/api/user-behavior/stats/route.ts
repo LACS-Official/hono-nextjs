@@ -6,7 +6,8 @@
 import { NextRequest } from 'next/server'
 import { unifiedDb as userBehaviorDb, softwareUsage, deviceConnections } from '@/lib/unified-db-connection'
 import { eq, count, desc, and, gte, lte, sql } from 'drizzle-orm'
-import { corsResponse, handleOptions, validateGitHubOAuth } from '@/lib/cors'
+import { corsResponse, handleOptions } from '@/lib/cors'
+import { authenticateRequest, isAuthorizedAdmin } from '@/lib/auth'
 
 // OPTIONS 方法处理 CORS 预检请求
 export async function OPTIONS(request: NextRequest) {
@@ -21,14 +22,24 @@ export async function GET(request: NextRequest) {
   const userAgent = request.headers.get('User-Agent')
 
   try {
-    // GitHub OAuth认证检查
-    const authResult = validateGitHubOAuth(request)
-    if (!authResult.isValid) {
+    // Supabase认证检查
+    const authResult = await authenticateRequest(request)
+    if (!authResult.success || !authResult.user) {
       return corsResponse({
         success: false,
-        error: authResult.error || 'GitHub OAuth authentication required'
+        error: authResult.error || 'Authentication required'
       }, { status: 401 }, origin, userAgent)
     }
+
+    // 检查管理员权限
+    if (!isAuthorizedAdmin(authResult.user)) {
+      return corsResponse({
+        success: false,
+        error: 'Insufficient permissions - admin access required'
+      }, { status: 403 }, origin, userAgent)
+    }
+
+    console.log('[DEBUG] GET端点使用Supabase认证，用户:', authResult.user.email)
 
     const { searchParams } = new URL(request.url)
     const softwareId = searchParams.get('softwareId')

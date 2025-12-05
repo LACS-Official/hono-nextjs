@@ -112,7 +112,7 @@ export default function SoftwareManagement() {
   })
   const [selectedRowKeys, setSelectedRowKeys] = useState<number[]>([])
 
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/app'
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL
 
   // 获取软件统计信息
   const fetchStats = async () => {

@@ -102,7 +102,7 @@ export default function SoftwareEdit() {
   const [software, setSoftware] = useState<Software | null>(null)
 
   const softwareId = params.id as string
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/app'
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL
 
   // 获取软件详情
   const fetchSoftwareDetail = async () => {
@@ -136,6 +136,16 @@ export default function SoftwareEdit() {
     setSaving(true)
     
     try {
+      // 获取Supabase会话信息
+      const { createClient } = await import('@/utils/supabase/client')
+      const supabase = createClient()
+      const { data: { session }, error } = await supabase.auth.getSession()
+      
+      if (error || !session) {
+        message.error('请先登录后再进行操作')
+        return
+      }
+
       // 处理数据
       const processedValues = {
         ...values,
@@ -148,6 +158,7 @@ export default function SoftwareEdit() {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
           'X-API-Key': process.env.NEXT_PUBLIC_API_KEY || ''
         },
         body: JSON.stringify(processedValues)

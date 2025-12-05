@@ -12,7 +12,7 @@ const nextConfig = {
 
   // 图片优化配置
   images: {
-    domains: ['via.placeholder.com', 'avatars.githubusercontent.com'],
+    domains: ['via.placeholder.com'],
     formats: ['image/webp', 'image/avif'],
     minimumCacheTTL: 60,
   },

@@ -106,7 +106,7 @@ export default function EnhancedVersionManager({
   const [comparisonVisible, setComparisonVisible] = useState(false)
   const [autoUpdateLoading, setAutoUpdateLoading] = useState(false)
 
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/app'
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL
 
   // 获取版本历史
   const fetchVersions = async () => {

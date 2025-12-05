@@ -6,7 +6,9 @@
 import { NextRequest } from 'next/server'
 import { unifiedDb as db, software, activationCodes, softwareUsage } from '@/lib/unified-db-connection'
 import { count, eq, and, gte, lte, desc, sql } from 'drizzle-orm'
-import { corsResponse, handleOptions, validateUnifiedAuth } from '@/lib/cors'
+import { corsResponse, handleOptions } from '@/lib/cors'
+import { createClient } from '@/utils/supabase/server'
+import { isAuthorizedAdmin } from '@/lib/auth'
 
 // 标记为动态路由，避免静态生成
 export const dynamic = 'force-dynamic'
@@ -24,20 +26,46 @@ export async function GET(request: NextRequest) {
   const userAgent = request.headers.get('user-agent')
 
   try {
-    // 统一认证验证（需要管理员权限）
-    const authValidation = validateUnifiedAuth(request)
-    if (!authValidation.isValid) {
+    // 从请求头获取Authorization token
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return corsResponse({
         success: false,
-        error: authValidation.error || 'Authentication required for dashboard access',
-        authType: authValidation.authType
+        error: 'Authorization header is required'
       }, { status: 401 }, origin, userAgent)
     }
 
+    const token = authHeader.split(' ')[1]
+    
+    // 使用token创建Supabase客户端并验证用户
+    const supabase = await createClient()
+    const { data: { user }, error } = await supabase.auth.getUser(token)
+    
+    if (error || !user) {
+      return corsResponse({
+        success: false,
+        error: 'Invalid authentication token'
+      }, { status: 401 }, origin, userAgent)
+    }
+
+    // 检查管理员权限
+    const userData = {
+      id: user.id,
+      email: user.email || '',
+      name: user.user_metadata?.full_name || user.email?.split('@')[0] || '',
+      avatar_url: user.user_metadata?.avatar_url,
+      role: user.user_metadata?.role
+    }
+    
+    if (!isAuthorizedAdmin(userData)) {
+      return corsResponse({
+        success: false,
+        error: 'Admin access required'
+      }, { status: 403 }, origin, userAgent)
+    }
+
     // 记录访问日志
-    const logInfo = authValidation.authType === 'github-oauth' 
-      ? `User: ${authValidation.user?.login} (${authValidation.user?.email})`
-      : `API Key authentication`
+    const logInfo = `User: ${userData.email}`
     console.log(`[DASHBOARD_STATS] ${logInfo} - IP: ${request.headers.get('x-forwarded-for') || 'unknown'} - Time: ${new Date().toISOString()}`)
 
     // 并行获取各种统计数据
@@ -286,3 +314,5 @@ async function getSystemHealth() {
     }
   }
 }
+
+

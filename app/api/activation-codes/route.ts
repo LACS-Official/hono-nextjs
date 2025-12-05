@@ -77,16 +77,16 @@ export async function POST(request: NextRequest) {
     // 在生成新激活码前，先清理5分钟内未使用的激活码
     await cleanupUnusedCodes()
 
-    // 认证验证：支持API Key或JWT Token
+    // 认证验证：支持API Key或Supabase认证
     let isAuthenticated = false
     let authError = ''
 
-    // 首先尝试JWT认证（GitHub OAuth）
-    const jwtAuth = authenticateRequest(request)
-    if (jwtAuth.success && jwtAuth.user && isAuthorizedAdmin(jwtAuth.user)) {
+    // 首先尝试Supabase认证
+    const supabaseAuth = await authenticateRequest(request)
+    if (supabaseAuth.success && supabaseAuth.user && isAuthorizedAdmin(supabaseAuth.user)) {
       isAuthenticated = true
     } else {
-      // 如果JWT认证失败，尝试API Key认证
+      // 如果Supabase认证失败，尝试API Key认证
       if (process.env.ENABLE_API_KEY_AUTH === 'true') {
         const apiKeyValidation = validateApiKeyWithExpiration(request)
         if (apiKeyValidation.isValid) {
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
           authError = apiKeyValidation.error || 'Invalid or missing API Key'
         }
       } else {
-        authError = jwtAuth.error || 'Authentication required'
+        authError = supabaseAuth.error || 'Authentication required'
       }
     }
 
@@ -194,16 +194,16 @@ export async function GET(request: NextRequest) {
   const userAgent = request.headers.get('User-Agent')
 
   try {
-    // 认证验证：支持API Key或JWT Token
+    // 认证验证：支持API Key或Supabase认证
     let isAuthenticated = false
     let authError = ''
 
-    // 首先尝试JWT认证（GitHub OAuth）
-    const jwtAuth = authenticateRequest(request)
-    if (jwtAuth.success && jwtAuth.user && isAuthorizedAdmin(jwtAuth.user)) {
+    // 首先尝试Supabase认证
+    const supabaseAuth = await authenticateRequest(request)
+    if (supabaseAuth.success && supabaseAuth.user && isAuthorizedAdmin(supabaseAuth.user)) {
       isAuthenticated = true
     } else {
-      // 如果JWT认证失败，尝试API Key认证
+      // 如果Supabase认证失败，尝试API Key认证
       if (process.env.ENABLE_API_KEY_AUTH === 'true') {
         const apiKeyValidation = validateApiKeyWithExpiration(request)
         if (apiKeyValidation.isValid) {
@@ -212,7 +212,7 @@ export async function GET(request: NextRequest) {
           authError = apiKeyValidation.error || 'Invalid or missing API Key'
         }
       } else {
-        authError = jwtAuth.error || 'Authentication required'
+        authError = supabaseAuth.error || 'Authentication required'
       }
     }
 

@@ -50,6 +50,20 @@
       "when": 1759175362217,
       "tag": "0006_brave_bug",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1765770555734,
+      "tag": "0007_fuzzy_captain_midlands",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1765770682911,
+      "tag": "0008_dazzling_killraven",
+      "breakpoints": true
     }
   ]
 }

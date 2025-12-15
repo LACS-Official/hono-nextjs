@@ -15,6 +15,7 @@ import * as userBehaviorSchema from './user-behavior-schema'
 import * as donorsSchema from './donors-schema'
 import * as websiteManagementSchema from './website-management-schema'
 import * as infoManagementSchema from './info-management-schema'
+import * as systemSettingsSchema from './system-settings-schema'
 
 // 合并所有模式
 const unifiedSchema = {
@@ -24,6 +25,7 @@ const unifiedSchema = {
   ...donorsSchema,
   ...websiteManagementSchema,
   ...infoManagementSchema,
+  ...systemSettingsSchema,
 }
 
 // 统一数据库连接字符串
@@ -70,6 +72,14 @@ export const {
   groupChats,
   mediaPlatforms,
   projectsList,
+
+  // 系统设置相关表
+  systemSettings,
+  systemSettingsAuditLog,
+  apiAccessControl,
+  systemLogConfig,
+  systemBackupConfig,
+  systemNotificationConfig,
 } = unifiedSchema
 
 // 数据库健康检查函数

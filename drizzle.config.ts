@@ -11,7 +11,8 @@ export default {
     './lib/user-behavior-schema.ts',
     './lib/donors-schema.ts',
     './lib/website-management-schema.ts',
-    './lib/info-management-schema.ts'
+    './lib/info-management-schema.ts',
+    './lib/system-settings-schema.ts'
   ],
   out: './drizzle/unified',
   dialect: 'postgresql',

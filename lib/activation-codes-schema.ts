@@ -10,6 +10,7 @@ export const activationCodes = pgTable('activation_codes', {
   isUsed: boolean('is_used').default(false).notNull(),
   usedAt: timestamp('used_at', { withTimezone: true }),
   usedBy: uuid('used_by'), // 使用者 ID
+  userId: uuid('user_id'), // 用户 ID
   metadata: jsonb('metadata'),
   productInfo: jsonb('product_info'),
 })

@@ -77,6 +77,9 @@ export default function Navigation({ className }: NavigationProps) {
     if (pathname.includes('/info-management')) {
       return ['info-management']
     }
+    if (pathname.includes('/system-settings')) {
+      return ['system-settings']
+    }
     if (pathname === '/admin') {
       return ['dashboard']
     }
@@ -126,6 +129,12 @@ export default function Navigation({ className }: NavigationProps) {
       icon: <InfoCircleOutlined />,
       label: '关于我们管理',
       onClick: () => router.push('/admin/info-management'),
+    },
+    {
+      key: 'system-settings',
+      icon: <SettingOutlined />,
+      label: '系统设置',
+      onClick: () => router.push('/admin/system-settings'),
     },
   ]
 

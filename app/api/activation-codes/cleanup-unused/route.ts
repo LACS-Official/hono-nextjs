@@ -1,7 +1,7 @@
 // 清理未使用激活码接口
-import { NextRequest } from 'next/server'
-import { unifiedDb as db, activationCodes } from '@/lib/unified-db-connection'
-import { eq, and, lt } from 'drizzle-orm'
+import { NextRequest, NextResponse } from 'next/server'
+import { activationCodesDb as db, activationCodes } from '@/lib/activation-codes-db'
+import { and, eq, lt } from 'drizzle-orm'
 import { corsResponse, handleOptions, validateApiKeyWithExpiration } from '@/lib/cors'
 
 // OPTIONS 方法处理 CORS 预检请求

@@ -1,6 +1,6 @@
-// 清理过期激活码接口
-import { NextRequest } from 'next/server'
-import { unifiedDb as db, activationCodes } from '@/lib/unified-db-connection'
+// 清理过期激活码接口 - 前端兼容版
+import { NextRequest, NextResponse } from 'next/server'
+import { activationCodesDb as db, activationCodes } from '@/lib/activation-codes-db'
 import { lt } from 'drizzle-orm'
 import { corsResponse, handleOptions, validateApiKeyWithExpiration } from '@/lib/cors'
 import { authenticateRequest, isAuthorizedAdmin } from '@/lib/auth'

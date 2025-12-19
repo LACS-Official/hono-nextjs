@@ -1,6 +1,6 @@
 // 验证激活码接口
 import { NextRequest } from 'next/server'
-import { unifiedDb as db, activationCodes } from '@/lib/unified-db-connection'
+import { activationCodesDb as db, activationCodes } from '@/lib/activation-codes-db'
 import { eq, and, lt } from 'drizzle-orm'
 import { corsResponse, handleOptions } from '@/lib/cors'
 import { TimeUtils } from '@/lib/time-utils'

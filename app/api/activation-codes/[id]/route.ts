@@ -1,6 +1,6 @@
 // 单个激活码操作接口
 import { NextRequest, NextResponse } from 'next/server'
-import { unifiedDb as db, activationCodes } from '@/lib/unified-db-connection'
+import { activationCodesDb as db, activationCodes } from '@/lib/activation-codes-db'
 import { eq } from 'drizzle-orm'
 import { corsResponse, validateApiKeyWithExpiration } from '@/lib/cors'
 import { authenticateRequest, isAuthorizedAdmin } from '@/lib/auth'

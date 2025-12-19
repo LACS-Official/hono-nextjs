@@ -1,6 +1,6 @@
 // 激活码 API - 主路由
 import { NextRequest } from 'next/server'
-import { unifiedDb as db, activationCodes } from '@/lib/unified-db-connection'
+import { activationCodesDb as db, activationCodes } from '@/lib/activation-codes-db'
 import { eq, desc, and, lt, gt } from 'drizzle-orm'
 import { v4 as uuidv4 } from 'uuid'
 import { corsResponse, handleOptions, validateApiKeyWithExpiration, checkRateLimit } from '@/lib/cors'

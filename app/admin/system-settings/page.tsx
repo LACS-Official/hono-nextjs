@@ -94,7 +94,7 @@ export default function SystemSettingsPage() {
         setSettings(result.data.settings)
         
         // 提取分类
-        const uniqueCategories = Array.from(new Set(result.data.settings.map((s: SystemSetting) => s.category)))
+        const uniqueCategories = Array.from(new Set(result.data.settings.map((s: SystemSetting) => s.category))) as string[]
         setCategories(uniqueCategories)
       } else {
         message.error('获取系统设置失败')

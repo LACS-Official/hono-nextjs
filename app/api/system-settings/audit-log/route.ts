@@ -11,7 +11,7 @@ import {
 } from '@/lib/system-settings-db'
 import { eq, desc, and, ilike } from 'drizzle-orm'
 import { z } from 'zod'
-import { auth } from '@/lib/auth'
+import { authenticateRequest } from '@/lib/auth'
 import { headers } from 'next/headers'
 
 // 验证模式
@@ -29,13 +29,11 @@ const queryAuditLogSchema = z.object({
 export async function GET(request: NextRequest) {
   try {
     // 验证用户权限
-    const session = await auth.api.getSession({
-      headers: await headers(),
-    })
+    const authResult = await authenticateRequest(request)
     
-    if (!session?.user) {
+    if (!authResult.success || !authResult.user) {
       return NextResponse.json(
-        { success: false, error: '未授权访问' },
+        { success: false, error: authResult.error || '未授权访问' },
         { status: 401 }
       )
     }
@@ -52,8 +50,13 @@ export async function GET(request: NextRequest) {
       endDate: searchParams.get('endDate'),
     })
 
+    // 分页参数
+    const page = query.page || 1
+    const limit = query.limit || 20
+    const offset = (page - 1) * limit
+
     // 构建查询条件
-    const conditions = []
+    let conditions = []
     
     if (query.settingId) {
       conditions.push(eq(systemSettingsAuditLog.settingId, query.settingId))
@@ -75,11 +78,6 @@ export async function GET(request: NextRequest) {
       conditions.push(eq(systemSettingsAuditLog.timestamp, query.endDate))
     }
 
-    // 分页参数
-    const page = query.page || 1
-    const limit = query.limit || 20
-    const offset = (page - 1) * limit
-
     // 执行查询
     let queryBuilder = systemSettingsDb
       .select({
@@ -98,9 +96,10 @@ export async function GET(request: NextRequest) {
       })
       .from(systemSettingsAuditLog)
       .leftJoin(systemSettings, eq(systemSettingsAuditLog.settingId, systemSettings.id))
-    
+
+    // 添加条件
     if (conditions.length > 0) {
-      queryBuilder = queryBuilder.where(and(...conditions))
+      queryBuilder = queryBuilder.where(and(...conditions)) as typeof queryBuilder
     }
     
     const auditLogs = await queryBuilder
@@ -114,7 +113,7 @@ export async function GET(request: NextRequest) {
       .from(systemSettingsAuditLog)
     
     if (conditions.length > 0) {
-      countQuery = countQuery.where(and(...conditions))
+      countQuery = countQuery.where(and(...conditions)) as typeof countQuery
     }
     
     const totalResult = await countQuery

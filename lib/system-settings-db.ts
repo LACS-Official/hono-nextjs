@@ -25,9 +25,9 @@ export const {
   systemSettings,
   systemSettingsAuditLog,
   apiAccessControl,
-  logConfig,
-  backupConfig,
-  notificationConfig,
+  systemLogConfig,
+  systemBackupConfig,
+  systemNotificationConfig,
 } = schema
 
 // 导出类型
@@ -38,10 +38,10 @@ export type {
   NewSystemSettingsAuditLog,
   ApiAccessControl,
   NewApiAccessControl,
-  LogConfig,
-  NewLogConfig,
-  BackupConfig,
-  NewBackupConfig,
-  NotificationConfig,
-  NewNotificationConfig,
+  SystemLogConfig,
+  NewSystemLogConfig,
+  SystemBackupConfig,
+  NewSystemBackupConfig,
+  SystemNotificationConfig,
+  NewSystemNotificationConfig,
 } from './system-settings-schema'

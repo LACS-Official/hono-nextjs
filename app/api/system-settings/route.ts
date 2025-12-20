@@ -15,7 +15,7 @@ import {
 import { eq, and, desc, ilike } from 'drizzle-orm'
 import { z } from 'zod'
 import { v4 as uuidv4 } from 'uuid'
-import { auth } from '@/lib/auth'
+import { authenticateRequest } from '@/lib/auth'
 import { headers } from 'next/headers'
 import { SettingValidator } from '@/lib/setting-validator'
 import { AuditLogService, AuditAction } from '@/lib/audit-log-service'
@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
     let queryBuilder = systemSettingsDb.select().from(systemSettings)
     
     if (conditions.length > 0) {
-      queryBuilder = queryBuilder.where(and(...conditions))
+      queryBuilder = queryBuilder.where(and(...conditions)) as typeof queryBuilder
     }
     
     const settings = await queryBuilder
@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
     let countQuery = systemSettingsDb.select({ count: systemSettings.id }).from(systemSettings)
     
     if (conditions.length > 0) {
-      countQuery = countQuery.where(and(...conditions))
+      countQuery = countQuery.where(and(...conditions)) as typeof countQuery
     }
     
     const totalResult = await countQuery
@@ -116,13 +116,11 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     // 验证用户权限
-    const session = await auth.api.getSession({
-      headers: await headers(),
-    })
+    const authResult = await authenticateRequest(request)
     
-    if (!session?.user) {
+    if (!authResult.success || !authResult.user) {
       return NextResponse.json(
-        { success: false, error: '未授权访问' },
+        { success: false, error: authResult.error || '未授权访问' },
         { status: 401 }
       )
     }
@@ -170,7 +168,7 @@ export async function POST(request: NextRequest) {
     const newSetting: NewSystemSetting = {
       id: uuidv4(),
       ...validatedData,
-      updatedBy: session.user.id,
+      updatedBy: authResult.user.id,
     }
 
     const result = await systemSettingsDb
@@ -184,7 +182,7 @@ export async function POST(request: NextRequest) {
       action: AuditAction.CREATE,
       oldValue: null,
       newValue: validatedData.value,
-      userId: session.user.id,
+      userId: authResult.user.id,
       userAgent: headers().get('user-agent') || undefined,
       ipAddress: request.ip || headers().get('x-forwarded-for') || undefined,
     })
@@ -197,7 +195,7 @@ export async function POST(request: NextRequest) {
     console.error('创建系统设置失败:', error)
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { success: false, error: '请求参数无效', details: error.errors },
+        { success: false, error: '请求参数无效', details: error.issues },
         { status: 400 }
       )
     }

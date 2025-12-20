@@ -10,20 +10,19 @@ import {
   systemSettingsAuditLog
 } from '@/lib/system-settings-db'
 import { eq, and, ilike, inArray } from 'drizzle-orm'
-import { auth } from '@/lib/auth'
+import { authenticateRequest } from '@/lib/auth'
 import { headers } from 'next/headers'
+import { v4 as uuidv4 } from 'uuid'
 
 // 获取系统设置分类
 export async function GET(request: NextRequest) {
   try {
     // 验证用户权限
-    const session = await auth.api.getSession({
-      headers: await headers(),
-    })
+    const authResult = await authenticateRequest(request)
     
-    if (!session?.user) {
+    if (!authResult.success || !authResult.user) {
       return NextResponse.json(
-        { success: false, error: '未授权访问' },
+        { success: false, error: authResult.error || '未授权访问' },
         { status: 401 }
       )
     }
@@ -50,7 +49,7 @@ export async function GET(request: NextRequest) {
         let exportQuery = systemSettingsDb.select().from(systemSettings)
         
         if (exportCategory) {
-          exportQuery = exportQuery.where(eq(systemSettings.category, exportCategory))
+          exportQuery = exportQuery.where(eq(systemSettings.category, exportCategory)) as typeof exportQuery
         }
 
         const settingsToExport = await exportQuery.orderBy(systemSettings.category, systemSettings.key)
@@ -100,18 +99,19 @@ export async function GET(request: NextRequest) {
         let isValid = true
         let errorMessage = ''
 
-        if (validationRules) {
+        if (validationRules && typeof validationRules === 'object' && validationRules !== null) {
           // 根据验证规则验证值
-          if (validationRules.required && !value) {
+          const rules = validationRules as Record<string, any>
+          if (rules.required && !value) {
             isValid = false
             errorMessage = '此设置为必填项'
-          } else if (validationRules.minLength && value.length < validationRules.minLength) {
+          } else if (typeof rules.minLength === 'number' && value.length < rules.minLength) {
             isValid = false
-            errorMessage = `值长度不能少于${validationRules.minLength}个字符`
-          } else if (validationRules.maxLength && value.length > validationRules.maxLength) {
+            errorMessage = `值长度不能少于${rules.minLength}个字符`
+          } else if (typeof rules.maxLength === 'number' && value.length > rules.maxLength) {
             isValid = false
-            errorMessage = `值长度不能超过${validationRules.maxLength}个字符`
-          } else if (validationRules.pattern && !new RegExp(validationRules.pattern).test(value)) {
+            errorMessage = `值长度不能超过${rules.maxLength}个字符`
+          } else if (typeof rules.pattern === 'string' && !new RegExp(rules.pattern).test(value)) {
             isValid = false
             errorMessage = '值格式不正确'
           }
@@ -144,13 +144,11 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     // 验证用户权限
-    const session = await auth.api.getSession({
-      headers: await headers(),
-    })
+    const authResult = await authenticateRequest(request)
     
-    if (!session?.user) {
+    if (!authResult.success || !authResult.user) {
       return NextResponse.json(
-        { success: false, error: '未授权访问' },
+        { success: false, error: authResult.error || '未授权访问' },
         { status: 401 }
       )
     }
@@ -194,13 +192,13 @@ export async function POST(request: NextRequest) {
                   value: item.value,
                   description: item.description,
                   updatedAt: new Date(),
-                  updatedBy: session.user.id,
+                  updatedBy: authResult.user.id,
                 })
                 .where(eq(systemSettings.id, existing[0].id))
             } else {
               // 创建新设置
               await systemSettingsDb.insert(systemSettings).values({
-                id: crypto.randomUUID(),
+                id: uuidv4(),
                 category: item.category,
                 key: item.key,
                 value: item.value,
@@ -209,7 +207,7 @@ export async function POST(request: NextRequest) {
                 isSecret: item.isSecret || false,
                 isRequired: item.isRequired || false,
                 validationRules: item.validationRules,
-                updatedBy: session.user.id,
+                updatedBy: authResult.user.id,
               })
             }
 

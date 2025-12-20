@@ -13,7 +13,7 @@ import {
 import { eq } from 'drizzle-orm'
 import { z } from 'zod'
 import { v4 as uuidv4 } from 'uuid'
-import { auth } from '@/lib/auth'
+import { authenticateRequest } from '@/lib/auth'
 import { headers } from 'next/headers'
 import { SettingValidator } from '@/lib/setting-validator'
 import { AuditLogService, AuditAction } from '@/lib/audit-log-service'
@@ -67,13 +67,11 @@ export async function PUT(
 ) {
   try {
     // 验证用户权限
-    const session = await auth.api.getSession({
-      headers: await headers(),
-    })
+    const authResult = await authenticateRequest(request)
     
-    if (!session?.user) {
+    if (!authResult.success || !authResult.user) {
       return NextResponse.json(
-        { success: false, error: '未授权访问' },
+        { success: false, error: authResult.error || '未授权访问' },
         { status: 401 }
       )
     }
@@ -118,7 +116,7 @@ export async function PUT(
     const updateData = {
       ...validatedData,
       updatedAt: new Date(),
-      updatedBy: session.user.id,
+      updatedBy: authResult.user.id,
     }
 
     // 执行更新
@@ -134,7 +132,7 @@ export async function PUT(
       action: AuditAction.UPDATE,
       oldValue: existingSetting[0].value,
       newValue: validatedData.value !== undefined ? validatedData.value : existingSetting[0].value,
-      userId: session.user.id,
+      userId: authResult.user.id,
       userAgent: headers().get('user-agent') || undefined,
       ipAddress: request.ip || headers().get('x-forwarded-for') || undefined,
     })
@@ -147,7 +145,7 @@ export async function PUT(
     console.error('更新系统设置失败:', error)
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { success: false, error: '请求参数无效', details: error.errors },
+        { success: false, error: '请求参数无效', details: error.issues },
         { status: 400 }
       )
     }
@@ -165,13 +163,11 @@ export async function DELETE(
 ) {
   try {
     // 验证用户权限
-    const session = await auth.api.getSession({
-      headers: await headers(),
-    })
+    const authResult = await authenticateRequest(request)
     
-    if (!session?.user) {
+    if (!authResult.success || !authResult.user) {
       return NextResponse.json(
-        { success: false, error: '未授权访问' },
+        { success: false, error: authResult.error || '未授权访问' },
         { status: 401 }
       )
     }
@@ -199,17 +195,17 @@ export async function DELETE(
     }
 
     // 删除设置
-    await unifiedDb
+    await systemSettingsDb
       .delete(systemSettings)
       .where(eq(systemSettings.id, params.id))
 
     // 记录审计日志
     await AuditLogService.createLog({
-      settingId: id,
+      settingId: params.id,
       action: AuditAction.DELETE,
       oldValue: existingSetting[0].value,
       newValue: null,
-      userId: session.user.id,
+      userId: authResult.user.id,
       userAgent: headers().get('user-agent') || undefined,
       ipAddress: request.ip || headers().get('x-forwarded-for') || undefined,
     })

@@ -10,7 +10,7 @@ export interface ValidationRule {
   required?: boolean
   minLength?: number
   maxLength?: number
-  pattern?: string
+  pattern?: string | RegExp
   min?: number
   max?: number
   enum?: string[]
@@ -188,8 +188,11 @@ export class SettingValidator {
     }
 
     // 正则表达式验证
-    if (rules.pattern && !new RegExp(rules.pattern).test(strValue)) {
-      return { isValid: false, errorMessage: '格式不正确' }
+    if (rules.pattern) {
+      const regex = typeof rules.pattern === 'string' ? new RegExp(rules.pattern) : rules.pattern
+      if (!regex.test(strValue)) {
+        return { isValid: false, errorMessage: '格式不正确' }
+      }
     }
 
     // 枚举值验证
@@ -346,22 +349,28 @@ export function createZodSchema(type: string, rules?: ValidationRule) {
 
   switch (type) {
     case 'string':
-      schema = z.string()
+      schema = rules?.required ? z.string() : z.string().optional()
       if (rules?.minLength) schema = (schema as z.ZodString).min(rules.minLength)
       if (rules?.maxLength) schema = (schema as z.ZodString).max(rules.maxLength)
-      if (rules?.pattern) schema = (schema as z.ZodString).regex(new RegExp(rules.pattern))
-      if (rules?.enum) schema = z.enum(rules.enum as [string, ...string[]])
+      if (rules?.pattern) {
+        const regex = typeof rules.pattern === 'string' ? new RegExp(rules.pattern) : rules.pattern
+        schema = (schema as z.ZodString).regex(regex)
+      }
+      if (rules?.enum) {
+        const enumSchema = z.enum(rules.enum as [string, ...string[]])
+        schema = rules.required ? enumSchema : enumSchema.optional()
+      }
       break
     case 'number':
-      schema = z.number()
+      schema = rules?.required ? z.number() : z.number().optional()
       if (rules?.min !== undefined) schema = (schema as z.ZodNumber).min(rules.min)
       if (rules?.max !== undefined) schema = (schema as z.ZodNumber).max(rules.max)
       break
     case 'boolean':
-      schema = z.boolean()
+      schema = rules?.required ? z.boolean() : z.boolean().optional()
       break
     case 'json':
-      schema = z.any().refine((value) => {
+      const jsonSchema = z.any().refine((value) => {
         try {
           if (typeof value === 'string') {
             JSON.parse(value)
@@ -371,13 +380,10 @@ export function createZodSchema(type: string, rules?: ValidationRule) {
           return false
         }
       }, { message: '必须是有效的JSON格式' })
+      schema = rules?.required ? jsonSchema : jsonSchema.optional()
       break
     default:
-      schema = z.any()
-  }
-
-  if (rules?.required) {
-    schema = schema as z.ZodEffects<any>
+      schema = rules?.required ? z.any() : z.any().optional()
   }
 
   return schema

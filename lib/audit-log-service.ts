@@ -8,7 +8,7 @@ import {
   systemSettingsAuditLog,
   systemSettings
 } from '@/lib/system-settings-db'
-import { eq, desc, and, ilike, inArray } from 'drizzle-orm'
+import { eq, desc, and, ilike, inArray, count } from 'drizzle-orm'
 import { v4 as uuidv4 } from 'uuid'
 
 // 审计日志操作类型
@@ -136,7 +136,7 @@ export class AuditLogService {
         .leftJoin(systemSettings, eq(systemSettingsAuditLog.settingId, systemSettings.id))
       
       if (conditions.length > 0) {
-        queryBuilder = queryBuilder.where(and(...conditions))
+        queryBuilder = queryBuilder.where(and(...conditions)) as typeof queryBuilder
       }
       
       const auditLogs = await queryBuilder
@@ -146,15 +146,15 @@ export class AuditLogService {
 
       // 获取总数
       let countQuery = systemSettingsDb
-        .select({ count: systemSettingsAuditLog.id })
+        .select({ count: count(systemSettingsAuditLog.id) })
         .from(systemSettingsAuditLog)
       
       if (conditions.length > 0) {
-        countQuery = countQuery.where(and(...conditions))
+        countQuery = countQuery.where(and(...conditions)) as typeof countQuery
       }
       
       const totalResult = await countQuery
-      const total = totalResult.length
+      const total = totalResult[0]?.count || 0
 
       return {
         auditLogs,
@@ -181,17 +181,17 @@ export class AuditLogService {
 
       // 总变更数
       const totalChangesResult = await systemSettingsDb
-        .select({ count: systemSettingsAuditLog.id })
+        .select({ count: count(systemSettingsAuditLog.id) })
         .from(systemSettingsAuditLog)
         .where(eq(systemSettingsAuditLog.timestamp, startDate))
       
-      const totalChanges = totalChangesResult.length
+      const totalChanges = totalChangesResult[0]?.count || 0
 
       // 按操作类型统计
       const changesByActionResult = await systemSettingsDb
         .select({
           action: systemSettingsAuditLog.action,
-          count: systemSettingsAuditLog.id,
+          count: count(systemSettingsAuditLog.id),
         })
         .from(systemSettingsAuditLog)
         .where(eq(systemSettingsAuditLog.timestamp, startDate))
@@ -206,12 +206,12 @@ export class AuditLogService {
       const changesByUserResult = await systemSettingsDb
         .select({
           userId: systemSettingsAuditLog.userId,
-          count: systemSettingsAuditLog.id,
+          count: count(systemSettingsAuditLog.id),
         })
         .from(systemSettingsAuditLog)
         .where(eq(systemSettingsAuditLog.timestamp, startDate))
         .groupBy(systemSettingsAuditLog.userId)
-        .orderBy(desc(systemSettingsAuditLog.id))
+        .orderBy(desc(count(systemSettingsAuditLog.id)))
         .limit(10)
       
       const changesByUser = changesByUserResult.reduce((acc, item) => {
@@ -224,11 +224,11 @@ export class AuditLogService {
       recentStartDate.setDate(recentStartDate.getDate() - 7)
       
       const recentChangesResult = await systemSettingsDb
-        .select({ count: systemSettingsAuditLog.id })
+        .select({ count: count(systemSettingsAuditLog.id) })
         .from(systemSettingsAuditLog)
         .where(eq(systemSettingsAuditLog.timestamp, recentStartDate))
       
-      const recentChanges = recentChangesResult.length
+      const recentChanges = recentChangesResult[0]?.count || 0
 
       // 最常修改的设置
       const topModifiedSettingsResult = await systemSettingsDb
@@ -236,13 +236,13 @@ export class AuditLogService {
           settingId: systemSettingsAuditLog.settingId,
           settingKey: systemSettings.key,
           settingCategory: systemSettings.category,
-          changeCount: systemSettingsAuditLog.id,
+          changeCount: count(systemSettingsAuditLog.id),
         })
         .from(systemSettingsAuditLog)
         .leftJoin(systemSettings, eq(systemSettingsAuditLog.settingId, systemSettings.id))
         .where(eq(systemSettingsAuditLog.timestamp, startDate))
-        .groupBy(systemSettingsAuditLog.settingId)
-        .orderBy(desc(systemSettingsAuditLog.id))
+        .groupBy(systemSettingsAuditLog.settingId, systemSettings.key, systemSettings.category)
+        .orderBy(desc(count(systemSettingsAuditLog.id)))
         .limit(10)
       
       const topModifiedSettings = topModifiedSettingsResult.map(item => ({

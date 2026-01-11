@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter, usePathname } from 'next/navigation'
-import { Layout, Menu, Avatar, Dropdown, Space, Button, Typography, Drawer } from 'antd'
+import { Layout, Menu, Avatar, Dropdown, Space, Button, Typography, Drawer, Badge } from 'antd'
 import {
   HomeOutlined,
   FileTextOutlined,
@@ -161,6 +161,34 @@ export default function Navigation({ className }: NavigationProps) {
       icon: <LogoutOutlined />,
       label: '退出登录',
       onClick: handleLogout,
+    },
+  ]
+
+  // 移动端底部导航项
+  const bottomNavItems: MenuProps['items'] = [
+    {
+      key: 'dashboard',
+      icon: <HomeOutlined />,
+      label: '首页',
+      onClick: () => router.push('/admin'),
+    },
+    {
+      key: 'software',
+      icon: <AppstoreOutlined />,
+      label: '软件',
+      onClick: () => router.push('/admin/software'),
+    },
+    {
+      key: 'activation-codes',
+      icon: <KeyOutlined />,
+      label: '激活码',
+      onClick: () => router.push('/admin/activation-codes'),
+    },
+    {
+      key: 'more',
+      icon: <MenuOutlined />,
+      label: '更多',
+      onClick: () => setMobileMenuOpen(true),
     },
   ]
 
@@ -388,13 +416,41 @@ export default function Navigation({ className }: NavigationProps) {
             <ThemeToggle />
             <Button
               type="text"
-              icon={<MenuOutlined />}
-              onClick={() => setMobileMenuOpen(true)}
+              icon={<NotificationOutlined />}
               style={{ fontSize: '18px' }}
-              aria-label="打开导航菜单"
-              title="打开导航菜单"
+              aria-label="通知"
+              title="通知"
             />
           </div>
+        </div>
+      )}
+
+      {/* 移动端底部导航栏 */}
+      {isMobile && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: '60px',
+            background: currentTheme === 'dark' ? '#141414' : '#fff',
+            borderTop: `1px solid ${currentTheme === 'dark' ? '#434343' : '#f0f0f0'}`,
+            display: 'flex',
+            zIndex: 1000,
+          }}
+        >
+          <Menu
+            mode="horizontal"
+            selectedKeys={getSelectedKeys()}
+            items={bottomNavItems}
+            style={{
+              width: '100%',
+              border: 'none',
+              display: 'flex',
+              justifyContent: 'space-around',
+            }}
+          />
         </div>
       )}
 

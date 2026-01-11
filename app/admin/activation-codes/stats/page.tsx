@@ -23,7 +23,8 @@ import {
   ClockCircleOutlined,
   ExclamationCircleOutlined
 } from '@ant-design/icons'
-import { ErrorBoundary, NetworkError } from '@/components/ErrorBoundary'
+import ErrorBoundaryWrapper from '@/components/ErrorBoundaryWrapper'
+import { NetworkError } from '@/components/ErrorComponents'
 import {
   activationCodeApi,
   type ActivationCodeStats,
@@ -77,19 +78,20 @@ export default function ActivationCodeStatsPage() {
 
   if (error && !stats) {
     return (
-      <ErrorBoundary>
+      <ErrorBoundaryWrapper>
         <div className="responsive-container" style={{ paddingTop: '0' }}>
           <NetworkError
-            message={error}
+            title="网络错误"
+            subTitle={error}
             onRetry={loadStats}
           />
         </div>
-      </ErrorBoundary>
+      </ErrorBoundaryWrapper>
     )
   }
 
   return (
-    <ErrorBoundary>
+    <ErrorBoundaryWrapper>
       <div className="responsive-container" style={{ paddingTop: '0', paddingBottom: '24px' }}>
         {/* 页面头部 */}
         <div className="responsive-card-spacing">
@@ -236,7 +238,7 @@ export default function ActivationCodeStatsPage() {
                           style={{ marginBottom: '16px' }}
                         />
                       )}
-                      
+
                       {getPercentage(stats.used, stats.total) > 80 && (
                         <Alert
                           message="使用率良好"
@@ -246,7 +248,7 @@ export default function ActivationCodeStatsPage() {
                           style={{ marginBottom: '16px' }}
                         />
                       )}
-                      
+
                       {stats.active === 0 && stats.total > 0 && (
                         <Alert
                           message="无可用激活码"
@@ -256,7 +258,7 @@ export default function ActivationCodeStatsPage() {
                           style={{ marginBottom: '16px' }}
                         />
                       )}
-                      
+
                       {stats.active > 0 && getPercentage(stats.expired, stats.total) <= 30 && (
                         <Alert
                           message="系统状态良好"
@@ -291,6 +293,6 @@ export default function ActivationCodeStatsPage() {
           </>
         )}
       </div>
-    </ErrorBoundary>
+    </ErrorBoundaryWrapper>
   )
 }

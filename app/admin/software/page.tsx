@@ -44,6 +44,14 @@ import {
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import Navigation from '@/components/Navigation'
+import ResponsiveSoftwareGrid from '@/components/ResponsiveSoftwareGrid'
+import ViewModeDetector from '@/components/ViewModeDetector'
+import { 
+  TableSkeleton, 
+  CardSkeleton, 
+  StatsCardSkeleton 
+} from '@/components/SkeletonScreen'
+import ErrorBoundaryWrapper from '@/components/ErrorBoundaryWrapper'
 import type { ColumnsType } from 'antd/es/table'
 
 const { Search } = Input
@@ -111,6 +119,29 @@ export default function SoftwareManagement() {
     isActive: ''
   })
   const [selectedRowKeys, setSelectedRowKeys] = useState<number[]>([])
+  const [viewMode, setViewMode] = useState<'table' | 'card'>('table') // 添加视图模式状态
+
+  // 根据屏幕尺寸自动切换视图模式
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 768 && viewMode === 'table') {
+        setViewMode('card')
+      } else if (window.innerWidth >= 768 && viewMode === 'card') {
+        // 不自动切换回表格，让用户自己决定
+      }
+    }
+
+    // 初始检查
+    handleResize()
+
+    // 监听窗口大小变化
+    window.addEventListener('resize', handleResize)
+
+    // 清理监听器
+    return () => {
+      window.removeEventListener('resize', handleResize)
+    }
+  }, [viewMode])
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL
 
@@ -257,6 +288,22 @@ export default function SoftwareManagement() {
   const handleExport = () => {
     // TODO: 实现导出功能
     message.info('导出功能开发中...')
+  }
+
+  // 处理软件操作
+  const handleSoftwareAction = {
+    view: (software: Software) => {
+      router.push(`/admin/software/${software.id}`)
+    },
+    edit: (software: Software) => {
+      router.push(`/admin/software/${software.id}/edit`)
+    },
+    delete: (id: number) => {
+      handleDelete(id)
+    },
+    viewStats: (software: Software) => {
+      router.push(`/admin/software/${software.id}/analytics`)
+    }
   }
 
   // 初始化数据
@@ -481,8 +528,13 @@ export default function SoftwareManagement() {
   }
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
-      <Navigation />
+    <ErrorBoundaryWrapper
+      onError={(error, errorInfo) => {
+        console.error('Software page error:', error, errorInfo)
+      }}
+    >
+      <Layout style={{ minHeight: '100vh' }}>
+        <Navigation />
 
       <Content style={{ padding: '24px', marginTop: '64px', background: '#f5f5f5' }}>
         {/* 面包屑导航 */}
@@ -508,7 +560,9 @@ export default function SoftwareManagement() {
         </div>
 
         {/* 统计卡片 */}
-        {stats && (
+        {loading ? (
+          <StatsCardSkeleton count={4} />
+        ) : stats && (
           <Row gutter={16} style={{ marginBottom: '24px' }}>
             <Col xs={24} sm={12} lg={6}>
               <Card>
@@ -593,6 +647,22 @@ export default function SoftwareManagement() {
             </Col>
             <Col xs={24} lg={8}>
               <Space wrap style={{ width: '100%', justifyContent: 'flex-end' }}>
+                {/* 视图切换按钮 */}
+                <Button.Group>
+                  <Button 
+                    icon={<AppstoreOutlined />} 
+                    type={viewMode === 'card' ? 'primary' : 'default'}
+                    onClick={() => setViewMode('card')}
+                    title="卡片视图"
+                  />
+                  <Button 
+                    icon={<BarChartOutlined />} 
+                    type={viewMode === 'table' ? 'primary' : 'default'}
+                    onClick={() => setViewMode('table')}
+                    title="表格视图"
+                  />
+                </Button.Group>
+                
                 {selectedRowKeys.length > 0 && (
                   <Popconfirm
                     title={`确定要删除选中的 ${selectedRowKeys.length} 个软件吗？`}
@@ -621,9 +691,9 @@ export default function SoftwareManagement() {
           </Row>
         </Card>
 
-        {/* 软件列表表格 */}
+        {/* 软件列表 - 根据视图模式显示不同布局 */}
         <Card>
-          {selectedRowKeys.length > 0 && (
+          {selectedRowKeys.length > 0 && viewMode === 'table' && (
             <Alert
               message={`已选择 ${selectedRowKeys.length} 个软件`}
               type="info"
@@ -637,43 +707,67 @@ export default function SoftwareManagement() {
             />
           )}
 
-          <Table
-            columns={columns}
-            dataSource={software}
-            rowKey="id"
-            loading={loading}
-            rowSelection={rowSelection}
-            pagination={{
-              ...pagination,
-              showSizeChanger: true,
-              showQuickJumper: true,
-              showTotal: (total, range) =>
-                `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
-              onChange: (page, pageSize) => {
-                fetchSoftware(page, pageSize)
-              },
-              onShowSizeChange: (current, size) => {
-                fetchSoftware(1, size)
-              }
-            }}
-            scroll={{ x: 1400 }}
-            locale={{
-              emptyText: (
-                <Empty
-                  image={Empty.PRESENTED_IMAGE_SIMPLE}
-                  description="暂无软件数据"
-                >
-                  <Link href="/admin/software/new">
-                    <Button type="primary" icon={<PlusOutlined />}>
-                      立即添加
-                    </Button>
-                  </Link>
-                </Empty>
-              )
-            }}
-          />
+          {/* 表格视图 */}
+          {viewMode === 'table' && (
+            loading ? (
+              <TableSkeleton rows={5} columns={8} />
+            ) : (
+              <Table
+                columns={columns}
+                dataSource={software}
+                rowKey="id"
+                loading={false}
+                rowSelection={rowSelection}
+                pagination={{
+                  ...pagination,
+                  showSizeChanger: true,
+                  showQuickJumper: true,
+                  showTotal: (total, range) =>
+                    `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
+                  onChange: (page, pageSize) => {
+                    fetchSoftware(page, pageSize)
+                  },
+                  onShowSizeChange: (current, size) => {
+                    fetchSoftware(1, size)
+                  }
+                }}
+                scroll={{ x: 1400 }}
+                locale={{
+                  emptyText: (
+                    <Empty
+                      image={Empty.PRESENTED_IMAGE_SIMPLE}
+                      description="暂无软件数据"
+                    >
+                      <Link href="/admin/software/new">
+                        <Button type="primary" icon={<PlusOutlined />}>
+                          立即添加
+                        </Button>
+                      </Link>
+                    </Empty>
+                  )
+                }}
+              />
+            )
+          )}
+
+          {/* 卡片视图 */}
+          {viewMode === 'card' && (
+            loading ? (
+              <CardSkeleton count={6} />
+            ) : (
+              <ResponsiveSoftwareGrid
+                software={software}
+                loading={loading}
+                onEdit={handleSoftwareAction.edit}
+                onDelete={handleSoftwareAction.delete}
+                onView={handleSoftwareAction.view}
+                onViewStats={handleSoftwareAction.viewStats}
+              />
+            )
+          )}
         </Card>
-      </Content>
-    </Layout>
+        </Content>
+      </Layout>
+    </ErrorBoundaryWrapper>
   )
 }

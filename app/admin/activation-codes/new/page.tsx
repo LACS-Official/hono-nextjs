@@ -24,7 +24,7 @@ import {
   KeyOutlined,
   InfoCircleOutlined
 } from '@ant-design/icons'
-import { ErrorBoundary } from '@/components/ErrorBoundary'
+import ErrorBoundaryWrapper from '@/components/ErrorBoundaryWrapper'
 import {
   activationCodeApi,
   type CreateActivationCodeRequest,
@@ -43,7 +43,7 @@ export default function NewActivationCodePage() {
   // 处理表单提交
   const handleSubmit = async (values: any) => {
     setLoading(true)
-    
+
     try {
       const request: CreateActivationCodeRequest = {
         expirationDays: values.expirationDays || 365,
@@ -62,12 +62,12 @@ export default function NewActivationCodePage() {
       }
 
       const result = await activationCodeApi.createActivationCode(request)
-      
+
       message.success('激活码创建成功！')
-      
+
       // 跳转到详情页面或列表页面
       router.push(`/admin/activation-codes/${result.id}`)
-      
+
     } catch (error) {
       const apiError = error as ActivationCodeApiError
       message.error(`创建失败: ${apiError.message}`)
@@ -97,7 +97,7 @@ export default function NewActivationCodePage() {
   ]
 
   return (
-    <ErrorBoundary>
+    <ErrorBoundaryWrapper>
       <div className="responsive-container" style={{ paddingTop: '0', paddingBottom: '24px' }}>
         {/* 页面头部 */}
         <div className="responsive-card-spacing">
@@ -140,7 +140,7 @@ export default function NewActivationCodePage() {
                   基础信息
                 </Title>
               </Col>
-              
+
               <Col xs={24} md={12}>
                 <Form.Item
                   name="expirationDays"
@@ -308,6 +308,6 @@ export default function NewActivationCodePage() {
           </Form>
         </Card>
       </div>
-    </ErrorBoundary>
+    </ErrorBoundaryWrapper>
   )
 }

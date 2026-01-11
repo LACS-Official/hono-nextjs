@@ -1,6 +1,5 @@
 'use client'
 
-import React from 'react'
 import { Result, Button, Typography, Space } from 'antd'
 import { 
   ExclamationCircleOutlined, 
@@ -11,32 +10,60 @@ import {
 
 const { Paragraph, Text } = Typography
 
-interface ErrorBoundaryProps {
+interface EmptyStateProps {
+  title?: string
+  subTitle?: string
+  onAction?: () => void
+  actionText?: string
+  image?: string
+}
+
+export function EmptyState({
+  title = '暂无数据',
+  subTitle = '当前没有可显示的内容',
+  onAction,
+  actionText = '创建',
+  image
+}: EmptyStateProps) {
+  return (
+    <Result
+      status="404"
+      title={title}
+      subTitle={subTitle}
+      extra={
+        onAction && (
+          <Button type="primary" onClick={onAction}>
+            {actionText}
+          </Button>
+        )
+      }
+    />
+  )
+}
+
+interface NetworkErrorProps {
   title?: string
   subTitle?: string
   onRetry?: () => void
   onGoHome?: () => void
   onGoBack?: () => void
-  extra?: React.ReactNode
   error?: Error | string
   showDetails?: boolean
 }
 
-const ErrorBoundary: React.FC<ErrorBoundaryProps> = ({
-  title = '出错了',
-  subTitle = '抱歉，页面遇到了一些问题',
+export function NetworkError({
+  title = '网络错误',
+  subTitle = '无法连接到服务器，请检查网络连接',
   onRetry,
   onGoHome,
   onGoBack,
-  extra,
   error,
   showDetails = false
-}) => {
+}: NetworkErrorProps) {
   const getErrorDetails = () => {
     if (!error) return null
     
     const errorMessage = typeof error === 'string' ? error : error.message
-    const errorStack = typeof error === 'object' && error.stack ? error.stack : null
     
     return (
       <div style={{ 
@@ -51,11 +78,6 @@ const ErrorBoundary: React.FC<ErrorBoundaryProps> = ({
         <Paragraph code style={{ marginTop: 8 }}>
           {errorMessage}
         </Paragraph>
-        {errorStack && showDetails && (
-          <Paragraph code style={{ marginTop: 8, fontSize: 12 }}>
-            {errorStack}
-          </Paragraph>
-        )}
       </div>
     )
   }
@@ -79,13 +101,12 @@ const ErrorBoundary: React.FC<ErrorBoundaryProps> = ({
           </Button>
         )}
       </Space>
-      {extra}
     </Space>
   )
 
   return (
     <Result
-      status="error"
+      status="warning"
       icon={<ExclamationCircleOutlined />}
       title={title}
       subTitle={subTitle}
@@ -95,5 +116,3 @@ const ErrorBoundary: React.FC<ErrorBoundaryProps> = ({
     </Result>
   )
 }
-
-export default ErrorBoundary

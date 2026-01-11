@@ -79,7 +79,7 @@ function AdminLayoutContent({
               marginLeft: isMobile ? '0' : '240px', // 桌面端为侧边栏留出空间
               marginTop: isMobile ? '64px' : '0', // 移动端为顶部栏留出空间
               paddingTop: '16px',
-              paddingBottom: '24px',
+              paddingBottom: isMobile ? '76px' : '24px', // 移动端为底部导航栏留出空间
               background: currentTheme === 'dark' ? '#000000' : '#f5f5f5',
               minHeight: '100vh',
               transition: 'margin-left 0.2s ease-in-out',

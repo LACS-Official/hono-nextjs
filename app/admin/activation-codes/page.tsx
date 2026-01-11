@@ -34,7 +34,8 @@ import {
 } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import type { Breakpoint } from 'antd'
-import { ErrorBoundary, EmptyState, NetworkError } from '@/components/ErrorBoundary'
+import ErrorBoundaryWrapper from '@/components/ErrorBoundaryWrapper'
+import { EmptyState, NetworkError } from '@/components/ErrorComponents'
 import { PageLoading, StatisticLoading } from '@/components/LoadingState'
 import {
   activationCodeApi,
@@ -73,7 +74,7 @@ export default function ActivationCodesPage() {
   const loadActivationCodes = async (page = currentPage, limit = pageSize, status = statusFilter) => {
     setLoading(true)
     setError(null)
-    
+
     try {
       const response = await activationCodeApi.getActivationCodes(page, limit, status)
       setCodes(response.codes)
@@ -91,7 +92,7 @@ export default function ActivationCodesPage() {
   // 加载统计信息
   const loadStats = async () => {
     setStatsLoading(true)
-    
+
     try {
       const statsData = await activationCodeApi.getActivationCodeStats()
       setStats(statsData)
@@ -422,7 +423,7 @@ export default function ActivationCodesPage() {
   ]
 
   return (
-    <ErrorBoundary>
+    <ErrorBoundaryWrapper>
       <div className="responsive-container"
         style={{
           minHeight: 'calc(100vh - 64px)',
@@ -430,212 +431,206 @@ export default function ActivationCodesPage() {
           paddingBottom: '24px'
         }}
       >
-            {/* 加载状态 */}
-            {loading && <PageLoading tip="正在加载激活码数据..." />}
+        {/* 加载状态 */}
+        {loading && <PageLoading tip="正在加载激活码数据..." />}
 
-            {/* 错误状态 */}
-            {error && !loading && (
-              <NetworkError
-                message={error}
-                onRetry={() => {
-                  loadActivationCodes()
-                  loadStats()
-                }}
-              />
-            )}
+        {/* 错误状态 */}
+        {error && !loading && (
+          <NetworkError
+            title="网络错误"
+            subTitle={error}
+            onRetry={() => {
+              loadActivationCodes()
+              loadStats()
+            }}
+          />
+        )}
 
-            {/* 主要内容 */}
-            {!loading && !error && (
-              <>
-                {/* 页面头部 */}
-                <div className="responsive-card-spacing">
-                  <Title level={2} className="responsive-title">
-                    激活码管理
-                  </Title>
-                  <Paragraph style={{ color: '#666', margin: 0 }}>
-                    管理系统激活码，包括生成、查看、删除和统计功能
-                  </Paragraph>
-                </div>
-
-                {/* 统计卡片 */}
-                {statsLoading ? (
-                  <Row gutter={[16, 16]} className="responsive-card-spacing">
-                    <Col xs={24} sm={12} md={6}><StatisticLoading /></Col>
-                    <Col xs={24} sm={12} md={6}><StatisticLoading /></Col>
-                    <Col xs={24} sm={12} md={6}><StatisticLoading /></Col>
-                    <Col xs={24} sm={12} md={6}><StatisticLoading /></Col>
-                  </Row>
-                ) : stats ? (
-                  <Row gutter={[16, 16]} className="responsive-card-spacing">
-                    <Col xs={24} sm={12} md={6}>
-                      <Card className="responsive-statistic-card">
-                        <Statistic
-                          title="总激活码"
-                          value={stats.total}
-                          prefix={<KeyOutlined />}
-                        />
-                      </Card>
-                    </Col>
-                    <Col xs={24} sm={12} md={6}>
-                      <Card className="responsive-statistic-card">
-                        <Statistic
-                          title="已使用"
-                          value={stats.used}
-                          prefix={<CheckCircleOutlined />}
-                          valueStyle={{ color: '#52c41a' }}
-                        />
-                      </Card>
-                    </Col>
-                    <Col xs={24} sm={12} md={6}>
-                      <Card className="responsive-statistic-card">
-                        <Statistic
-                          title="有效激活码"
-                          value={stats.active}
-                          prefix={<ClockCircleOutlined />}
-                          valueStyle={{ color: '#1890ff' }}
-                        />
-                      </Card>
-                    </Col>
-                    <Col xs={24} sm={12} md={6}>
-                      <Card className="responsive-statistic-card">
-                        <Statistic
-                          title="已过期"
-                          value={stats.expired}
-                          prefix={<ExclamationCircleOutlined />}
-                          valueStyle={{ color: '#ff4d4f' }}
-                        />
-                      </Card>
-                    </Col>
-                    <Col xs={24} sm={12} md={6}>
-                      <Card className="responsive-statistic-card">
-                        <Statistic
-                          title="使用率"
-                          value={stats.usageRate}
-                          suffix="%"
-                          precision={1}
-                          valueStyle={{ color: stats.usageRate > 50 ? '#52c41a' : '#faad14' }}
-                        />
-                      </Card>
-                    </Col>
-                  </Row>
-                ) : null}
-
-          {/* 操作栏 */}
-          <Card className="responsive-card-spacing">
-            <div className="responsive-search-container">
-              <div style={{ flex: 1, minWidth: '200px' }}>
-                <Search
-                  placeholder="搜索激活码、产品名称或邮箱..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  onSearch={handleSearch}
-                  style={{ width: '100%', marginBottom: '12px' }}
-                  allowClear
-                />
-                <Select
-                  value={statusFilter}
-                  onChange={setStatusFilter}
-                  style={{ width: '100%', maxWidth: '200px' }}
-                  placeholder="选择状态筛选"
-                >
-                  <Option value="all">全部状态</Option>
-                  <Option value="active">有效</Option>
-                  <Option value="used">已使用</Option>
-                  <Option value="expired">已过期</Option>
-                  <Option value="unused">未使用</Option>
-                </Select>
-              </div>
-              <div className="responsive-button-group">
-                <Button
-                  icon={<BarChartOutlined />}
-                  onClick={() => router.push('/admin/activation-codes/stats')}
-                >
-                  统计
-                </Button>
-                <Button
-                  icon={<ReloadOutlined />}
-                  onClick={() => {
-                    loadActivationCodes()
-                    loadStats()
-                  }}
-                >
-                  刷新
-                </Button>
-                <Button
-                  icon={<ClearOutlined />}
-                  onClick={handleCleanupExpired}
-                >
-                  清理
-                </Button>
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={() => router.push('/admin/activation-codes/new')}
-                >
-                  新增
-                </Button>
-              </div>
+        {/* 主要内容 */}
+        {!loading && !error && (
+          <>
+            {/* 页面头部 */}
+            <div className="responsive-card-spacing">
+              <Title level={2} className="responsive-title">
+                激活码管理
+              </Title>
+              <Paragraph style={{ color: '#666', margin: 0 }}>
+                管理系统激活码，包括生成、查看、删除和统计功能
+              </Paragraph>
             </div>
-          </Card>
 
-                {/* 激活码表格 */}
-                <Card>
-                  {filteredCodes.length === 0 && !loading ? (
-                    <EmptyState
-                      title="暂无激活码"
-                      description="当前没有符合条件的激活码，您可以创建新的激活码"
-                      action={
-                        <Button
-                          type="primary"
-                          icon={<PlusOutlined />}
-                          onClick={() => router.push('/admin/activation-codes/new')}
-                        >
-                          创建激活码
-                        </Button>
-                      }
+            {/* 统计卡片 */}
+            {statsLoading ? (
+              <Row gutter={[16, 16]} className="responsive-card-spacing">
+                <Col xs={24} sm={12} md={6}><StatisticLoading /></Col>
+                <Col xs={24} sm={12} md={6}><StatisticLoading /></Col>
+                <Col xs={24} sm={12} md={6}><StatisticLoading /></Col>
+                <Col xs={24} sm={12} md={6}><StatisticLoading /></Col>
+              </Row>
+            ) : stats ? (
+              <Row gutter={[16, 16]} className="responsive-card-spacing">
+                <Col xs={24} sm={12} md={6}>
+                  <Card className="responsive-statistic-card">
+                    <Statistic
+                      title="总激活码"
+                      value={stats.total}
+                      prefix={<KeyOutlined />}
                     />
-                  ) : (
-                    <>
-                      <div className="responsive-table-container activation-codes-table">
-                        <Table
-                          columns={columns}
-                          dataSource={filteredCodes}
-                          rowKey="id"
-                          loading={loading}
-                          pagination={false}
-                          scroll={{ x: 1200 }}
-                          size="middle"
-                        />
-                      </div>
+                  </Card>
+                </Col>
+                <Col xs={24} sm={12} md={6}>
+                  <Card className="responsive-statistic-card">
+                    <Statistic
+                      title="已使用"
+                      value={stats.used}
+                      prefix={<CheckCircleOutlined />}
+                      valueStyle={{ color: '#52c41a' }}
+                    />
+                  </Card>
+                </Col>
+                <Col xs={24} sm={12} md={6}>
+                  <Card className="responsive-statistic-card">
+                    <Statistic
+                      title="有效激活码"
+                      value={stats.active}
+                      prefix={<ClockCircleOutlined />}
+                      valueStyle={{ color: '#1890ff' }}
+                    />
+                  </Card>
+                </Col>
+                <Col xs={24} sm={12} md={6}>
+                  <Card className="responsive-statistic-card">
+                    <Statistic
+                      title="已过期"
+                      value={stats.expired}
+                      prefix={<ExclamationCircleOutlined />}
+                      valueStyle={{ color: '#ff4d4f' }}
+                    />
+                  </Card>
+                </Col>
+                <Col xs={24} sm={12} md={6}>
+                  <Card className="responsive-statistic-card">
+                    <Statistic
+                      title="使用率"
+                      value={stats.usageRate}
+                      suffix="%"
+                      precision={1}
+                      valueStyle={{ color: stats.usageRate > 50 ? '#52c41a' : '#faad14' }}
+                    />
+                  </Card>
+                </Col>
+              </Row>
+            ) : null}
 
-                      {/* 分页 */}
-                      <div style={{ marginTop: '16px', textAlign: 'center' }}>
-                        <Pagination
-                          current={currentPage}
-                          pageSize={pageSize}
-                          total={total}
-                          showSizeChanger
-                          showQuickJumper
-                          showTotal={(total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`}
-                          onChange={(page, size) => {
-                            setCurrentPage(page)
-                            setPageSize(size || 10)
-                            loadActivationCodes(page, size || 10, statusFilter)
-                          }}
-                          onShowSizeChange={(_, size) => {
-                            setPageSize(size)
-                            setCurrentPage(1)
-                            loadActivationCodes(1, size, statusFilter)
-                          }}
-                          responsive
-                        />
-                      </div>
-                    </>
-                  )}
-                </Card>
-              </>
-            )}
+            {/* 操作栏 */}
+            <Card className="responsive-card-spacing">
+              <div className="responsive-search-container">
+                <div style={{ flex: 1, minWidth: '200px' }}>
+                  <Search
+                    placeholder="搜索激活码、产品名称或邮箱..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onSearch={handleSearch}
+                    style={{ width: '100%', marginBottom: '12px' }}
+                    allowClear
+                  />
+                  <Select
+                    value={statusFilter}
+                    onChange={setStatusFilter}
+                    style={{ width: '100%', maxWidth: '200px' }}
+                    placeholder="选择状态筛选"
+                  >
+                    <Option value="all">全部状态</Option>
+                    <Option value="active">有效</Option>
+                    <Option value="used">已使用</Option>
+                    <Option value="expired">已过期</Option>
+                    <Option value="unused">未使用</Option>
+                  </Select>
+                </div>
+                <div className="responsive-button-group">
+                  <Button
+                    icon={<BarChartOutlined />}
+                    onClick={() => router.push('/admin/activation-codes/stats')}
+                  >
+                    统计
+                  </Button>
+                  <Button
+                    icon={<ReloadOutlined />}
+                    onClick={() => {
+                      loadActivationCodes()
+                      loadStats()
+                    }}
+                  >
+                    刷新
+                  </Button>
+                  <Button
+                    icon={<ClearOutlined />}
+                    onClick={handleCleanupExpired}
+                  >
+                    清理
+                  </Button>
+                  <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={() => router.push('/admin/activation-codes/new')}
+                  >
+                    新增
+                  </Button>
+                </div>
+              </div>
+            </Card>
+
+            {/* 激活码表格 */}
+            <Card>
+              {filteredCodes.length === 0 && !loading ? (
+                <EmptyState
+                  title="暂无激活码"
+                  subTitle="当前没有符合条件的激活码，您可以创建新的激活码"
+                  onAction={() => router.push('/admin/activation-codes/new')}
+                  actionText="创建激活码"
+                />
+              ) : (
+                <>
+                  <div className="responsive-table-container activation-codes-table">
+                    <Table
+                      columns={columns}
+                      dataSource={filteredCodes}
+                      rowKey="id"
+                      loading={loading}
+                      pagination={false}
+                      scroll={{ x: 1200 }}
+                      size="middle"
+                    />
+                  </div>
+
+                  {/* 分页 */}
+                  <div style={{ marginTop: '16px', textAlign: 'center' }}>
+                    <Pagination
+                      current={currentPage}
+                      pageSize={pageSize}
+                      total={total}
+                      showSizeChanger
+                      showQuickJumper
+                      showTotal={(total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`}
+                      onChange={(page, size) => {
+                        setCurrentPage(page)
+                        setPageSize(size || 10)
+                        loadActivationCodes(page, size || 10, statusFilter)
+                      }}
+                      onShowSizeChange={(_, size) => {
+                        setPageSize(size)
+                        setCurrentPage(1)
+                        loadActivationCodes(1, size, statusFilter)
+                      }}
+                      responsive
+                    />
+                  </div>
+                </>
+              )}
+            </Card>
+          </>
+        )}
       </div>
-    </ErrorBoundary>
+    </ErrorBoundaryWrapper>
   )
 }

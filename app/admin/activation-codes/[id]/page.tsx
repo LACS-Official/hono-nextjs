@@ -25,7 +25,8 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined
 } from '@ant-design/icons'
-import { ErrorBoundary, EmptyState, NetworkError } from '@/components/ErrorBoundary'
+import ErrorBoundaryWrapper from '@/components/ErrorBoundaryWrapper'
+import { EmptyState, NetworkError } from '@/components/ErrorComponents'
 import {
   activationCodeApi,
   type ActivationCode,
@@ -152,37 +153,35 @@ export default function ActivationCodeDetailPage() {
 
   if (error && !code) {
     return (
-      <ErrorBoundary>
+      <ErrorBoundaryWrapper>
         <div className="responsive-container" style={{ paddingTop: '0' }}>
           <NetworkError
-            message={error}
+            title="网络错误"
+            subTitle={error}
             onRetry={loadActivationCode}
           />
         </div>
-      </ErrorBoundary>
+      </ErrorBoundaryWrapper>
     )
   }
 
   if (!code) {
     return (
-      <ErrorBoundary>
+      <ErrorBoundaryWrapper>
         <div className="responsive-container" style={{ paddingTop: '0' }}>
           <EmptyState
             title="激活码不存在"
-            description="未找到指定的激活码，可能已被删除或ID不正确"
-            action={
-              <Button type="primary" onClick={() => router.push('/admin/activation-codes')}>
-                返回列表
-              </Button>
-            }
+            subTitle="未找到指定的激活码，可能已被删除或ID不正确"
+            onAction={() => router.push('/admin/activation-codes')}
+            actionText="返回列表"
           />
         </div>
-      </ErrorBoundary>
+      </ErrorBoundaryWrapper>
     )
   }
 
   return (
-    <ErrorBoundary>
+    <ErrorBoundaryWrapper>
       <div className="responsive-container" style={{ paddingTop: '0', paddingBottom: '24px' }}>
         {/* 页面头部 */}
         <div className="responsive-card-spacing">
@@ -309,6 +308,6 @@ export default function ActivationCodeDetailPage() {
           </Card>
         )}
       </div>
-    </ErrorBoundary>
+    </ErrorBoundaryWrapper>
   )
 }

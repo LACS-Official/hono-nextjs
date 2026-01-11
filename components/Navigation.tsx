@@ -21,6 +21,8 @@ import {
 } from '@ant-design/icons'
 import type { MenuProps } from 'antd'
 import { useAuth } from '@/contexts/AuthContext'
+import { ThemeToggle } from '@/components/ThemeToggle'
+import { useTheme } from '@/contexts/ThemeContext'
 import { useState, useEffect } from 'react'
 
 const { Sider } = Layout
@@ -34,6 +36,7 @@ export default function Navigation({ className }: NavigationProps) {
   const router = useRouter()
   const pathname = usePathname()
   const { user, logout } = useAuth()
+  const { theme: currentTheme } = useTheme()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
@@ -176,8 +179,8 @@ export default function Navigation({ className }: NavigationProps) {
             bottom: 0,
             height: '100vh',
             zIndex: 1000,
-            background: '#fff',
-            borderRight: '1px solid #f0f0f0',
+            background: currentTheme === 'dark' ? '#141414' : '#fff',
+            borderRight: `1px solid ${currentTheme === 'dark' ? '#434343' : '#f0f0f0'}`,
             overflow: 'auto',
           }}
           className={className}
@@ -191,7 +194,7 @@ export default function Navigation({ className }: NavigationProps) {
               alignItems: 'center',
               justifyContent: collapsed ? 'center' : 'space-between',
               padding: collapsed ? '0' : '0 16px',
-              borderBottom: '1px solid #f0f0f0',
+              borderBottom: `1px solid ${currentTheme === 'dark' ? '#434343' : '#f0f0f0'}`,
             }}
           >
             <Button
@@ -216,13 +219,16 @@ export default function Navigation({ className }: NavigationProps) {
             </Button>
 
             {!collapsed && (
-              <Button
-                type="text"
-                icon={<MenuFoldOutlined />}
-                onClick={() => setCollapsed(true)}
-                style={{ fontSize: '16px' }}
-                title="折叠侧边栏"
-              />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Button
+                  type="text"
+                  icon={<MenuFoldOutlined />}
+                  onClick={() => setCollapsed(true)}
+                  style={{ fontSize: '16px' }}
+                  title="折叠侧边栏"
+                />
+                <ThemeToggle />
+              </div>
             )}
           </div>
 
@@ -247,8 +253,8 @@ export default function Navigation({ className }: NavigationProps) {
               left: 0,
               right: 0,
               padding: '16px',
-              borderTop: '1px solid #f0f0f0',
-              background: '#fff',
+              borderTop: `1px solid ${currentTheme === 'dark' ? '#434343' : '#f0f0f0'}`,
+              background: currentTheme === 'dark' ? '#141414' : '#fff',
             }}
           >
             <Dropdown
@@ -272,7 +278,7 @@ export default function Navigation({ className }: NavigationProps) {
                 tabIndex={0}
                 aria-label={`用户菜单 - ${user?.name || '管理员'}`}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#f5f5f5'
+                  e.currentTarget.style.backgroundColor = currentTheme === 'dark' ? '#262626' : '#f5f5f5'
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.backgroundColor = 'transparent'
@@ -295,6 +301,7 @@ export default function Navigation({ className }: NavigationProps) {
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap',
+                        color: currentTheme === 'dark' ? '#fff' : 'inherit',
                       }}
                     >
                       {user?.name || '管理员'}
@@ -346,8 +353,8 @@ export default function Navigation({ className }: NavigationProps) {
             left: 0,
             right: 0,
             height: '64px',
-            background: '#fff',
-            borderBottom: '1px solid #f0f0f0',
+            background: currentTheme === 'dark' ? '#141414' : '#fff',
+            borderBottom: `1px solid ${currentTheme === 'dark' ? '#434343' : '#f0f0f0'}`,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -377,14 +384,17 @@ export default function Navigation({ className }: NavigationProps) {
           </Button>
 
           {/* 菜单按钮 */}
-          <Button
-            type="text"
-            icon={<MenuOutlined />}
-            onClick={() => setMobileMenuOpen(true)}
-            style={{ fontSize: '18px' }}
-            aria-label="打开导航菜单"
-            title="打开导航菜单"
-          />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <ThemeToggle />
+            <Button
+              type="text"
+              icon={<MenuOutlined />}
+              onClick={() => setMobileMenuOpen(true)}
+              style={{ fontSize: '18px' }}
+              aria-label="打开导航菜单"
+              title="打开导航菜单"
+            />
+          </div>
         </div>
       )}
 
@@ -427,8 +437,8 @@ export default function Navigation({ className }: NavigationProps) {
             left: 0,
             right: 0,
             padding: '16px',
-            borderTop: '1px solid #f0f0f0',
-            background: '#fff',
+            borderTop: `1px solid ${currentTheme === 'dark' ? '#434343' : '#f0f0f0'}`,
+            background: currentTheme === 'dark' ? '#141414' : '#fff',
           }}
         >
           <Dropdown
@@ -445,8 +455,8 @@ export default function Navigation({ className }: NavigationProps) {
                 cursor: 'pointer',
                 padding: '12px',
                 borderRadius: '6px',
-                border: '1px solid #f0f0f0',
-                background: '#fafafa',
+                border: `1px solid ${currentTheme === 'dark' ? '#434343' : '#f0f0f0'}`,
+                background: currentTheme === 'dark' ? '#262626' : '#fafafa',
               }}
               role="button"
               tabIndex={0}
@@ -468,6 +478,7 @@ export default function Navigation({ className }: NavigationProps) {
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap',
+                        color: currentTheme === 'dark' ? '#fff' : 'inherit',
                       }}
                     >
                       {user?.name || '管理员'}

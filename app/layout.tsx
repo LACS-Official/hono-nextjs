@@ -3,6 +3,7 @@ import { AntdRegistry } from '@ant-design/nextjs-registry';
 import { ConfigProvider } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { ThemeProvider } from '@/contexts/ThemeContext';
 
 export const metadata = {
   title: 'LACS API Server',
@@ -15,7 +16,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="zh-CN">
+    <html lang="zh-CN" suppressHydrationWarning>
       <head>
         <style dangerouslySetInnerHTML={{
           __html: `
@@ -29,13 +30,15 @@ export default function RootLayout({
         }} />
       </head>
       <body>
-        <AntdRegistry>
-          <ConfigProvider locale={zhCN}>
-            <AuthProvider>
-              {children}
-            </AuthProvider>
-          </ConfigProvider>
-        </AntdRegistry>
+        <ThemeProvider>
+          <AntdRegistry>
+            <ConfigProvider locale={zhCN}>
+              <AuthProvider>
+                {children}
+              </AuthProvider>
+            </ConfigProvider>
+          </AntdRegistry>
+        </ThemeProvider>
       </body>
     </html>
   )

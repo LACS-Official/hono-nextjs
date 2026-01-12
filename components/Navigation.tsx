@@ -262,7 +262,7 @@ export default function Navigation({ className }: NavigationProps) {
 
           {/* 导航菜单 */}
           <Menu
-            mode="vertical"
+            mode="inline"
             selectedKeys={getSelectedKeys()}
             items={menuItems}
             style={{

@@ -9,15 +9,15 @@ export const useLoginLog = () => {
   const recordLoginLog = async () => {
     try {
       const supabase = createClient()
-      
+
       // 获取当前会话信息
       const { data: { session } } = await supabase.auth.getSession()
-      
+
       if (!session || !session.user) {
         console.error('没有有效的用户会话')
         return
       }
-      
+
       const userId = session.user.id
       const email = session.user.email || ''
       // Supabase会话ID可能不是直接通过session.id获取
@@ -28,27 +28,26 @@ export const useLoginLog = () => {
       // 在客户端获取真实公网IP
       let clientIp = '未知'
       try {
-        const ipResponse = await fetch('https://api.ipify.org?format=json')
-        if (ipResponse.ok) {
-          const ipData = await ipResponse.json()
-          clientIp = ipData.ip
+        const backupResponse = await fetch('https://ipinfo.io/json')
+        if (backupResponse.ok) {
+          const backupData = await backupResponse.json()
+          clientIp = backupData.ip
         }
-      } catch (ipError) {
-        console.warn('获取客户端IP失败:', ipError)
-        // 备用方案：使用其他IP查询服务
+      } catch (backupError) {
+        console.warn('获取客户端IP失败:', backupError)
         try {
-          const backupResponse = await fetch('https://ipinfo.io/json')
-          if (backupResponse.ok) {
-            const backupData = await backupResponse.json()
-            clientIp = backupData.ip
+          const ipResponse = await fetch('https://api.ipify.org?format=json')
+          if (ipResponse.ok) {
+            const ipData = await ipResponse.json()
+            clientIp = ipData.ip
           }
-        } catch (backupError) {
-          console.warn('备用IP获取也失败:', backupError)
+        } catch (ipError) {
+          console.warn('备用IP获取也失败:', ipError)
         }
       }
-      
+
       console.log('客户端获取的真实IP:', clientIp)
-      
+
       // 调用登录日志API记录登录信息
       const response = await fetch('/api/login-logs', {
         method: 'POST',
@@ -62,7 +61,7 @@ export const useLoginLog = () => {
           clientIp
         })
       })
-      
+
       if (!response.ok) {
         const errorData = await response.json()
         console.error('记录登录日志失败:', errorData.error)

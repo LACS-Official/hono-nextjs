@@ -4,6 +4,7 @@ import { ConfigProvider } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
+import ConfigInitializer from '@/components/ConfigInitializer';
 
 export const metadata = {
   title: 'LACS API Server',
@@ -20,7 +21,6 @@ export default function RootLayout({
       <head>
         <style dangerouslySetInnerHTML={{
           __html: `
-            /* 抑制 Ant Design 的 -ms-high-contrast 弃用警告 */
             @media (forced-colors: active) {
               * {
                 forced-color-adjust: auto;
@@ -34,7 +34,9 @@ export default function RootLayout({
           <AntdRegistry>
             <ConfigProvider locale={zhCN}>
               <AuthProvider>
-                {children}
+                <ConfigInitializer>
+                  {children}
+                </ConfigInitializer>
               </AuthProvider>
             </ConfigProvider>
           </AntdRegistry>

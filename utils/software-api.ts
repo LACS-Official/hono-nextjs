@@ -30,8 +30,9 @@ export interface Software {
     graphics?: string
     other?: string
   }
-  openname?: string // 软件启动文件名或命令
-  filetype?: string // 软件包文件格式类型
+  openname?: string
+  filetype?: string
+  viewCount: number
   isActive: boolean
   sortOrder: number
   metadata?: any

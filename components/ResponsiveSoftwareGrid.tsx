@@ -3,7 +3,7 @@
 import React from 'react'
 import { Row, Col, Empty, Spin } from 'antd'
 import SoftwareCard from './SoftwareCard'
-import type { Software } from '../app/admin/software/page'
+import type { Software } from '../utils/software-api'
 
 interface ResponsiveSoftwareGridProps {
   software: Software[]

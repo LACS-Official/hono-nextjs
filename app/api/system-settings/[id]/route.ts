@@ -4,9 +4,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { 
-  systemSettingsDb, 
-  systemSettings, 
+import {
+  systemSettingsDb,
+  systemSettings,
   systemSettingsAuditLog,
   NewSystemSettingsAuditLog
 } from '@/lib/system-settings-db'
@@ -33,7 +33,8 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  try {// 获取设置详情
+  try {
+    // 获取设置详情
     const setting = await systemSettingsDb
       .select()
       .from(systemSettings)
@@ -68,7 +69,7 @@ export async function PUT(
   try {
     // 验证用户权限
     const authResult = await authenticateRequest(request)
-    
+
     if (!authResult.success || !authResult.user) {
       return NextResponse.json(
         { success: false, error: authResult.error || '未授权访问' },
@@ -103,10 +104,10 @@ export async function PUT(
         existingSetting[0].type,
         validationRules
       )
-      
-      if (!validationResult.isValid) {
+
+      if (!validationResult.valid) {
         return NextResponse.json(
-          { success: false, error: validationResult.errorMessage },
+          { success: false, error: validationResult.errors?.join(', ') || '验证失败' },
           { status: 400 }
         )
       }
@@ -127,14 +128,16 @@ export async function PUT(
       .returning()
 
     // 记录审计日志
-    await AuditLogService.createLog({
-      settingId: params.id,
+    await AuditLogService.log({
+      resourceType: 'system_setting',
+      resourceId: params.id,
       action: AuditAction.UPDATE,
-      oldValue: existingSetting[0].value,
-      newValue: validatedData.value !== undefined ? validatedData.value : existingSetting[0].value,
       userId: authResult.user.id,
-      userAgent: headers().get('user-agent') || undefined,
-      ipAddress: request.ip || headers().get('x-forwarded-for') || undefined,
+      details: {
+        oldValue: existingSetting[0].value,
+        newValue: validatedData.value !== undefined ? validatedData.value : existingSetting[0].value,
+      },
+      request,
     })
 
     return NextResponse.json({
@@ -164,7 +167,7 @@ export async function DELETE(
   try {
     // 验证用户权限
     const authResult = await authenticateRequest(request)
-    
+
     if (!authResult.success || !authResult.user) {
       return NextResponse.json(
         { success: false, error: authResult.error || '未授权访问' },
@@ -200,14 +203,16 @@ export async function DELETE(
       .where(eq(systemSettings.id, params.id))
 
     // 记录审计日志
-    await AuditLogService.createLog({
-      settingId: params.id,
+    await AuditLogService.log({
+      resourceType: 'system_setting',
+      resourceId: params.id,
       action: AuditAction.DELETE,
-      oldValue: existingSetting[0].value,
-      newValue: null,
       userId: authResult.user.id,
-      userAgent: headers().get('user-agent') || undefined,
-      ipAddress: request.ip || headers().get('x-forwarded-for') || undefined,
+      details: {
+        oldValue: existingSetting[0].value,
+        newValue: null,
+      },
+      request,
     })
 
     return NextResponse.json({

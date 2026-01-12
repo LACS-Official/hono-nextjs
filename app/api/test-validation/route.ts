@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
     console.error('获取登录日志失败:', error)
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { success: false, error: '参数验证失败', details: error.errors },
+        { success: false, error: '参数验证失败', details: error.issues },
         { status: 400 }
       )
     }

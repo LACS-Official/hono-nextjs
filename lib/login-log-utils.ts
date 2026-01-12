@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid'
 import { UAParser } from 'ua-parser-js'
 import { NextRequest } from 'next/server'
+import { eq, and, desc, inArray, count, sql } from 'drizzle-orm'
 import { systemSettingsDb, loginLogs } from './system-settings-db'
 
 /**
@@ -11,7 +12,7 @@ import { systemSettingsDb, loginLogs } from './system-settings-db'
 export const parseUserAgent = (userAgent: string) => {
   const parser = new UAParser(userAgent)
   const result = parser.getResult()
-  
+
   return {
     device: {
       model: result.device.model || 'Unknown',
@@ -54,12 +55,12 @@ export const getClientIp = (request: NextRequest): string => {
   if (forwardedFor) {
     return forwardedFor.split(',')[0].trim()
   }
-  
+
   const realIp = request.headers.get('x-real-ip')
   if (realIp) {
     return realIp
   }
-  
+
   return request.ip || '127.0.0.1'
 }
 
@@ -75,8 +76,7 @@ export const getIpLocation = async (ip: string): Promise<IpLocation> => {
     }
 
     const response = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,regionName,city,isp,org,as,timezone`, {
-      method: 'GET',
-      timeout: 5000
+      method: 'GET'
     })
 
     if (!response.ok) {
@@ -123,7 +123,7 @@ export const getNetworkInfo = (request: NextRequest) => {
   // 从请求头中获取网络信息
   const acceptLanguage = request.headers.get('accept-language') || 'Unknown'
   const referer = request.headers.get('referer') || 'Direct'
-  
+
   return {
     language: acceptLanguage,
     referer,
@@ -165,7 +165,7 @@ export const recordLoginLog = async (
     const ipAddress = getClientIp(request)
     const deviceInfo = parseUserAgent(userAgent)
     const networkInfo = getNetworkInfo(request)
-    
+
     // 创建登录日志记录
     await systemSettingsDb.insert(loginLogs).values({
       id: uuidv4(),
@@ -179,7 +179,7 @@ export const recordLoginLog = async (
       sessionId,
       isActive: true
     })
-    
+
     console.log(`登录日志已记录: 用户 ${email}, IP ${maskIpAddress(ipAddress)}`)
   } catch (error) {
     console.error('记录登录日志失败:', error)
@@ -196,8 +196,8 @@ export const terminateSession = async (sessionId: string) => {
     await systemSettingsDb
       .update(loginLogs)
       .set({ isActive: false })
-      .where(loginLogs.sessionId.equals(sessionId))
-      
+      .where(eq(loginLogs.sessionId, sessionId))
+
     console.log(`会话已终止: ${sessionId}`)
     return { success: true }
   } catch (error) {
@@ -217,10 +217,10 @@ export const getActiveSessions = async (userId: string, limit: number = 10) => {
     const sessions = await systemSettingsDb
       .select()
       .from(loginLogs)
-      .where(loginLogs.userId.equals(userId).and(loginLogs.isActive.equals(true)))
-      .orderBy(loginLogs.loginTime.desc())
+      .where(and(eq(loginLogs.userId, userId), eq(loginLogs.isActive, true)))
+      .orderBy(desc(loginLogs.loginTime))
       .limit(limit)
-    
+
     return sessions
   } catch (error) {
     console.error('获取活跃会话失败:', error)
@@ -238,9 +238,9 @@ export const getActiveSessionsForUsers = async (userIds: string[]) => {
     const sessions = await systemSettingsDb
       .select()
       .from(loginLogs)
-      .where(loginLogs.userId.in(userIds).and(loginLogs.isActive.equals(true)))
-      .orderBy(loginLogs.loginTime.desc())
-    
+      .where(and(inArray(loginLogs.userId, userIds), eq(loginLogs.isActive, true)))
+      .orderBy(desc(loginLogs.loginTime))
+
     return sessions
   } catch (error) {
     console.error('批量获取活跃会话失败:', error)
@@ -261,17 +261,17 @@ export const getUserLoginHistory = async (userId: string, limit: number = 20, of
       systemSettingsDb
         .select()
         .from(loginLogs)
-        .where(loginLogs.userId.equals(userId))
-        .orderBy(loginLogs.loginTime.desc())
+        .where(eq(loginLogs.userId, userId))
+        .orderBy(desc(loginLogs.loginTime))
         .limit(limit)
         .offset(offset),
       systemSettingsDb
-        .select({ count: loginLogs.id.count() })
+        .select({ count: sql<number>`count(*)`.as('count') })
         .from(loginLogs)
-        .where(loginLogs.userId.equals(userId))
+        .where(eq(loginLogs.userId, userId))
         .then(result => result[0]?.count || 0)
     ])
-    
+
     return { logs, totalCount }
   } catch (error) {
     console.error('获取用户登录历史记录失败:', error)

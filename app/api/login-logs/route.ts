@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
       message: '登录日志记录成功',
       data: newLog
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error('记录登录日志失败:', error)
     return NextResponse.json(
       { success: false, error: '记录登录日志失败: ' + error.message },
@@ -90,11 +90,11 @@ export async function DELETE(request: NextRequest) {
       
       const deleteResult = await systemSettingsDb
         .delete(loginLogs)
-        .where(eq(loginLogs.id, id))
+        .where(eq(loginLogs.id, id)) as any
       
       console.log('删除结果:', deleteResult)
       
-      if (deleteResult[0]?.affectedRows === 0) {
+      if (deleteResult?.[0]?.affectedRows === 0) {
         return NextResponse.json(
           { success: false, error: '未找到对应的登录日志' },
           { status: 404 }
@@ -115,11 +115,11 @@ export async function DELETE(request: NextRequest) {
       const updateResult = await systemSettingsDb
         .update(loginLogs)
         .set({ isActive: false })
-        .where(eq(loginLogs.sessionId, sessionId))
+        .where(eq(loginLogs.sessionId, sessionId)) as any
       
       console.log('更新结果:', updateResult)
       
-      if (updateResult[0]?.affectedRows === 0) {
+      if (updateResult?.[0]?.affectedRows === 0) {
         return NextResponse.json(
           { success: false, error: '未找到对应的登录日志' },
           { status: 404 }
@@ -138,7 +138,7 @@ export async function DELETE(request: NextRequest) {
       { success: false, error: '缺少id或sessionId参数' },
       { status: 400 }
     )
-  } catch (error) {
+  } catch (error: any) {
     console.error('操作失败:', error)
     return NextResponse.json(
       { success: false, error: '操作失败: ' + error.message },
@@ -193,7 +193,7 @@ export async function GET(request: NextRequest) {
     const conditions = []
 
     if (searchParams.get('userId')) {
-      conditions.push(eq(loginLogs.userId, searchParams.get('userId')))
+      conditions.push(eq(loginLogs.userId, searchParams.get('userId')!))
     }
 
     if (searchParams.get('email')) {
@@ -205,11 +205,11 @@ export async function GET(request: NextRequest) {
     }
 
     if (searchParams.get('startDate')) {
-      conditions.push(gte(loginLogs.loginTime, new Date(searchParams.get('startDate'))))
+      conditions.push(gte(loginLogs.loginTime, new Date(searchParams.get('startDate')!)))
     }
 
     if (searchParams.get('endDate')) {
-      conditions.push(lte(loginLogs.loginTime, new Date(searchParams.get('endDate'))))
+      conditions.push(lte(loginLogs.loginTime, new Date(searchParams.get('endDate')!)))
     }
 
     if (isActiveParam === 'true' || isActiveParam === 'false') {

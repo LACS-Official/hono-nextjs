@@ -81,6 +81,7 @@ interface Pagination {
 
 interface LoginLogsResponse {
   success: boolean
+  error?: string
   data: {
     logs: LoginLog[]
     pagination: Pagination
@@ -211,18 +212,18 @@ const LoginLogsPage: React.FC = () => {
     setLoading(true)
     try {
       const url = new URL('/api/login-logs', window.location.origin)
-      
+
       url.searchParams.set('page', page.toString())
       url.searchParams.set('limit', limit.toString())
-      
+
       if (filters?.email) {
         url.searchParams.set('email', filters.email)
       }
-      
+
       if (filters?.ipAddress) {
         url.searchParams.set('ipAddress', filters.ipAddress)
       }
-      
+
       if (filters?.dateRange) {
         if (filters.dateRange[0]) {
           url.searchParams.set('startDate', filters.dateRange[0].startOf('day').toISOString())
@@ -231,21 +232,21 @@ const LoginLogsPage: React.FC = () => {
           url.searchParams.set('endDate', filters.dateRange[1].endOf('day').toISOString())
         }
       }
-      
+
       if (filters?.isActive !== undefined) {
         url.searchParams.set('isActive', filters.isActive.toString())
       }
-      
+
       const response = await fetch(url.toString())
-      
+
       if (!response.ok) {
         console.error('响应状态码:', response.status, response.statusText)
         throw new Error(`HTTP error! status: ${response.status}`)
       }
-      
+
       const data: LoginLogsResponse = await response.json()
       console.log('API响应数据:', data)
-      
+
       if (data.success) {
         setLoginLogs(data.data.logs)
         setPagination(data.data.pagination)
@@ -253,7 +254,7 @@ const LoginLogsPage: React.FC = () => {
         console.error('API返回错误:', data.error)
         message.error(`获取登录日志失败: ${data.error || '未知错误'}`)
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('获取登录日志失败:', error)
       message.error(`获取登录日志失败: ${error.message || '网络错误'}`)
     } finally {
@@ -273,7 +274,7 @@ const LoginLogsPage: React.FC = () => {
     if (processedFilters.dateRange === null) {
       delete processedFilters.dateRange
     }
-    
+
     const updatedFilters = { ...filterParams, ...processedFilters }
     setFilterParams(updatedFilters)
     fetchLoginLogs(1, pagination.limit, updatedFilters)
@@ -294,7 +295,7 @@ const LoginLogsPage: React.FC = () => {
       const response = await fetch(`/api/login-logs/logout/${logoutSessionId}`, {
         method: 'POST'
       })
-      
+
       const data = await response.json()
       if (data.success) {
         message.success('强制登出成功')
@@ -302,7 +303,7 @@ const LoginLogsPage: React.FC = () => {
       } else {
         message.error(data.error || '强制登出失败')
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('强制登出失败:', error)
       message.error('强制登出失败')
     } finally {
@@ -320,7 +321,7 @@ const LoginLogsPage: React.FC = () => {
   return (
     <div style={{ padding: '24px' }}>
       <Title level={2}>登录日志管理</Title>
-      
+
       {/* 筛选栏 */}
       <Card
         size="small"
@@ -386,7 +387,7 @@ const LoginLogsPage: React.FC = () => {
           </Col>
         </Row>
       </Card>
-      
+
       {/* 登录日志表格 */}
       <Card>
         <Table
@@ -405,7 +406,7 @@ const LoginLogsPage: React.FC = () => {
           }}
         />
       </Card>
-      
+
       {/* 登录详情模态框 */}
       <Modal
         title="登录详情"
@@ -423,25 +424,25 @@ const LoginLogsPage: React.FC = () => {
             <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 12 }}>
               <Text strong>登录账号：</Text>
               <Text>{selectedLog.email}</Text>
-              
+
               <Text strong>用户ID：</Text>
               <Text code>{selectedLog.userId}</Text>
-              
+
               <Text strong>登录IP：</Text>
               <Text>{selectedLog.ipAddress}</Text>
-              
+
               <Text strong>登录时间：</Text>
               <Text>{dayjs(selectedLog.loginTime).format('YYYY-MM-DD HH:mm:ss')}</Text>
-              
+
               <Text strong>会话ID：</Text>
               <Text code>{selectedLog.sessionId}</Text>
-              
+
               <Text strong>会话状态：</Text>
               <Tag color={selectedLog.isActive ? 'green' : 'red'}>
                 {selectedLog.isActive ? '活跃' : '已登出'}
               </Tag>
             </div>
-            
+
             <div>
               <Text strong style={{ display: 'block', marginBottom: 8 }}>设备信息：</Text>
               <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr 120px 1fr', gap: 12, padding: '12px', backgroundColor: '#fafafa', borderRadius: 6 }}>
@@ -449,19 +450,19 @@ const LoginLogsPage: React.FC = () => {
                 <Text>{selectedLog.deviceInfo.device.type || 'Unknown'}</Text>
                 <Text strong>设备型号：</Text>
                 <Text>{selectedLog.deviceInfo.device.model || 'Unknown'}</Text>
-                
+
                 <Text strong>设备厂商：</Text>
                 <Text>{selectedLog.deviceInfo.device.vendor || 'Unknown'}</Text>
                 <Text strong>操作系统：</Text>
                 <Text>{selectedLog.deviceInfo.os.name} {selectedLog.deviceInfo.os.version}</Text>
-                
+
                 <Text strong>浏览器：</Text>
                 <Text>{selectedLog.deviceInfo.browser.name} {selectedLog.deviceInfo.browser.version}</Text>
                 <Text strong>渲染引擎：</Text>
                 <Text>{selectedLog.deviceInfo.engine.name} {selectedLog.deviceInfo.engine.version}</Text>
               </div>
             </div>
-            
+
             <div>
               <Text strong style={{ display: 'block', marginBottom: 8 }}>网络信息：</Text>
               <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr 120px 1fr', gap: 12, padding: '12px', backgroundColor: '#fafafa', borderRadius: 6 }}>
@@ -469,14 +470,14 @@ const LoginLogsPage: React.FC = () => {
                 <Text>{selectedLog.networkInfo.language || 'Unknown'}</Text>
                 <Text strong>来源：</Text>
                 <Text>{selectedLog.networkInfo.referer || 'Direct'}</Text>
-                
+
                 <Text strong>网络类型：</Text>
                 <Text>{selectedLog.networkInfo.networkType || 'Unknown'}</Text>
                 <Text strong>运营商：</Text>
                 <Text>{selectedLog.networkInfo.carrier || 'Unknown'}</Text>
               </div>
             </div>
-            
+
             <div>
               <Text strong style={{ display: 'block', marginBottom: 8 }}>原始User-Agent：</Text>
               <div style={{ padding: '12px', backgroundColor: '#fafafa', borderRadius: 6, fontFamily: 'monospace', fontSize: '12px', overflow: 'auto' }}>
@@ -486,7 +487,7 @@ const LoginLogsPage: React.FC = () => {
           </div>
         )}
       </Modal>
-      
+
       {/* 强制登出确认模态框 */}
       <Modal
         title="确认强制登出"

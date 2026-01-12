@@ -23,12 +23,12 @@ export const useLoginLog = () => {
       // Supabase会话ID可能不是直接通过session.id获取
       // 尝试使用access_token作为会话标识符
       // 注意：sessionId字段在数据库中限制为255字符，所以需要截取
-      const sessionId = (session.access_token || session.id || 'unknown').substring(0, 255)
+      const sessionId = (session.access_token || 'unknown').substring(0, 255)
 
       // 在客户端获取真实公网IP
       let clientIp = '未知'
       try {
-        const ipResponse = await fetch('https://api.ipify.org?format=json', { timeout: 5000 })
+        const ipResponse = await fetch('https://api.ipify.org?format=json')
         if (ipResponse.ok) {
           const ipData = await ipResponse.json()
           clientIp = ipData.ip
@@ -37,7 +37,7 @@ export const useLoginLog = () => {
         console.warn('获取客户端IP失败:', ipError)
         // 备用方案：使用其他IP查询服务
         try {
-          const backupResponse = await fetch('https://ipinfo.io/json', { timeout: 5000 })
+          const backupResponse = await fetch('https://ipinfo.io/json')
           if (backupResponse.ok) {
             const backupData = await backupResponse.json()
             clientIp = backupData.ip

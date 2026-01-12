@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
       message: '数据库连接正常',
       data: result
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error('数据库连接测试失败:', error)
     console.error('错误详情:', error.stack)
     

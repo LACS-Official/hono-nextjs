@@ -105,7 +105,7 @@ export async function GET(request: NextRequest) {
         },
       },
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error('获取系统设置失败:', error)
     return NextResponse.json(
       { success: false, error: '获取系统设置失败', details: error.message },
@@ -166,7 +166,7 @@ export async function POST(request: NextRequest) {
       success: true,
       data: result.rows[0],
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error('创建系统设置失败:', error)
     if (error instanceof z.ZodError) {
       return NextResponse.json(

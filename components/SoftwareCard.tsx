@@ -10,7 +10,7 @@ import {
   CloseCircleOutlined,
   BarChartOutlined 
 } from '@ant-design/icons'
-import type { Software } from '../page'
+import type { Software } from '../utils/software-api'
 
 const { Text, Paragraph } = Typography
 

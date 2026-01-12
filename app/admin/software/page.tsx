@@ -46,41 +46,19 @@ import { useRouter } from 'next/navigation'
 import Navigation from '@/components/Navigation'
 import ResponsiveSoftwareGrid from '@/components/ResponsiveSoftwareGrid'
 import ViewModeDetector from '@/components/ViewModeDetector'
-import { 
-  TableSkeleton, 
-  CardSkeleton, 
-  StatsCardSkeleton 
+import {
+  TableSkeleton,
+  CardSkeleton,
+  StatsCardSkeleton
 } from '@/components/SkeletonScreen'
 import ErrorBoundaryWrapper from '@/components/ErrorBoundaryWrapper'
 import type { ColumnsType } from 'antd/es/table'
+import type { Software } from '@/utils/software-api'
 
 const { Search } = Input
 const { Option } = Select
 const { Title, Text } = Typography
 const { Content } = Layout
-
-interface Software {
-  id: number
-  name: string
-  nameEn?: string
-  description?: string
-  descriptionEn?: string
-  currentVersionId?: number | null
-  currentVersion: string
-  latestVersion?: string
-  officialWebsite?: string
-  category?: string
-  tags?: string[]
-  systemRequirements?: any
-  openname?: string
-  filetype?: string
-  viewCount: number
-  isActive: boolean
-  sortOrder: number
-  metadata?: any
-  createdAt: string
-  updatedAt: string
-}
 
 interface SoftwareStats {
   total: number
@@ -244,7 +222,7 @@ export default function SoftwareManagement() {
     }
 
     try {
-      const promises = selectedRowKeys.map(id => 
+      const promises = selectedRowKeys.map(id =>
         fetch(`${API_BASE_URL}/software/id/${id}`, {
           method: 'DELETE',
           headers: {
@@ -348,11 +326,11 @@ export default function SoftwareManagement() {
       render: (description: string) => (
         description ? (
           <Tooltip placement="topLeft" title={description}>
-            <div style={{ 
-              maxWidth: 200, 
-              overflow: 'hidden', 
-              textOverflow: 'ellipsis', 
-              whiteSpace: 'nowrap' 
+            <div style={{
+              maxWidth: 200,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
             }}>
               {description}
             </div>
@@ -536,236 +514,236 @@ export default function SoftwareManagement() {
       <Layout style={{ minHeight: '100vh' }}>
         <Navigation />
 
-      <Content style={{ padding: '24px', marginTop: '64px', background: '#f5f5f5' }}>
-        {/* 面包屑导航 */}
-        <Breadcrumb style={{ marginBottom: '24px' }}>
-          <Breadcrumb.Item>
-            <Link href="/admin">
-              <HomeOutlined /> 管理后台
-            </Link>
-          </Breadcrumb.Item>
-          <Breadcrumb.Item>
-            <AppstoreOutlined /> 软件管理
-          </Breadcrumb.Item>
-        </Breadcrumb>
+        <Content style={{ padding: '24px', marginTop: '64px', background: '#f5f5f5' }}>
+          {/* 面包屑导航 */}
+          <Breadcrumb style={{ marginBottom: '24px' }}>
+            <Breadcrumb.Item>
+              <Link href="/admin">
+                <HomeOutlined /> 管理后台
+              </Link>
+            </Breadcrumb.Item>
+            <Breadcrumb.Item>
+              <AppstoreOutlined /> 软件管理
+            </Breadcrumb.Item>
+          </Breadcrumb>
 
-        {/* 页面标题 */}
-        <div style={{ marginBottom: '24px' }}>
-          <Title level={2} style={{ margin: 0 }}>
-            软件管理
-          </Title>
-          <Text type="secondary">
-            管理系统中的所有软件信息，包括版本控制和下载链接管理
-          </Text>
-        </div>
+          {/* 页面标题 */}
+          <div style={{ marginBottom: '24px' }}>
+            <Title level={2} style={{ margin: 0 }}>
+              软件管理
+            </Title>
+            <Text type="secondary">
+              管理系统中的所有软件信息，包括版本控制和下载链接管理
+            </Text>
+          </div>
 
-        {/* 统计卡片 */}
-        {loading ? (
-          <StatsCardSkeleton count={4} />
-        ) : stats && (
-          <Row gutter={16} style={{ marginBottom: '24px' }}>
-            <Col xs={24} sm={12} lg={6}>
-              <Card>
-                <Statistic
-                  title="软件总数"
-                  value={stats.total}
-                  prefix={<AppstoreOutlined />}
-                  valueStyle={{ color: '#1890ff' }}
-                />
-              </Card>
-            </Col>
-            <Col xs={24} sm={12} lg={6}>
-              <Card>
-                <Statistic
-                  title="启用软件"
-                  value={stats.active}
-                  prefix={<CheckCircleOutlined />}
-                  valueStyle={{ color: '#52c41a' }}
-                />
-              </Card>
-            </Col>
-            <Col xs={24} sm={12} lg={6}>
-              <Card>
-                <Statistic
-                  title="总访问量"
-                  value={stats.totalViews}
-                  prefix={<EyeOutlined />}
-                  valueStyle={{ color: '#fa8c16' }}
-                />
-              </Card>
-            </Col>
-            <Col xs={24} sm={12} lg={6}>
-              <Card>
-                <Statistic
-                  title="平均访问量"
-                  value={stats.averageViews}
-                  prefix={<BarChartOutlined />}
-                  valueStyle={{ color: '#722ed1' }}
-                />
-              </Card>
-            </Col>
-          </Row>
-        )}
-
-        {/* 操作栏 */}
-        <Card style={{ marginBottom: '24px' }}>
-          <Row justify="space-between" align="middle" gutter={[16, 16]}>
-            <Col xs={24} lg={16}>
-              <Space wrap>
-                <Search
-                  placeholder="搜索软件名称或描述"
-                  allowClear
-                  onSearch={handleSearch}
-                  style={{ width: 250 }}
-                  enterButton={<SearchOutlined />}
-                />
-                <Select
-                  placeholder="选择分类"
-                  allowClear
-                  style={{ width: 150 }}
-                  onChange={(value) => handleFilterChange('category', value || '')}
-                >
-                  <Option value="开发工具">开发工具</Option>
-                  <Option value="浏览器">浏览器</Option>
-                  <Option value="图像处理">图像处理</Option>
-                  <Option value="社交通讯">社交通讯</Option>
-                  <Option value="办公软件">办公软件</Option>
-                  <Option value="系统工具">系统工具</Option>
-                  <Option value="多媒体">多媒体</Option>
-                  <Option value="游戏">游戏</Option>
-                </Select>
-                <Select
-                  placeholder="选择状态"
-                  allowClear
-                  style={{ width: 120 }}
-                  onChange={(value) => handleFilterChange('isActive', value || '')}
-                >
-                  <Option value="true">启用</Option>
-                  <Option value="false">禁用</Option>
-                </Select>
-              </Space>
-            </Col>
-            <Col xs={24} lg={8}>
-              <Space wrap style={{ width: '100%', justifyContent: 'flex-end' }}>
-                {/* 视图切换按钮 */}
-                <Button.Group>
-                  <Button 
-                    icon={<AppstoreOutlined />} 
-                    type={viewMode === 'card' ? 'primary' : 'default'}
-                    onClick={() => setViewMode('card')}
-                    title="卡片视图"
+          {/* 统计卡片 */}
+          {loading ? (
+            <StatsCardSkeleton count={4} />
+          ) : stats && (
+            <Row gutter={16} style={{ marginBottom: '24px' }}>
+              <Col xs={24} sm={12} lg={6}>
+                <Card>
+                  <Statistic
+                    title="软件总数"
+                    value={stats.total}
+                    prefix={<AppstoreOutlined />}
+                    valueStyle={{ color: '#1890ff' }}
                   />
-                  <Button 
-                    icon={<BarChartOutlined />} 
-                    type={viewMode === 'table' ? 'primary' : 'default'}
-                    onClick={() => setViewMode('table')}
-                    title="表格视图"
+                </Card>
+              </Col>
+              <Col xs={24} sm={12} lg={6}>
+                <Card>
+                  <Statistic
+                    title="启用软件"
+                    value={stats.active}
+                    prefix={<CheckCircleOutlined />}
+                    valueStyle={{ color: '#52c41a' }}
                   />
-                </Button.Group>
-                
-                {selectedRowKeys.length > 0 && (
-                  <Popconfirm
-                    title={`确定要删除选中的 ${selectedRowKeys.length} 个软件吗？`}
-                    onConfirm={handleBatchDelete}
-                    okText="确定"
-                    cancelText="取消"
+                </Card>
+              </Col>
+              <Col xs={24} sm={12} lg={6}>
+                <Card>
+                  <Statistic
+                    title="总访问量"
+                    value={stats.totalViews}
+                    prefix={<EyeOutlined />}
+                    valueStyle={{ color: '#fa8c16' }}
+                  />
+                </Card>
+              </Col>
+              <Col xs={24} sm={12} lg={6}>
+                <Card>
+                  <Statistic
+                    title="平均访问量"
+                    value={stats.averageViews}
+                    prefix={<BarChartOutlined />}
+                    valueStyle={{ color: '#722ed1' }}
+                  />
+                </Card>
+              </Col>
+            </Row>
+          )}
+
+          {/* 操作栏 */}
+          <Card style={{ marginBottom: '24px' }}>
+            <Row justify="space-between" align="middle" gutter={[16, 16]}>
+              <Col xs={24} lg={16}>
+                <Space wrap>
+                  <Search
+                    placeholder="搜索软件名称或描述"
+                    allowClear
+                    onSearch={handleSearch}
+                    style={{ width: 250 }}
+                    enterButton={<SearchOutlined />}
+                  />
+                  <Select
+                    placeholder="选择分类"
+                    allowClear
+                    style={{ width: 150 }}
+                    onChange={(value) => handleFilterChange('category', value || '')}
                   >
-                    <Button danger icon={<DeleteOutlined />}>
-                      批量删除 ({selectedRowKeys.length})
-                    </Button>
-                  </Popconfirm>
-                )}
-                <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
-                  刷新
-                </Button>
-                <Button icon={<ExportOutlined />} onClick={handleExport}>
-                  导出
-                </Button>
-                <Link href="/admin/software/new">
-                  <Button type="primary" icon={<PlusOutlined />}>
-                    新增软件
-                  </Button>
-                </Link>
-              </Space>
-            </Col>
-          </Row>
-        </Card>
+                    <Option value="开发工具">开发工具</Option>
+                    <Option value="浏览器">浏览器</Option>
+                    <Option value="图像处理">图像处理</Option>
+                    <Option value="社交通讯">社交通讯</Option>
+                    <Option value="办公软件">办公软件</Option>
+                    <Option value="系统工具">系统工具</Option>
+                    <Option value="多媒体">多媒体</Option>
+                    <Option value="游戏">游戏</Option>
+                  </Select>
+                  <Select
+                    placeholder="选择状态"
+                    allowClear
+                    style={{ width: 120 }}
+                    onChange={(value) => handleFilterChange('isActive', value || '')}
+                  >
+                    <Option value="true">启用</Option>
+                    <Option value="false">禁用</Option>
+                  </Select>
+                </Space>
+              </Col>
+              <Col xs={24} lg={8}>
+                <Space wrap style={{ width: '100%', justifyContent: 'flex-end' }}>
+                  {/* 视图切换按钮 */}
+                  <Button.Group>
+                    <Button
+                      icon={<AppstoreOutlined />}
+                      type={viewMode === 'card' ? 'primary' : 'default'}
+                      onClick={() => setViewMode('card')}
+                      title="卡片视图"
+                    />
+                    <Button
+                      icon={<BarChartOutlined />}
+                      type={viewMode === 'table' ? 'primary' : 'default'}
+                      onClick={() => setViewMode('table')}
+                      title="表格视图"
+                    />
+                  </Button.Group>
 
-        {/* 软件列表 - 根据视图模式显示不同布局 */}
-        <Card>
-          {selectedRowKeys.length > 0 && viewMode === 'table' && (
-            <Alert
-              message={`已选择 ${selectedRowKeys.length} 个软件`}
-              type="info"
-              showIcon
-              style={{ marginBottom: 16 }}
-              action={
-                <Button size="small" onClick={() => setSelectedRowKeys([])}>
-                  清除选择
-                </Button>
-              }
-            />
-          )}
-
-          {/* 表格视图 */}
-          {viewMode === 'table' && (
-            loading ? (
-              <TableSkeleton rows={5} columns={8} />
-            ) : (
-              <Table
-                columns={columns}
-                dataSource={software}
-                rowKey="id"
-                loading={false}
-                rowSelection={rowSelection}
-                pagination={{
-                  ...pagination,
-                  showSizeChanger: true,
-                  showQuickJumper: true,
-                  showTotal: (total, range) =>
-                    `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
-                  onChange: (page, pageSize) => {
-                    fetchSoftware(page, pageSize)
-                  },
-                  onShowSizeChange: (current, size) => {
-                    fetchSoftware(1, size)
-                  }
-                }}
-                scroll={{ x: 1400 }}
-                locale={{
-                  emptyText: (
-                    <Empty
-                      image={Empty.PRESENTED_IMAGE_SIMPLE}
-                      description="暂无软件数据"
+                  {selectedRowKeys.length > 0 && (
+                    <Popconfirm
+                      title={`确定要删除选中的 ${selectedRowKeys.length} 个软件吗？`}
+                      onConfirm={handleBatchDelete}
+                      okText="确定"
+                      cancelText="取消"
                     >
-                      <Link href="/admin/software/new">
-                        <Button type="primary" icon={<PlusOutlined />}>
-                          立即添加
-                        </Button>
-                      </Link>
-                    </Empty>
-                  )
-                }}
-              />
-            )
-          )}
+                      <Button danger icon={<DeleteOutlined />}>
+                        批量删除 ({selectedRowKeys.length})
+                      </Button>
+                    </Popconfirm>
+                  )}
+                  <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
+                    刷新
+                  </Button>
+                  <Button icon={<ExportOutlined />} onClick={handleExport}>
+                    导出
+                  </Button>
+                  <Link href="/admin/software/new">
+                    <Button type="primary" icon={<PlusOutlined />}>
+                      新增软件
+                    </Button>
+                  </Link>
+                </Space>
+              </Col>
+            </Row>
+          </Card>
 
-          {/* 卡片视图 */}
-          {viewMode === 'card' && (
-            loading ? (
-              <CardSkeleton count={6} />
-            ) : (
-              <ResponsiveSoftwareGrid
-                software={software}
-                loading={loading}
-                onEdit={handleSoftwareAction.edit}
-                onDelete={handleSoftwareAction.delete}
-                onView={handleSoftwareAction.view}
-                onViewStats={handleSoftwareAction.viewStats}
+          {/* 软件列表 - 根据视图模式显示不同布局 */}
+          <Card>
+            {selectedRowKeys.length > 0 && viewMode === 'table' && (
+              <Alert
+                message={`已选择 ${selectedRowKeys.length} 个软件`}
+                type="info"
+                showIcon
+                style={{ marginBottom: 16 }}
+                action={
+                  <Button size="small" onClick={() => setSelectedRowKeys([])}>
+                    清除选择
+                  </Button>
+                }
               />
-            )
-          )}
-        </Card>
+            )}
+
+            {/* 表格视图 */}
+            {viewMode === 'table' && (
+              loading ? (
+                <TableSkeleton rows={5} columns={8} />
+              ) : (
+                <Table
+                  columns={columns}
+                  dataSource={software}
+                  rowKey="id"
+                  loading={false}
+                  rowSelection={rowSelection}
+                  pagination={{
+                    ...pagination,
+                    showSizeChanger: true,
+                    showQuickJumper: true,
+                    showTotal: (total, range) =>
+                      `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
+                    onChange: (page, pageSize) => {
+                      fetchSoftware(page, pageSize)
+                    },
+                    onShowSizeChange: (current, size) => {
+                      fetchSoftware(1, size)
+                    }
+                  }}
+                  scroll={{ x: 1400 }}
+                  locale={{
+                    emptyText: (
+                      <Empty
+                        image={Empty.PRESENTED_IMAGE_SIMPLE}
+                        description="暂无软件数据"
+                      >
+                        <Link href="/admin/software/new">
+                          <Button type="primary" icon={<PlusOutlined />}>
+                            立即添加
+                          </Button>
+                        </Link>
+                      </Empty>
+                    )
+                  }}
+                />
+              )
+            )}
+
+            {/* 卡片视图 */}
+            {viewMode === 'card' && (
+              loading ? (
+                <CardSkeleton count={6} />
+              ) : (
+                <ResponsiveSoftwareGrid
+                  software={software}
+                  loading={loading}
+                  onEdit={handleSoftwareAction.edit}
+                  onDelete={handleSoftwareAction.delete}
+                  onView={handleSoftwareAction.view}
+                  onViewStats={handleSoftwareAction.viewStats}
+                />
+              )
+            )}
+          </Card>
         </Content>
       </Layout>
     </ErrorBoundaryWrapper>

@@ -5,11 +5,13 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import { Button, Input, Form, message } from 'antd';
 import { UserOutlined, LockOutlined, EyeInvisibleOutlined, EyeTwoTone } from '@ant-design/icons';
+import { useLoginLog } from '@/hooks/useLoginLog';
 
 export default function LoginForm() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const supabase = createClient();
+  const { recordLoginLog } = useLoginLog();
 
   const onFinish = async (values: { email: string; password: string }) => {
     setLoading(true);
@@ -24,6 +26,9 @@ export default function LoginForm() {
         return;
       }
 
+      // 记录登录日志
+      await recordLoginLog();
+      
       message.success('登录成功');
       router.push('/admin');
     } catch (error) {

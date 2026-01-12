@@ -115,6 +115,30 @@ async function createTables() {
       )
     `
     
+    // 创建登录日志表
+    await sql`
+      CREATE TABLE IF NOT EXISTS "login_logs" (
+        "id" varchar(255) PRIMARY KEY NOT NULL,
+        "user_id" varchar(255) NOT NULL,
+        "email" varchar(255) NOT NULL,
+        "ip_address" varchar(45) NOT NULL,
+        "user_agent" text NOT NULL,
+        "device_info" jsonb NOT NULL,
+        "network_info" jsonb NOT NULL,
+        "login_time" timestamp DEFAULT now() NOT NULL,
+        "session_id" varchar(255) NOT NULL,
+        "is_active" boolean DEFAULT true NOT NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL
+      )
+    `
+    
+    // 创建索引优化查询性能
+    await sql`CREATE INDEX IF NOT EXISTS "login_logs_user_id_idx" ON "login_logs" ("user_id")`
+    await sql`CREATE INDEX IF NOT EXISTS "login_logs_login_time_idx" ON "login_logs" ("login_time" DESC)`
+    await sql`CREATE INDEX IF NOT EXISTS "login_logs_ip_address_idx" ON "login_logs" ("ip_address")`
+    await sql`CREATE INDEX IF NOT EXISTS "login_logs_session_id_idx" ON "login_logs" ("session_id")`
+    await sql`CREATE INDEX IF NOT EXISTS "login_logs_is_active_idx" ON "login_logs" ("is_active")`
+    
     console.log('系统设置数据库表创建成功!')
   } catch (error) {
     console.error('创建系统设置数据库表失败:', error)

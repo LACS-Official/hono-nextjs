@@ -61,6 +61,12 @@ export function isAuthorizedAdmin(user: User): boolean {
     return false
   }
 
+  // 检查用户角色是否为管理员
+  if (user.role === 'admin') {
+    return true
+  }
+
+  // 如果没有角色信息，则检查邮箱是否在允许的管理员列表中
   const allowedEmails = process.env.ALLOWED_ADMIN_EMAILS?.split(',') || ['2935278133@qq.com']
   const allowedEmailsTrimmed = allowedEmails.map(email => email.trim())
 

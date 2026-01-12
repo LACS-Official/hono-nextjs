@@ -101,6 +101,28 @@ export const systemNotificationConfig = pgTable('system_notification_config', {
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 })
 
+// 登录日志表
+export const loginLogs = pgTable('login_logs', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  userId: varchar('user_id', { length: 255 }).notNull(), // 用户ID
+  email: varchar('email', { length: 255 }).notNull(), // 用户邮箱
+  ipAddress: varchar('ip_address', { length: 45 }).notNull(), // 登录IP地址
+  userAgent: text('user_agent').notNull(), // 用户代理
+  deviceInfo: jsonb('device_info').notNull(), // 设备信息（JSON格式）
+  networkInfo: jsonb('network_info').notNull(), // 网络信息（JSON格式）
+  loginTime: timestamp('login_time').notNull().defaultNow(), // 登录时间
+  sessionId: varchar('session_id', { length: 255 }).notNull(), // 会话ID
+  isActive: boolean('is_active').notNull().default(true), // 会话是否活跃
+  createdAt: timestamp('created_at').notNull().defaultNow(), // 创建时间
+}, (table) => ({
+  // 创建索引优化查询性能
+  userIdIdx: index('login_logs_user_id_idx').on(table.userId),
+  loginTimeIdx: index('login_logs_login_time_idx').on(table.loginTime.desc()),
+  ipAddressIdx: index('login_logs_ip_address_idx').on(table.ipAddress),
+  sessionIdIdx: index('login_logs_session_id_idx').on(table.sessionId),
+  isActiveIdx: index('login_logs_is_active_idx').on(table.isActive),
+}))
+
 // 定义关系
 export const systemSettingsRelations = relations(systemSettings, ({ many }) => ({
   auditLogs: many(systemSettingsAuditLog),
@@ -126,3 +148,5 @@ export type SystemBackupConfig = typeof systemBackupConfig.$inferSelect
 export type NewSystemBackupConfig = typeof systemBackupConfig.$inferInsert
 export type SystemNotificationConfig = typeof systemNotificationConfig.$inferSelect
 export type NewSystemNotificationConfig = typeof systemNotificationConfig.$inferInsert
+export type LoginLog = typeof loginLogs.$inferSelect
+export type NewLoginLog = typeof loginLogs.$inferInsert

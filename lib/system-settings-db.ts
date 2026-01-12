@@ -28,6 +28,7 @@ export const {
   systemLogConfig,
   systemBackupConfig,
   systemNotificationConfig,
+  loginLogs,
 } = schema
 
 // 导出类型
@@ -44,4 +45,6 @@ export type {
   NewSystemBackupConfig,
   SystemNotificationConfig,
   NewSystemNotificationConfig,
+  LoginLog,
+  NewLoginLog,
 } from './system-settings-schema'

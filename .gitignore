@@ -133,7 +133,6 @@ SECURITY.md
 *.tmp
 *.bak
 *.backup
-*~
 
 # Development and testing
 /debug/
@@ -147,3 +146,4 @@ SECURITY.md
 tests/
 .augment/
 script/
+scripts/

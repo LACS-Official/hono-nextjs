@@ -1,44 +1,61 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import Link from 'next/link'
+import {
+  Trophy,
+  Eye,
+  TrendingUp,
+  AppWindow,
+  Search,
+  RefreshCw,
+  Crown,
+  Medal,
+  Flame
+} from 'lucide-react'
+
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb"
 import {
   Table,
-  Card,
-  Row,
-  Col,
-  Statistic,
-  Typography,
-  Tag,
-  Avatar,
-  Space,
-  Select,
-  Input,
-  Button,
-  Breadcrumb,
-  Layout,
-  message,
-  Tooltip,
-  Progress
-} from 'antd'
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import {
-  TrophyOutlined,
-  EyeOutlined,
-  SearchOutlined,
-  ReloadOutlined,
-  HomeOutlined,
-  AppstoreOutlined,
-  CrownOutlined,
-  FireOutlined,
-  RiseOutlined
-} from '@ant-design/icons'
-import Link from 'next/link'
-import Navigation from '@/components/Navigation'
-import type { ColumnsType } from 'antd/es/table'
-
-const { Title, Text } = Typography
-const { Content } = Layout
-const { Search } = Input
-const { Option } = Select
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
+import { Progress } from "@/components/ui/progress"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import { useToast } from "@/hooks/use-toast"
 
 interface RankedSoftware {
   id: number
@@ -71,6 +88,7 @@ interface RankingData {
 }
 
 export default function SoftwareRanking() {
+  const { toast } = useToast()
   const [loading, setLoading] = useState(false)
   const [rankingData, setRankingData] = useState<RankingData | null>(null)
   const [filters, setFilters] = useState({
@@ -107,11 +125,19 @@ export default function SoftwareRanking() {
           pageSize: data.pagination.limit
         })
       } else {
-        message.error('获取排行榜失败')
+        toast({
+          variant: "destructive",
+          title: "获取失败",
+          description: "无法加载排行榜数据",
+        })
       }
     } catch (error) {
       console.error('Error fetching ranking:', error)
-      message.error('获取排行榜失败，请稍后重试')
+      toast({
+        variant: "destructive",
+        title: "请求失败",
+        description: "网络错误或服务器无响应",
+      })
     } finally {
       setLoading(false)
     }
@@ -119,32 +145,24 @@ export default function SoftwareRanking() {
 
   // 获取排名图标
   const getRankIcon = (rank: number) => {
-    if (rank === 1) return <CrownOutlined style={{ color: '#FFD700', fontSize: '18px' }} />
-    if (rank === 2) return <TrophyOutlined style={{ color: '#C0C0C0', fontSize: '16px' }} />
-    if (rank === 3) return <TrophyOutlined style={{ color: '#CD7F32', fontSize: '16px' }} />
-    return <span style={{ color: '#666', fontWeight: 'bold' }}>#{rank}</span>
+    if (rank === 1) return <Crown className="h-5 w-5 text-yellow-500" />
+    if (rank === 2) return <Medal className="h-5 w-5 text-gray-400" />
+    if (rank === 3) return <Medal className="h-5 w-5 text-orange-600" />
+    return <span className="font-bold text-muted-foreground">#{rank}</span>
   }
 
   // 获取访问量颜色
   const getViewCountColor = (viewCount: number, maxViews: number) => {
     const ratio = viewCount / maxViews
-    if (ratio > 0.8) return '#ff4d4f'
-    if (ratio > 0.6) return '#fa8c16'
-    if (ratio > 0.4) return '#faad14'
-    if (ratio > 0.2) return '#52c41a'
-    return '#1890ff'
+    if (ratio > 0.8) return 'bg-red-500'
+    if (ratio > 0.6) return 'bg-orange-500'
+    if (ratio > 0.4) return 'bg-yellow-500'
+    if (ratio > 0.2) return 'bg-green-500'
+    return 'bg-blue-500'
   }
 
   // 搜索处理
-  const handleSearch = (value: string) => {
-    setFilters({ ...filters, search: value })
-    fetchRanking(1, pagination.pageSize)
-  }
-
-  // 筛选处理
-  const handleFilterChange = (key: string, value: string) => {
-    const newFilters = { ...filters, [key]: value }
-    setFilters(newFilters)
+  const handleSearch = () => {
     fetchRanking(1, pagination.pageSize)
   }
 
@@ -157,274 +175,274 @@ export default function SoftwareRanking() {
     fetchRanking()
   }, [])
 
-  // 表格列定义
-  const columns: ColumnsType<RankedSoftware> = [
-    {
-      title: '排名',
-      dataIndex: 'rank',
-      key: 'rank',
-      width: 80,
-      align: 'center',
-      render: (rank: number) => (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          {getRankIcon(rank)}
-        </div>
-      )
-    },
-    {
-      title: '软件信息',
-      key: 'software',
-      width: 300,
-      render: (_, record: RankedSoftware) => (
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          <Avatar 
-            size={48} 
-            style={{ 
-              backgroundColor: getViewCountColor(
-                record.viewCount, 
-                rankingData?.data[0]?.viewCount || 1
-              ),
-              marginRight: 12
-            }}
-          >
-            {record.name.charAt(0)}
-          </Avatar>
-          <div>
-            <div style={{ fontWeight: 'bold', fontSize: '16px', marginBottom: 4 }}>
-              {record.name}
-            </div>
-            {record.nameEn && (
-              <div style={{ fontSize: '12px', color: '#666', marginBottom: 4 }}>
-                {record.nameEn}
-              </div>
-            )}
-            <div style={{ fontSize: '12px', color: '#999' }}>
-              版本: {record.currentVersion}
-            </div>
-          </div>
-        </div>
-      )
-    },
-    {
-      title: '访问量',
-      dataIndex: 'viewCount',
-      key: 'viewCount',
-      width: 200,
-      align: 'center',
-      render: (viewCount: number) => {
-        const maxViews = rankingData?.data[0]?.viewCount || 1
-        const percentage = Math.round((viewCount / maxViews) * 100)
-        
-        return (
-          <div>
-            <div style={{ 
-              fontSize: '20px', 
-              fontWeight: 'bold', 
-              color: getViewCountColor(viewCount, maxViews),
-              marginBottom: 8
-            }}>
-              {viewCount.toLocaleString()}
-            </div>
-            <Progress 
-              percent={percentage} 
-              size="small" 
-              strokeColor={getViewCountColor(viewCount, maxViews)}
-              showInfo={false}
-            />
-            <div style={{ fontSize: '12px', color: '#666', marginTop: 4 }}>
-              占比 {percentage}%
-            </div>
-          </div>
-        )
-      }
-    },
-    {
-      title: '分类',
-      dataIndex: 'category',
-      key: 'category',
-      width: 120,
-      render: (category: string) => (
-        category ? (
-          <Tag color="purple">{category}</Tag>
-        ) : (
-          <Text type="secondary">未分类</Text>
-        )
-      )
-    },
-    {
-      title: '标签',
-      dataIndex: 'tags',
-      key: 'tags',
-      width: 200,
-      render: (tags: string[]) => (
-        <div>
-          {tags && tags.length > 0 ? (
-            tags.slice(0, 3).map(tag => (
-              <Tag key={tag} style={{ marginBottom: 2, fontSize: '12px' }}>
-                {tag}
-              </Tag>
-            ))
-          ) : (
-            <Text type="secondary">无标签</Text>
-          )}
-          {tags && tags.length > 3 && (
-            <Tooltip title={tags.slice(3).join(', ')}>
-              <Tag style={{ fontSize: '12px' }}>+{tags.length - 3}</Tag>
-            </Tooltip>
-          )}
-        </div>
-      )
-    },
-    {
-      title: '更新时间',
-      dataIndex: 'updatedAt',
-      key: 'updatedAt',
-      width: 120,
-      render: (date: string) => new Date(date).toLocaleDateString('zh-CN')
-    }
-  ]
-
   const maxViews = rankingData?.data[0]?.viewCount || 1
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
-      <Navigation />
+    <div className="space-y-6 pb-24">
+      {/* 面包屑导航 */}
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink href="/admin">管理后台</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink href="/admin/software">软件管理</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>访问量排行榜</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
 
-      <Content style={{ padding: '24px', marginTop: '64px', background: '#f5f5f5' }}>
-        {/* 面包屑导航 */}
-        <Breadcrumb style={{ marginBottom: '24px' }}>
-          <Breadcrumb.Item>
-            <Link href="/admin">
-              <HomeOutlined /> 管理后台
-            </Link>
-          </Breadcrumb.Item>
-          <Breadcrumb.Item>
-            <Link href="/admin/software">
-              <AppstoreOutlined /> 软件管理
-            </Link>
-          </Breadcrumb.Item>
-          <Breadcrumb.Item>
-            <TrophyOutlined /> 访问量排行榜
-          </Breadcrumb.Item>
-        </Breadcrumb>
+      {/* 页面标题 */}
+      <div className="space-y-1">
+        <h2 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+          <Trophy className="h-8 w-8 text-yellow-500" />
+          软件访问量排行榜
+        </h2>
+        <p className="text-muted-foreground">
+          根据软件详情页面的访问次数进行排名,实时更新
+        </p>
+      </div>
 
-        {/* 页面标题 */}
-        <div style={{ marginBottom: '24px' }}>
-          <Title level={2} style={{ margin: 0, display: 'flex', alignItems: 'center' }}>
-            <TrophyOutlined style={{ marginRight: 8, color: '#faad14' }} />
-            软件访问量排行榜
-          </Title>
-          <Text type="secondary">
-            根据软件详情页面的访问次数进行排名，实时更新
-          </Text>
+      {/* 统计卡片 */}
+      {rankingData && (
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">软件总数</CardTitle>
+              <AppWindow className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-blue-600">
+                {rankingData.summary.totalSoftware}
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">总访问量</CardTitle>
+              <Eye className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-orange-600">
+                {rankingData.summary.totalViews.toLocaleString()}
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">平均访问量</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">
+                {Math.round(rankingData.summary.averageViews)}
+              </div>
+            </CardContent>
+          </Card>
         </div>
+      )}
 
-        {/* 统计卡片 */}
-        {rankingData && (
-          <Row gutter={16} style={{ marginBottom: '24px' }}>
-            <Col xs={24} sm={8}>
-              <Card>
-                <Statistic
-                  title="软件总数"
-                  value={rankingData.summary.totalSoftware}
-                  prefix={<AppstoreOutlined />}
-                  valueStyle={{ color: '#1890ff' }}
+      {/* 筛选栏 */}
+      <Card>
+        <CardHeader>
+          <CardTitle>筛选条件</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">搜索软件</label>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="搜索软件名称"
+                  value={filters.search}
+                  onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                 />
-              </Card>
-            </Col>
-            <Col xs={24} sm={8}>
-              <Card>
-                <Statistic
-                  title="总访问量"
-                  value={rankingData.summary.totalViews}
-                  prefix={<EyeOutlined />}
-                  valueStyle={{ color: '#fa8c16' }}
-                />
-              </Card>
-            </Col>
-            <Col xs={24} sm={8}>
-              <Card>
-                <Statistic
-                  title="平均访问量"
-                  value={rankingData.summary.averageViews}
-                  prefix={<RiseOutlined />}
-                  valueStyle={{ color: '#52c41a' }}
-                />
-              </Card>
-            </Col>
-          </Row>
-        )}
-
-        {/* 筛选栏 */}
-        <Card style={{ marginBottom: '24px' }}>
-          <Row gutter={16} align="middle">
-            <Col xs={24} sm={8}>
-              <Search
-                placeholder="搜索软件名称"
-                allowClear
-                onSearch={handleSearch}
-                enterButton={<SearchOutlined />}
-              />
-            </Col>
-            <Col xs={24} sm={6}>
+                <Button variant="outline" size="icon" onClick={handleSearch}>
+                  <Search className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">分类</label>
               <Select
-                placeholder="选择分类"
-                allowClear
-                style={{ width: '100%' }}
-                onChange={(value) => handleFilterChange('category', value || '')}
+                value={filters.category}
+                onValueChange={(value) => {
+                  setFilters({ ...filters, category: value })
+                  fetchRanking(1, pagination.pageSize)
+                }}
               >
-                <Option value="开发工具">开发工具</Option>
-                <Option value="浏览器">浏览器</Option>
-                <Option value="图像处理">图像处理</Option>
-                <Option value="社交通讯">社交通讯</Option>
-                <Option value="办公软件">办公软件</Option>
-                <Option value="系统工具">系统工具</Option>
-                <Option value="多媒体">多媒体</Option>
-                <Option value="游戏">游戏</Option>
+                <SelectTrigger>
+                  <SelectValue placeholder="选择分类" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">全部分类</SelectItem>
+                  <SelectItem value="开发工具">开发工具</SelectItem>
+                  <SelectItem value="浏览器">浏览器</SelectItem>
+                  <SelectItem value="图像处理">图像处理</SelectItem>
+                  <SelectItem value="社交通讯">社交通讯</SelectItem>
+                  <SelectItem value="办公软件">办公软件</SelectItem>
+                  <SelectItem value="系统工具">系统工具</SelectItem>
+                  <SelectItem value="多媒体">多媒体</SelectItem>
+                  <SelectItem value="游戏">游戏</SelectItem>
+                </SelectContent>
               </Select>
-            </Col>
-            <Col xs={24} sm={6}>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">最小访问量</label>
               <Input
-                placeholder="最小访问量"
                 type="number"
-                allowClear
-                onChange={(e) => handleFilterChange('minViewCount', e.target.value)}
+                placeholder="最小访问量"
+                value={filters.minViewCount}
+                onChange={(e) => {
+                  setFilters({ ...filters, minViewCount: e.target.value })
+                  fetchRanking(1, pagination.pageSize)
+                }}
               />
-            </Col>
-            <Col xs={24} sm={4}>
-              <Button icon={<ReloadOutlined />} onClick={handleRefresh} block>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">操作</label>
+              <Button variant="outline" onClick={handleRefresh} className="w-full">
+                <RefreshCw className="mr-2 h-4 w-4" />
                 刷新
               </Button>
-            </Col>
-          </Row>
-        </Card>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-        {/* 排行榜表格 */}
-        <Card>
-          <Table
-            columns={columns}
-            dataSource={rankingData?.data || []}
-            rowKey="id"
-            loading={loading}
-            pagination={{
-              ...pagination,
-              total: rankingData?.pagination.total || 0,
-              showSizeChanger: true,
-              showQuickJumper: true,
-              showTotal: (total, range) =>
-                `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
-              onChange: (page, pageSize) => {
-                fetchRanking(page, pageSize)
-              },
-              onShowSizeChange: (current, size) => {
-                fetchRanking(1, size)
-              }
-            }}
-            scroll={{ x: 1000 }}
-          />
-        </Card>
-      </Content>
-    </Layout>
+      {/* 排行榜表格 */}
+      <Card>
+        <CardHeader>
+          <CardTitle>排行榜</CardTitle>
+          <CardDescription>
+            {rankingData && `共 ${rankingData.pagination.total} 个软件`}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[80px] text-center">排名</TableHead>
+                <TableHead>软件信息</TableHead>
+                <TableHead className="text-center">访问量</TableHead>
+                <TableHead>分类</TableHead>
+                <TableHead>标签</TableHead>
+                <TableHead>更新时间</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8">
+                    <RefreshCw className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+                  </TableCell>
+                </TableRow>
+              ) : rankingData?.data.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    暂无数据
+                  </TableCell>
+                </TableRow>
+              ) : (
+                rankingData?.data.map((record) => {
+                  const percentage = (record.viewCount / maxViews) * 100
+                  const colorClass = getViewCountColor(record.viewCount, maxViews)
+                  
+                  return (
+                    <TableRow key={record.id}>
+                      <TableCell className="text-center">
+                        <div className="flex items-center justify-center">
+                          {getRankIcon(record.rank)}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <Avatar className={`h-12 w-12 ${colorClass} text-white`}>
+                            <AvatarFallback className={`${colorClass} text-white`}>
+                              {record.name.charAt(0)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <div className="font-bold text-base">{record.name}</div>
+                            {record.nameEn && (
+                              <div className="text-xs text-muted-foreground">{record.nameEn}</div>
+                            )}
+                            <div className="text-xs text-muted-foreground">
+                              版本: {record.currentVersion}
+                            </div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-2 min-w-[150px]">
+                          <div className={`text-xl font-bold text-center ${
+                            record.rank === 1 ? 'text-red-600' :
+                            record.rank === 2 ? 'text-orange-600' :
+                            record.rank === 3 ? 'text-yellow-600' :
+                            'text-blue-600'
+                          }`}>
+                            {record.viewCount.toLocaleString()}
+                          </div>
+                          <Progress value={percentage} className="h-2" />
+                          <div className="text-xs text-center text-muted-foreground">
+                            占比 {percentage.toFixed(1)}%
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {record.category ? (
+                          <Badge variant="secondary" className="bg-purple-100 text-purple-800">
+                            {record.category}
+                          </Badge>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">未分类</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {record.tags && record.tags.length > 0 ? (
+                            <>
+                              {record.tags.slice(0, 3).map(tag => (
+                                <Badge key={tag} variant="secondary" className="text-xs">
+                                  {tag}
+                                </Badge>
+                              ))}
+                              {record.tags.length > 3 && (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Badge variant="secondary" className="text-xs cursor-help">
+                                        +{record.tags.length - 3}
+                                      </Badge>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>{record.tags.slice(3).join(', ')}</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )}
+                            </>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">无标签</span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {new Date(record.updatedAt).toLocaleDateString('zh-CN')}
+                      </TableCell>
+                    </TableRow>
+                  )
+                })
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
   )
 }
-

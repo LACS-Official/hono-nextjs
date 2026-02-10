@@ -12,6 +12,8 @@ if (!systemSettingsDbUrl) {
 
 const pool = new Pool({
   connectionString: systemSettingsDbUrl,
+  ssl: systemSettingsDbUrl.includes('supabase.co') || systemSettingsDbUrl.includes('neon.tech') 
+    ? { rejectUnauthorized: false } : false
 })
 
 async function createTables() {
@@ -134,12 +136,28 @@ async function createTables() {
         )
       `)
       
+      // 创建黑名单表
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS "blocked_items" (
+          "id" varchar(255) PRIMARY KEY NOT NULL,
+          "type" varchar(20) NOT NULL,
+          "value" varchar(255) NOT NULL,
+          "reason" text,
+          "is_active" boolean DEFAULT true NOT NULL,
+          "created_at" timestamp DEFAULT now() NOT NULL,
+          "expires_at" timestamp,
+          "created_by" varchar(255)
+        )
+      `)
+      
       // 创建索引优化查询性能
       await client.query(`CREATE INDEX IF NOT EXISTS "login_logs_user_id_idx" ON "login_logs" ("user_id")`)
       await client.query(`CREATE INDEX IF NOT EXISTS "login_logs_login_time_idx" ON "login_logs" ("login_time" DESC)`)
       await client.query(`CREATE INDEX IF NOT EXISTS "login_logs_ip_address_idx" ON "login_logs" ("ip_address")`)
       await client.query(`CREATE INDEX IF NOT EXISTS "login_logs_session_id_idx" ON "login_logs" ("session_id")`)
       await client.query(`CREATE INDEX IF NOT EXISTS "login_logs_is_active_idx" ON "login_logs" ("is_active")`)
+      await client.query(`CREATE INDEX IF NOT EXISTS "blocked_items_value_idx" ON "blocked_items" ("value")`)
+      await client.query(`CREATE INDEX IF NOT EXISTS "blocked_items_type_idx" ON "blocked_items" ("type")`)
       
       console.log('系统设置数据库表创建成功!')
     } finally {

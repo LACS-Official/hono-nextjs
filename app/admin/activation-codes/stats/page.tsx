@@ -3,38 +3,45 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  Card,
-  Button,
-  Space,
-  Typography,
-  Row,
-  Col,
-  Statistic,
-  Progress,
-  Alert,
-  Spin
-} from 'antd'
+  ArrowLeft,
+  RefreshCw,
+  BarChart3,
+  Key,
+  CheckCircle,
+  Clock,
+  AlertCircle
+} from 'lucide-react'
+
+import { Button } from "@/components/ui/button"
 import {
-  ArrowLeftOutlined,
-  ReloadOutlined,
-  BarChartOutlined,
-  KeyOutlined,
-  CheckCircleOutlined,
-  ClockCircleOutlined,
-  ExclamationCircleOutlined
-} from '@ant-design/icons'
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Progress } from "@/components/ui/progress"
+import { useToast } from "@/hooks/use-toast"
 import ErrorBoundaryWrapper from '@/components/ErrorBoundaryWrapper'
-import { NetworkError } from '@/components/ErrorComponents'
+
 import {
   activationCodeApi,
   type ActivationCodeStats,
   type ActivationCodeApiError
 } from '@/utils/activation-codes-api'
 
-const { Title, Text, Paragraph } = Typography
-
 export default function ActivationCodeStatsPage() {
   const router = useRouter()
+  const { toast } = useToast()
   const [stats, setStats] = useState<ActivationCodeStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -51,6 +58,11 @@ export default function ActivationCodeStatsPage() {
       const apiError = error as ActivationCodeApiError
       setError(apiError.message)
       console.error('加载统计信息失败:', apiError.message)
+      toast({
+        variant: "destructive",
+        title: "加载失败",
+        description: apiError.message,
+      })
     } finally {
       setLoading(false)
     }
@@ -67,10 +79,9 @@ export default function ActivationCodeStatsPage() {
 
   if (loading) {
     return (
-      <div style={{ textAlign: 'center', padding: '50px' }}>
-        <Spin size="large" />
-        <div style={{ marginTop: '16px' }}>
-          <Text>正在加载统计信息...</Text>
+      <div className="space-y-6">
+        <div className="flex items-center justify-center py-12">
+          <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
       </div>
     )
@@ -79,12 +90,13 @@ export default function ActivationCodeStatsPage() {
   if (error && !stats) {
     return (
       <ErrorBoundaryWrapper>
-        <div className="responsive-container" style={{ paddingTop: '0' }}>
-          <NetworkError
-            title="网络错误"
-            subTitle={error}
-            onRetry={loadStats}
-          />
+        <div className="space-y-6">
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>网络错误</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+          <Button onClick={loadStats}>重试</Button>
         </div>
       </ErrorBoundaryWrapper>
     )
@@ -92,203 +104,219 @@ export default function ActivationCodeStatsPage() {
 
   return (
     <ErrorBoundaryWrapper>
-      <div className="responsive-container" style={{ paddingTop: '0', paddingBottom: '24px' }}>
+      <div className="space-y-6 pb-24">
+        {/* 面包屑导航 */}
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/admin">管理后台</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/admin/activation-codes">激活码管理</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>统计</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+
         {/* 页面头部 */}
-        <div className="responsive-card-spacing">
-          <Space align="center" style={{ marginBottom: '16px' }}>
-            <Button
-              icon={<ArrowLeftOutlined />}
-              onClick={() => router.back()}
-            >
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+              <BarChart3 className="h-6 w-6 text-primary" />
+              激活码统计
+            </h2>
+            <p className="text-muted-foreground">
+              查看激活码的使用情况和统计信息
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => router.back()}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
               返回
             </Button>
-            <Title level={2} style={{ margin: 0 }}>
-              <BarChartOutlined style={{ marginRight: '8px' }} />
-              激活码统计
-            </Title>
-            <Button
-              icon={<ReloadOutlined />}
-              onClick={loadStats}
-              loading={loading}
-            >
+            <Button variant="outline" onClick={loadStats} disabled={loading}>
+              <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
               刷新
             </Button>
-          </Space>
-          <Paragraph style={{ color: '#666', margin: 0 }}>
-            查看激活码的使用情况和统计信息
-          </Paragraph>
+          </div>
         </div>
 
         {stats && (
           <>
             {/* 总体统计 */}
-            <Card title="总体统计" className="responsive-card-spacing">
-              <Row gutter={[16, 16]}>
-                <Col xs={12} sm={8} md={6}>
-                  <Statistic
-                    title="总激活码数"
-                    value={stats.total}
-                    prefix={<KeyOutlined />}
-                    valueStyle={{ color: '#1890ff' }}
-                  />
-                </Col>
-                <Col xs={12} sm={8} md={6}>
-                  <Statistic
-                    title="已使用"
-                    value={stats.used}
-                    prefix={<CheckCircleOutlined />}
-                    valueStyle={{ color: '#52c41a' }}
-                  />
-                </Col>
-                <Col xs={12} sm={8} md={6}>
-                  <Statistic
-                    title="未使用"
-                    value={stats.unused}
-                    prefix={<ClockCircleOutlined />}
-                    valueStyle={{ color: '#1890ff' }}
-                  />
-                </Col>
-                <Col xs={12} sm={8} md={6}>
-                  <Statistic
-                    title="已过期"
-                    value={stats.expired}
-                    prefix={<ExclamationCircleOutlined />}
-                    valueStyle={{ color: '#ff4d4f' }}
-                  />
-                </Col>
-                <Col xs={12} sm={8} md={6}>
-                  <Statistic
-                    title="有效激活码"
-                    value={stats.active}
-                    prefix={<KeyOutlined />}
-                    valueStyle={{ color: '#52c41a' }}
-                  />
-                </Col>
-              </Row>
-            </Card>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">总激活码数</CardTitle>
+                  <Key className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-blue-600">{stats.total}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">已使用</CardTitle>
+                  <CheckCircle className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-green-600">{stats.used}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">未使用</CardTitle>
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-blue-600">{stats.unused}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">已过期</CardTitle>
+                  <AlertCircle className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-red-600">{stats.expired}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">有效激活码</CardTitle>
+                  <Key className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-green-600">{stats.active}</div>
+                </CardContent>
+              </Card>
+            </div>
 
             {/* 使用率分析 */}
-            <Card title="使用率分析" className="responsive-card-spacing">
-              <Row gutter={[24, 24]}>
-                <Col xs={24} md={12}>
-                  <div style={{ marginBottom: '16px' }}>
-                    <Text strong>激活码使用率</Text>
-                    <div style={{ marginTop: '8px' }}>
-                      <Progress
-                        percent={getPercentage(stats.used, stats.total)}
-                        status="active"
-                        strokeColor="#52c41a"
-                        format={(percent) => `${percent}% (${stats.used}/${stats.total})`}
-                      />
-                    </div>
+            <Card>
+              <CardHeader>
+                <CardTitle>使用率分析</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium">激活码使用率</span>
+                    <span className="text-muted-foreground">
+                      {getPercentage(stats.used, stats.total)}% ({stats.used}/{stats.total})
+                    </span>
                   </div>
-                </Col>
-                <Col xs={24} md={12}>
-                  <div style={{ marginBottom: '16px' }}>
-                    <Text strong>激活码过期率</Text>
-                    <div style={{ marginTop: '8px' }}>
-                      <Progress
-                        percent={getPercentage(stats.expired, stats.total)}
-                        status={getPercentage(stats.expired, stats.total) > 30 ? "exception" : "normal"}
-                        strokeColor="#ff4d4f"
-                        format={(percent) => `${percent}% (${stats.expired}/${stats.total})`}
-                      />
-                    </div>
+                  <Progress value={getPercentage(stats.used, stats.total)} className="h-2" />
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium">激活码过期率</span>
+                    <span className="text-muted-foreground">
+                      {getPercentage(stats.expired, stats.total)}% ({stats.expired}/{stats.total})
+                    </span>
                   </div>
-                </Col>
-              </Row>
+                  <Progress 
+                    value={getPercentage(stats.expired, stats.total)} 
+                    className="h-2"
+                  />
+                </div>
 
-              {/* 统计说明 */}
-              <Alert
-                message="统计说明"
-                description={
-                  <ul style={{ margin: 0, paddingLeft: '20px' }}>
-                    <li><strong>总激活码数</strong>：系统中所有激活码的总数量</li>
-                    <li><strong>已使用</strong>：已经被激活使用的激活码数量</li>
-                    <li><strong>未使用</strong>：尚未被使用且仍在有效期内的激活码数量</li>
-                    <li><strong>已过期</strong>：超过有效期的激活码数量</li>
-                    <li><strong>有效激活码</strong>：未使用且未过期的激活码数量</li>
-                  </ul>
-                }
-                type="info"
-                showIcon
-                style={{ marginTop: '16px' }}
-              />
+                {/* 统计说明 */}
+                <Alert>
+                  <BarChart3 className="h-4 w-4" />
+                  <AlertTitle>统计说明</AlertTitle>
+                  <AlertDescription>
+                    <ul className="list-disc list-inside space-y-1 mt-2">
+                      <li><strong>总激活码数</strong>：系统中所有激活码的总数量</li>
+                      <li><strong>已使用</strong>：已经被激活使用的激活码数量</li>
+                      <li><strong>未使用</strong>：尚未被使用且仍在有效期内的激活码数量</li>
+                      <li><strong>已过期</strong>：超过有效期的激活码数量</li>
+                      <li><strong>有效激活码</strong>：未使用且未过期的激活码数量</li>
+                    </ul>
+                  </AlertDescription>
+                </Alert>
+              </CardContent>
             </Card>
 
             {/* 健康度评估 */}
-            <Card title="健康度评估" className="responsive-card-spacing">
-              <Row gutter={[16, 16]}>
-                <Col span={24}>
-                  {stats.total === 0 ? (
-                    <Alert
-                      message="暂无数据"
-                      description="系统中还没有激活码，建议创建一些激活码来开始使用。"
-                      type="warning"
-                      showIcon
-                    />
-                  ) : (
-                    <>
-                      {getPercentage(stats.expired, stats.total) > 50 && (
-                        <Alert
-                          message="过期率过高"
-                          description={`当前过期率为 ${getPercentage(stats.expired, stats.total)}%，建议清理过期激活码或调整有效期策略。`}
-                          type="warning"
-                          showIcon
-                          style={{ marginBottom: '16px' }}
-                        />
-                      )}
+            <Card>
+              <CardHeader>
+                <CardTitle>健康度评估</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {stats.total === 0 ? (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>暂无数据</AlertTitle>
+                    <AlertDescription>
+                      系统中还没有激活码,建议创建一些激活码来开始使用。
+                    </AlertDescription>
+                  </Alert>
+                ) : (
+                  <>
+                    {getPercentage(stats.expired, stats.total) > 50 && (
+                      <Alert variant="destructive">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle>过期率过高</AlertTitle>
+                        <AlertDescription>
+                          当前过期率为 {getPercentage(stats.expired, stats.total)}%,建议清理过期激活码或调整有效期策略。
+                        </AlertDescription>
+                      </Alert>
+                    )}
 
-                      {getPercentage(stats.used, stats.total) > 80 && (
-                        <Alert
-                          message="使用率良好"
-                          description={`当前使用率为 ${getPercentage(stats.used, stats.total)}%，激活码使用情况良好。`}
-                          type="success"
-                          showIcon
-                          style={{ marginBottom: '16px' }}
-                        />
-                      )}
+                    {getPercentage(stats.used, stats.total) > 80 && (
+                      <Alert className="border-green-200 bg-green-50">
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                        <AlertTitle className="text-green-800">使用率良好</AlertTitle>
+                        <AlertDescription className="text-green-700">
+                          当前使用率为 {getPercentage(stats.used, stats.total)}%,激活码使用情况良好。
+                        </AlertDescription>
+                      </Alert>
+                    )}
 
-                      {stats.active === 0 && stats.total > 0 && (
-                        <Alert
-                          message="无可用激活码"
-                          description="当前没有有效的激活码，建议创建新的激活码。"
-                          type="error"
-                          showIcon
-                          style={{ marginBottom: '16px' }}
-                        />
-                      )}
+                    {stats.active === 0 && stats.total > 0 && (
+                      <Alert variant="destructive">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle>无可用激活码</AlertTitle>
+                        <AlertDescription>
+                          当前没有有效的激活码,建议创建新的激活码。
+                        </AlertDescription>
+                      </Alert>
+                    )}
 
-                      {stats.active > 0 && getPercentage(stats.expired, stats.total) <= 30 && (
-                        <Alert
-                          message="系统状态良好"
-                          description={`当前有 ${stats.active} 个有效激活码，过期率控制在合理范围内。`}
-                          type="success"
-                          showIcon
-                        />
-                      )}
-                    </>
-                  )}
-                </Col>
-              </Row>
+                    {stats.active > 0 && getPercentage(stats.expired, stats.total) <= 30 && (
+                      <Alert className="border-green-200 bg-green-50">
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                        <AlertTitle className="text-green-800">系统状态良好</AlertTitle>
+                        <AlertDescription className="text-green-700">
+                          当前有 {stats.active} 个有效激活码,过期率控制在合理范围内。
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                  </>
+                )}
+              </CardContent>
             </Card>
 
             {/* 快捷操作 */}
-            <Card title="快捷操作" className="responsive-card-spacing">
-              <Space wrap>
-                <Button
-                  type="primary"
-                  icon={<KeyOutlined />}
-                  onClick={() => router.push('/admin/activation-codes/new')}
-                >
-                  创建激活码
-                </Button>
-                <Button
-                  onClick={() => router.push('/admin/activation-codes')}
-                >
-                  查看激活码列表
-                </Button>
-              </Space>
+            <Card>
+              <CardHeader>
+                <CardTitle>快捷操作</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
+                  <Button onClick={() => router.push('/admin/activation-codes/new')}>
+                    <Key className="mr-2 h-4 w-4" />
+                    创建激活码
+                  </Button>
+                  <Button variant="outline" onClick={() => router.push('/admin/activation-codes')}>
+                    查看激活码列表
+                  </Button>
+                </div>
+              </CardContent>
             </Card>
           </>
         )}

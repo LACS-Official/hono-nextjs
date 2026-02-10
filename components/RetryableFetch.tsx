@@ -1,8 +1,10 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Button, message, Result, Spin } from 'antd'
-import { ReloadOutlined } from '@ant-design/icons'
+import { AlertCircle, RefreshCw, Loader2 } from 'lucide-react'
+import { Button } from "@/components/ui/button"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { useToast } from "@/hooks/use-toast"
 
 interface RetryableFetchProps {
   url: string
@@ -23,6 +25,7 @@ const RetryableFetch: React.FC<RetryableFetchProps> = ({
   onError,
   onSuccess
 }) => {
+  const { toast } = useToast()
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState<boolean>(false)
   const [error, setError] = useState<Error | null>(null)
@@ -46,23 +49,22 @@ const RetryableFetch: React.FC<RetryableFetchProps> = ({
       setError(null)
       setCurrentRetry(0)
       
-      if (onSuccess) {
-        onSuccess(result)
-      }
+      if (onSuccess) onSuccess(result)
       
       if (isRetry) {
-        message.success('重试成功！')
+        toast({ title: "重试成功！" })
       }
     } catch (err) {
       const error = err as Error
       setError(error)
-      
-      if (onError) {
-        onError(error)
-      }
+      if (onError) onError(error)
       
       if (isRetry) {
-        message.error(`重试失败: ${error.message}`)
+        toast({ 
+          variant: "destructive",
+          title: "重试失败",
+          description: error.message 
+        })
       }
     } finally {
       setLoading(false)
@@ -72,12 +74,15 @@ const RetryableFetch: React.FC<RetryableFetchProps> = ({
   const retry = () => {
     if (currentRetry < retryCount) {
       setCurrentRetry(prev => prev + 1)
-      
       setTimeout(() => {
         fetchData(true)
       }, retryDelay * currentRetry)
     } else {
-      message.error(`已达到最大重试次数 (${retryCount})`)
+      toast({ 
+        variant: "destructive",
+        title: "错误",
+        description: `已达到最大重试次数 (${retryCount})` 
+      })
     }
   }
 
@@ -90,22 +95,24 @@ const RetryableFetch: React.FC<RetryableFetchProps> = ({
       {children(data, loading, error, retry)}
       
       {error && !loading && (
-        <div style={{ textAlign: 'center', padding: '20px' }}>
-          <Result
-            status="warning"
-            title="数据加载失败"
-            subTitle={error.message}
-            extra={
+        <div className="flex justify-center p-8">
+          <Alert variant="destructive" className="max-w-md">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>数据加载失败</AlertTitle>
+            <AlertDescription className="space-y-4 pt-2">
+              <p>{error.message}</p>
               <Button 
-                type="primary" 
-                icon={<ReloadOutlined />} 
+                variant="outline" 
+                size="sm" 
                 onClick={retry}
                 disabled={currentRetry >= retryCount}
+                className="w-full"
               >
+                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
                 重试 {currentRetry > 0 && `(${currentRetry}/${retryCount})`}
               </Button>
-            }
-          />
+            </AlertDescription>
+          </Alert>
         </div>
       )}
     </>

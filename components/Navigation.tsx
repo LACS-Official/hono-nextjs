@@ -1,562 +1,318 @@
 'use client'
 
 import { useRouter, usePathname } from 'next/navigation'
-import { Layout, Menu, Avatar, Dropdown, Space, Button, Typography, Drawer, Badge } from 'antd'
+import Link from 'next/link'
 import {
-  HomeOutlined,
-  FileTextOutlined,
-  UserOutlined,
-  LogoutOutlined,
-  SettingOutlined,
-  KeyOutlined,
-  AppstoreOutlined,
-  NotificationOutlined,
-  MenuOutlined,
-  MenuFoldOutlined,
-  MenuUnfoldOutlined,
-  HeartOutlined,
-  GlobalOutlined,
-  BarChartOutlined,
-  InfoCircleOutlined
-} from '@ant-design/icons'
-import type { MenuProps } from 'antd'
+  Home,
+  FileText,
+  User,
+  LogOut,
+  Settings,
+  Key,
+  AppWindow,
+  Bell,
+  Menu,
+  ChevronLeft,
+  ChevronRight,
+  Heart,
+  Globe,
+  BarChart,
+  Info
+} from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useState, useEffect } from 'react'
-
-const { Sider } = Layout
-const { Text } = Typography
+import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import debounce from 'lodash/debounce'
 
 interface NavigationProps {
   className?: string
+  collapsed: boolean
+  setCollapsed: (collapsed: boolean) => void
+  isMobile: boolean
 }
 
-export default function Navigation({ className }: NavigationProps) {
+export default function Navigation({ className, collapsed, setCollapsed, isMobile }: NavigationProps) {
   const router = useRouter()
   const pathname = usePathname()
   const { user, logout } = useAuth()
-  const { theme: currentTheme } = useTheme()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [collapsed, setCollapsed] = useState(false)
-  const [isMobile, setIsMobile] = useState(false)
 
-  // 检测屏幕尺寸
-  useEffect(() => {
-    const checkScreenSize = () => {
-      const mobile = window.innerWidth < 768
-      setIsMobile(mobile)
-      if (mobile) {
-        setCollapsed(true)
-      }
-    }
-
-    checkScreenSize()
-    window.addEventListener('resize', checkScreenSize)
-    return () => window.removeEventListener('resize', checkScreenSize)
-  }, [])
-
+  // Handlers and effects for resize are now managed by parent or purely props based
+  
   const handleLogout = async () => {
     await logout()
   }
 
-  // 获取当前选中的菜单项
-  const getSelectedKeys = () => {
-    if (pathname.includes('/activation-codes')) {
-      return ['activation-codes']
-    }
-    if (pathname.includes('/software')) {
-      return ['software']
-    }
-    if (pathname.includes('/websites')) {
-      return ['websites']
-    }
-    if (pathname.includes('/user-behavior')) {
-      return ['user-behavior']
-    }
-    if (pathname.includes('/donors')) {
-      return ['donors']
-    }
-    if (pathname.includes('/info-management')) {
-      return ['info-management']
-    }
-    if (pathname.includes('/system-settings')) {
-      return ['system-settings']
-    }
-    if (pathname === '/admin') {
-      return ['dashboard']
-    }
-    return []
+  // Check if link is active
+  const isLinkActive = (href: string) => {
+    if (href === '/admin' && pathname === '/admin') return true
+    if (href !== '/admin' && pathname.startsWith(href)) return true
+    return false
   }
 
-  // 菜单项配置
-  const menuItems: MenuProps['items'] = [
+  // Menu items configuration
+  const menuItems = [
     {
-      key: 'dashboard',
-      icon: <HomeOutlined />,
+      href: '/admin',
+      icon: Home,
       label: '仪表板',
-      onClick: () => router.push('/admin'),
     },
     {
-      key: 'software',
-      icon: <AppstoreOutlined />,
+      href: '/admin/software',
+      icon: AppWindow,
       label: '软件管理',
-      onClick: () => router.push('/admin/software'),
     },
     {
-      key: 'websites',
-      icon: <GlobalOutlined />,
+      href: '/admin/websites',
+      icon: Globe,
       label: '网站管理',
-      onClick: () => router.push('/admin/websites'),
     },
     {
-      key: 'activation-codes',
-      icon: <KeyOutlined />,
+      href: '/admin/activation-codes',
+      icon: Key,
       label: '激活码管理',
-      onClick: () => router.push('/admin/activation-codes'),
     },
     {
-      key: 'user-behavior',
-      icon: <BarChartOutlined />,
+      href: '/admin/user-behavior',
+      icon: BarChart,
       label: '用户行为统计',
-      onClick: () => router.push('/admin/user-behavior'),
     },
     {
-      key: 'donors',
-      icon: <HeartOutlined />,
+      href: '/admin/donors',
+      icon: Heart,
       label: '捐赠人员管理',
-      onClick: () => router.push('/admin/donors'),
     },
     {
-      key: 'info-management',
-      icon: <InfoCircleOutlined />,
+      href: '/admin/info-management',
+      icon: Info,
       label: '关于我们管理',
-      onClick: () => router.push('/admin/info-management'),
     },
     {
-      key: 'system-settings',
-      icon: <SettingOutlined />,
+      href: '/admin/system-settings',
+      icon: Settings,
       label: '系统设置',
-      onClick: () => router.push('/admin/system-settings'),
     },
   ]
 
-  // 用户下拉菜单
-  const userMenuItems: MenuProps['items'] = [
-    {
-      key: 'profile',
-      icon: <UserOutlined />,
-      label: '个人资料',
-    },
-    {
-      key: 'settings',
-      icon: <SettingOutlined />,
-      label: '设置',
-    },
-    {
-      type: 'divider',
-    },
-    {
-      key: 'logout',
-      icon: <LogoutOutlined />,
-      label: '退出登录',
-      onClick: handleLogout,
-    },
-  ]
+  // Sidebar component for reuse
+  const SidebarContent = () => (
+    <div className="flex flex-col h-full bg-background border-r">
+      {/* Logo Area */}
+      <div className={cn(
+        "h-16 flex items-center px-4 border-b",
+        collapsed ? "justify-center px-2" : "justify-between"
+      )}>
+        <Link href="/admin" className="flex items-center gap-2 overflow-hidden">
+          {!collapsed ? (
+            <span className="text-xl font-bold text-foreground truncate">
+              领创全栈管理平台
+            </span>
+          ) : (
+             <span className="text-xl font-bold text-foreground">LACS</span>
+          )}
+        </Link>
+        
+        {!collapsed && !isMobile && (
+          <div className="flex items-center gap-1">
+             <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => setCollapsed(true)}
+              title="折叠侧边栏"
+              className="h-8 w-8"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <ThemeToggle />
+          </div>
+        )}
+      </div>
 
-  // 移动端底部导航项
-  const bottomNavItems: MenuProps['items'] = [
-    {
-      key: 'dashboard',
-      icon: <HomeOutlined />,
-      label: '首页',
-      onClick: () => router.push('/admin'),
-    },
-    {
-      key: 'software',
-      icon: <AppstoreOutlined />,
-      label: '软件',
-      onClick: () => router.push('/admin/software'),
-    },
-    {
-      key: 'activation-codes',
-      icon: <KeyOutlined />,
-      label: '激活码',
-      onClick: () => router.push('/admin/activation-codes'),
-    },
-    {
-      key: 'more',
-      icon: <MenuOutlined />,
-      label: '更多',
-      onClick: () => setMobileMenuOpen(true),
-    },
-  ]
+      {/* Navigation Links */}
+      <ScrollArea className="flex-1 py-4">
+        <nav className="space-y-1 px-2">
+          {menuItems.map((item) => {
+            const isActive = isLinkActive(item.href)
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => isMobile && setMobileMenuOpen(false)}
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-sm font-medium",
+                  isActive 
+                    ? "bg-primary/10 text-primary" 
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                  collapsed && "justify-center px-2"
+                )}
+                title={collapsed ? item.label : undefined}
+              >
+                <item.icon className={cn("h-5 w-5 flex-shrink-0", isActive && "text-primary")} />
+                {!collapsed && <span>{item.label}</span>}
+              </Link>
+            )
+          })}
+        </nav>
+      </ScrollArea>
+
+      {/* User Footer */}
+      <div className="p-4 border-t bg-background">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className={cn(
+              "w-full flex items-center gap-3 p-2 h-auto hover:bg-muted",
+              collapsed ? "justify-center" : "justify-start"
+            )}>
+              <Avatar className="h-8 w-8">
+                <AvatarImage src={user?.avatar_url} alt={user?.name || 'User'} />
+                <AvatarFallback><User className="h-4 w-4" /></AvatarFallback>
+              </Avatar>
+              
+              {!collapsed && (
+                <div className="flex flex-col items-start overflow-hidden text-left">
+                  <span className="text-sm font-medium truncate w-full">{user?.name || '管理员'}</span>
+                  <span className="text-xs text-muted-foreground truncate w-full">{user?.email}</span>
+                </div>
+              )}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel>我的账户</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem>
+              <User className="mr-2 h-4 w-4" />
+              <span>个人资料</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem>
+              <Settings className="mr-2 h-4 w-4" />
+              <span>设置</span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
+              <LogOut className="mr-2 h-4 w-4" />
+              <span>退出登录</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      {/* Expand Button (Collapsed Mode) */}
+      {collapsed && !isMobile && (
+        <div className="py-2 flex justify-center border-t">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => setCollapsed(false)}
+            title="展开侧边栏"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+    </div>
+  )
 
   return (
     <>
-      {/* 桌面端侧边栏 */}
+      {/* Desktop Sidebar */}
       {!isMobile && (
-        <Sider
-          width={240}
-          collapsedWidth={80}
-          collapsed={collapsed}
-          style={{
-            position: 'fixed',
-            left: 0,
-            top: 0,
-            bottom: 0,
-            height: '100vh',
-            zIndex: 1000,
-            background: currentTheme === 'dark' ? '#141414' : '#fff',
-            borderRight: `1px solid ${currentTheme === 'dark' ? '#434343' : '#f0f0f0'}`,
-            overflow: 'auto',
-          }}
-          className={className}
-          trigger={null}
-        >
-          {/* Logo区域 */}
-          <div
-            style={{
-              height: '64px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: collapsed ? 'center' : 'space-between',
-              padding: collapsed ? '0' : '0 16px',
-              borderBottom: `1px solid ${currentTheme === 'dark' ? '#434343' : '#f0f0f0'}`,
-            }}
-          >
-            <Button
-              type="text"
-              onClick={() => router.push('/admin')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: collapsed ? '0' : '8px',
-                padding: '4px 8px',
-                height: 'auto',
-                fontSize: '16px',
-                fontWeight: 600,
-                color: '#1890ff',
-              }}
-            >
-              {!collapsed && (
-                <Text strong style={{ fontSize: '18px', color: '#1890ff' }}>
-                  领创全栈管理平台
-                </Text>
-              )}
-            </Button>
-
-            {!collapsed && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Button
-                  type="text"
-                  icon={<MenuFoldOutlined />}
-                  onClick={() => setCollapsed(true)}
-                  style={{ fontSize: '16px' }}
-                  title="折叠侧边栏"
-                />
-                <ThemeToggle />
-              </div>
-            )}
-          </div>
-
-          {/* 导航菜单 */}
-          <Menu
-            mode="inline"
-            selectedKeys={getSelectedKeys()}
-            items={menuItems}
-            style={{
-              border: 'none',
-              background: 'transparent',
-              padding: '8px 0',
-            }}
-            inlineCollapsed={collapsed}
-          />
-
-          {/* 用户信息区域 */}
-          <div
-            style={{
-              position: 'absolute',
-              bottom: 0,
-              left: 0,
-              right: 0,
-              padding: '16px',
-              borderTop: `1px solid ${currentTheme === 'dark' ? '#434343' : '#f0f0f0'}`,
-              background: currentTheme === 'dark' ? '#141414' : '#fff',
-            }}
-          >
-            <Dropdown
-              menu={{ items: userMenuItems }}
-              placement="topRight"
-              arrow
-              trigger={['click']}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: collapsed ? '0' : '8px',
-                  cursor: 'pointer',
-                  padding: '8px',
-                  borderRadius: '6px',
-                  transition: 'background-color 0.2s',
-                  justifyContent: collapsed ? 'center' : 'flex-start',
-                }}
-                role="button"
-                tabIndex={0}
-                aria-label={`用户菜单 - ${user?.name || '管理员'}`}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = currentTheme === 'dark' ? '#262626' : '#f5f5f5'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent'
-                }}
-              >
-                <Avatar
-                  src={user?.avatar_url}
-                  icon={!user?.avatar_url && <UserOutlined />}
-                  size="default"
-                  alt={`${user?.name || '管理员'}的头像`}
-                />
-                {!collapsed && (
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <Text
-                      strong
-                      style={{
-                        display: 'block',
-                        fontSize: '14px',
-                        lineHeight: '20px',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        color: currentTheme === 'dark' ? '#fff' : 'inherit',
-                      }}
-                    >
-                      {user?.name || '管理员'}
-                    </Text>
-                    <Text
-                      type="secondary"
-                      style={{
-                        display: 'block',
-                        fontSize: '12px',
-                        lineHeight: '16px',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {user?.email || '系统用户'}
-                    </Text>
-                  </div>
-                )}
-              </div>
-            </Dropdown>
-          </div>
-
-          {/* 折叠按钮（折叠状态下显示） */}
-          {collapsed && (
-            <Button
-              type="text"
-              icon={<MenuUnfoldOutlined />}
-              onClick={() => setCollapsed(false)}
-              style={{
-                position: 'absolute',
-                bottom: '80px',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                fontSize: '16px',
-              }}
-              title="展开侧边栏"
-            />
+        <aside
+          className={cn(
+            "fixed inset-y-0 left-0 z-50 bg-background border-r transition-all duration-300",
+            collapsed ? "w-[80px]" : "w-[240px]",
+            className
           )}
-        </Sider>
+        >
+          <SidebarContent />
+        </aside>
       )}
 
-      {/* 移动端顶部栏 */}
+      {/* Mobile Top Bar */}
       {isMobile && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            height: '64px',
-            background: currentTheme === 'dark' ? '#141414' : '#fff',
-            borderBottom: `1px solid ${currentTheme === 'dark' ? '#434343' : '#f0f0f0'}`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '0 16px',
-            zIndex: 1000,
-          }}
-        >
-          {/* Logo */}
-          <Button
-            type="text"
-            onClick={() => router.push('/admin')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '4px 8px',
-              height: 'auto',
-              fontSize: '16px',
-              fontWeight: 600,
-              color: '#1890ff',
-            }}
-          >
-
-            <Text strong style={{ fontSize: '18px', color: '#1890ff' }}>
-              LACS Admin
-            </Text>
-          </Button>
-
-          {/* 菜单按钮 */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <header className="fixed top-0 left-0 right-0 h-16 bg-background border-b z-50 flex items-center justify-between px-4">
+          <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <Menu className="h-6 w-6" />
+                <span className="sr-only">打开菜单</span>
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="p-0 w-[280px]">
+              <SheetHeader className="sr-only">
+                <SheetTitle>导航菜单</SheetTitle>
+              </SheetHeader>
+               {/* Mobile Sidebar Content */}
+               <div className="flex flex-col h-full bg-background">
+                 <div className="h-16 flex items-center px-6 border-b">
+                     <span className="text-xl font-bold text-foreground">LACS Admin</span>
+                 </div>
+                 <ScrollArea className="flex-1 py-4">
+                    <nav className="space-y-1 px-4">
+                      {menuItems.map((item) => {
+                         const isActive = isLinkActive(item.href)
+                         return (
+                           <Link
+                             key={item.href}
+                             href={item.href}
+                             onClick={() => setMobileMenuOpen(false)}
+                             className={cn(
+                               "flex items-center gap-3 px-3 py-3 rounded-md transition-colors text-sm font-medium",
+                               isActive 
+                                 ? "bg-primary/10 text-primary" 
+                                 : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                             )}
+                           >
+                             <item.icon className={cn("h-5 w-5", isActive && "text-primary")} />
+                             <span>{item.label}</span>
+                           </Link>
+                         )
+                      })}
+                    </nav>
+                 </ScrollArea>
+                 <div className="p-4 border-t bg-background">
+                    <div className="flex items-center gap-3 mb-4 px-2">
+                         <Avatar className="h-9 w-9">
+                            <AvatarImage src={user?.avatar_url} />
+                            <AvatarFallback><User className="h-4 w-4" /></AvatarFallback>
+                          </Avatar>
+                          <div className="flex flex-col overflow-hidden">
+                            <span className="text-sm font-medium truncate">{user?.name || '管理员'}</span>
+                            <span className="text-xs text-muted-foreground truncate">{user?.email}</span>
+                          </div>
+                    </div>
+                    <Button variant="outline" className="w-full justify-start text-destructive" onClick={handleLogout}>
+                       <LogOut className="mr-2 h-4 w-4" />
+                       退出登录
+                    </Button>
+                 </div>
+               </div>
+            </SheetContent>
+          </Sheet>
+          
+          <span className="text-lg font-bold text-foreground">LACS Admin</span>
+          
+          <div className="flex items-center gap-2">
             <ThemeToggle />
-            <Button
-              type="text"
-              icon={<NotificationOutlined />}
-              style={{ fontSize: '18px' }}
-              aria-label="通知"
-              title="通知"
-            />
+            <Button variant="ghost" size="icon">
+              <Bell className="h-5 w-5" />
+            </Button>
           </div>
-        </div>
+        </header>
       )}
-
-      {/* 移动端底部导航栏 */}
-      {isMobile && (
-        <div
-          style={{
-            position: 'fixed',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            height: '60px',
-            background: currentTheme === 'dark' ? '#141414' : '#fff',
-            borderTop: `1px solid ${currentTheme === 'dark' ? '#434343' : '#f0f0f0'}`,
-            display: 'flex',
-            zIndex: 1000,
-          }}
-        >
-          <Menu
-            mode="horizontal"
-            selectedKeys={getSelectedKeys()}
-            items={bottomNavItems}
-            style={{
-              width: '100%',
-              border: 'none',
-              display: 'flex',
-              justifyContent: 'space-around',
-            }}
-          />
-        </div>
-      )}
-
-      {/* 移动端抽屉菜单 */}
-      <Drawer
-        title={
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <AppstoreOutlined style={{ fontSize: '20px', color: '#1890ff' }} />
-            <Text strong style={{ fontSize: '18px', color: '#1890ff' }}>
-              LACS Admin
-            </Text>
-          </div>
-        }
-        placement="left"
-        onClose={() => setMobileMenuOpen(false)}
-        open={mobileMenuOpen}
-        width={280}
-        styles={{
-          body: { padding: 0 }
-        }}
-        aria-label="移动端导航菜单"
-        destroyOnClose={false}
-        maskClosable={true}
-        keyboard={true}
-      >
-        <Menu
-          mode="vertical"
-          selectedKeys={getSelectedKeys()}
-          items={menuItems}
-          style={{ border: 'none', marginBottom: '80px' }}
-          onClick={() => setMobileMenuOpen(false)}
-          aria-label="导航菜单项"
-        />
-
-        {/* 移动端用户信息 */}
-        <div
-          style={{
-            position: 'absolute',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            padding: '16px',
-            borderTop: `1px solid ${currentTheme === 'dark' ? '#434343' : '#f0f0f0'}`,
-            background: currentTheme === 'dark' ? '#141414' : '#fff',
-          }}
-        >
-          <Dropdown
-            menu={{ items: userMenuItems }}
-            placement="topRight"
-            arrow
-            trigger={['click']}
-          >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                cursor: 'pointer',
-                padding: '12px',
-                borderRadius: '6px',
-                border: `1px solid ${currentTheme === 'dark' ? '#434343' : '#f0f0f0'}`,
-                background: currentTheme === 'dark' ? '#262626' : '#fafafa',
-              }}
-              role="button"
-              tabIndex={0}
-              aria-label={`用户菜单 - ${user?.name || '管理员'}`}
-            >
-              <Avatar
-                src={user?.avatar_url}
-                icon={!user?.avatar_url && <UserOutlined />}
-                size="large"
-                alt={`${user?.name || '管理员'}的头像`}
-              />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <Text
-                      strong
-                      style={{
-                        display: 'block',
-                        fontSize: '16px',
-                        lineHeight: '22px',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        color: currentTheme === 'dark' ? '#fff' : 'inherit',
-                      }}
-                    >
-                      {user?.name || '管理员'}
-                    </Text>
-                <Text
-                  type="secondary"
-                  style={{
-                    display: 'block',
-                    fontSize: '14px',
-                    lineHeight: '20px',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {user?.email || '系统用户'}
-                </Text>
-              </div>
-            </div>
-          </Dropdown>
-        </div>
-      </Drawer>
     </>
   )
 }

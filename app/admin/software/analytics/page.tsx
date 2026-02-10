@@ -1,41 +1,46 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import {
-  Card,
-  Row,
-  Col,
-  Statistic,
-  Typography,
-  Select,
-  DatePicker,
-  Button,
-  Breadcrumb,
-  Layout,
-  message,
-  Space,
-  Table,
-  Progress,
-  Tag
-} from 'antd'
-import {
-  BarChartOutlined,
-  EyeOutlined,
-  RiseOutlined,
-  HomeOutlined,
-  AppstoreOutlined,
-  ReloadOutlined,
-  DownloadOutlined,
-  CalendarOutlined
-} from '@ant-design/icons'
 import Link from 'next/link'
-import Navigation from '@/components/Navigation'
+import {
+  BarChart3,
+  Eye,
+  TrendingUp,
+  AppWindow,
+  Download,
+  RefreshCw,
+  Calendar
+} from 'lucide-react'
 import dayjs from 'dayjs'
 
-const { Title, Text } = Typography
-const { Content } = Layout
-const { Option } = Select
-const { RangePicker } = DatePicker
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { Input } from "@/components/ui/input"
+import { Progress } from "@/components/ui/progress"
+import { useToast } from "@/hooks/use-toast"
 
 interface ViewCountStats {
   statistics: Array<{
@@ -61,6 +66,7 @@ interface ViewCountStats {
 }
 
 export default function SoftwareAnalytics() {
+  const { toast } = useToast()
   const [loading, setLoading] = useState(false)
   const [statsData, setStatsData] = useState<ViewCountStats | null>(null)
   const [filters, setFilters] = useState({
@@ -94,11 +100,19 @@ export default function SoftwareAnalytics() {
       if (data.success) {
         setStatsData(data.data)
       } else {
-        message.error('获取统计数据失败')
+        toast({
+          variant: "destructive",
+          title: "获取失败",
+          description: "无法加载统计数据",
+        })
       }
     } catch (error) {
       console.error('Error fetching stats:', error)
-      message.error('获取统计数据失败，请稍后重试')
+      toast({
+        variant: "destructive",
+        title: "请求失败",
+        description: "网络错误或服务器无响应",
+      })
     } finally {
       setLoading(false)
     }
@@ -131,44 +145,25 @@ export default function SoftwareAnalytics() {
         a.click()
         window.URL.revokeObjectURL(url)
         document.body.removeChild(a)
-        message.success('导出成功')
+        toast({
+          title: "导出成功",
+          description: "统计数据已导出为 CSV 文件",
+        })
       } else {
-        message.error('导出失败')
+        toast({
+          variant: "destructive",
+          title: "导出失败",
+          description: "无法导出统计数据",
+        })
       }
     } catch (error) {
       console.error('Error exporting CSV:', error)
-      message.error('导出失败，请稍后重试')
-    }
-  }
-
-  // 日期范围变化
-  const handleDateRangeChange = (dates: any) => {
-    if (dates) {
-      setFilters({
-        ...filters,
-        startDate: dates[0].format('YYYY-MM-DD'),
-        endDate: dates[1].format('YYYY-MM-DD')
-      })
-    } else {
-      setFilters({
-        ...filters,
-        startDate: '',
-        endDate: ''
+      toast({
+        variant: "destructive",
+        title: "导出失败",
+        description: "网络错误或服务器无响应",
       })
     }
-  }
-
-  // 访问量范围变化
-  const handleViewCountRangeChange = (type: 'min' | 'max', value: string) => {
-    setFilters({
-      ...filters,
-      [type === 'min' ? 'minViewCount' : 'maxViewCount']: value
-    })
-  }
-
-  // 应用筛选
-  const handleApplyFilters = () => {
-    fetchStats()
   }
 
   // 重置筛选
@@ -206,247 +201,319 @@ export default function SoftwareAnalytics() {
     return ranges
   }
 
-  // 表格列定义
-  const columns = [
-    {
-      title: '排名',
-      key: 'rank',
-      width: 80,
-      render: (_: any, __: any, index: number) => (
-        <Tag color={index < 3 ? 'gold' : 'blue'}>#{index + 1}</Tag>
-      )
-    },
-    {
-      title: '软件名称',
-      dataIndex: 'name',
-      key: 'name',
-      render: (text: string, record: any) => (
-        <div>
-          <div style={{ fontWeight: 'bold' }}>{text}</div>
-          {record.nameEn && (
-            <div style={{ fontSize: '12px', color: '#666' }}>{record.nameEn}</div>
-          )}
-        </div>
-      )
-    },
-    {
-      title: '分类',
-      dataIndex: 'category',
-      key: 'category',
-      render: (category: string) => (
-        category ? <Tag color="purple">{category}</Tag> : <Text type="secondary">未分类</Text>
-      )
-    },
-    {
-      title: '访问量',
-      dataIndex: 'viewCount',
-      key: 'viewCount',
-      sorter: (a: any, b: any) => a.viewCount - b.viewCount,
-      render: (viewCount: number) => {
-        const maxViews = statsData?.summary.maxViews || 1
-        const percentage = Math.round((viewCount / maxViews) * 100)
-        
-        return (
-          <div>
-            <div style={{ fontWeight: 'bold', fontSize: '16px', marginBottom: 4 }}>
-              {viewCount.toLocaleString()}
-            </div>
-            <Progress percent={percentage} size="small" showInfo={false} />
-          </div>
-        )
-      }
-    },
-    {
-      title: '更新时间',
-      dataIndex: 'updatedAt',
-      key: 'updatedAt',
-      render: (date: string) => dayjs(date).format('YYYY-MM-DD HH:mm')
-    }
-  ]
-
   const distribution = getViewCountDistribution()
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
-      <Navigation />
+    <div className="space-y-6 pb-24">
+      {/* 面包屑导航 */}
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink href="/admin">管理后台</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink href="/admin/software">软件管理</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>访问量分析</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
 
-      <Content style={{ padding: '24px', marginTop: '64px', background: '#f5f5f5' }}>
-        {/* 面包屑导航 */}
-        <Breadcrumb style={{ marginBottom: '24px' }}>
-          <Breadcrumb.Item>
-            <Link href="/admin">
-              <HomeOutlined /> 管理后台
-            </Link>
-          </Breadcrumb.Item>
-          <Breadcrumb.Item>
-            <Link href="/admin/software">
-              <AppstoreOutlined /> 软件管理
-            </Link>
-          </Breadcrumb.Item>
-          <Breadcrumb.Item>
-            <BarChartOutlined /> 访问量分析
-          </Breadcrumb.Item>
-        </Breadcrumb>
+      {/* 页面标题 */}
+      <div className="space-y-1">
+        <h2 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+          <BarChart3 className="h-8 w-8 text-primary" />
+          软件访问量分析
+        </h2>
+        <p className="text-muted-foreground">
+          详细的访问量统计分析和数据导出功能
+        </p>
+      </div>
 
-        {/* 页面标题 */}
-        <div style={{ marginBottom: '24px' }}>
-          <Title level={2} style={{ margin: 0, display: 'flex', alignItems: 'center' }}>
-            <BarChartOutlined style={{ marginRight: 8, color: '#1890ff' }} />
-            软件访问量分析
-          </Title>
-          <Text type="secondary">
-            详细的访问量统计分析和数据导出功能
-          </Text>
-        </div>
-
-        {/* 筛选器 */}
-        <Card style={{ marginBottom: '24px' }}>
-          <Row gutter={16} align="middle">
-            <Col xs={24} sm={8}>
-              <Space direction="vertical" style={{ width: '100%' }}>
-                <Text strong>日期范围</Text>
-                <RangePicker
-                  style={{ width: '100%' }}
-                  onChange={handleDateRangeChange}
-                  placeholder={['开始日期', '结束日期']}
-                />
-              </Space>
-            </Col>
-            <Col xs={24} sm={8}>
-              <Space direction="vertical" style={{ width: '100%' }}>
-                <Text strong>访问量范围</Text>
-                <Space.Compact style={{ width: '100%' }}>
-                  <input
-                    placeholder="最小值"
-                    type="number"
-                    style={{ width: '50%', padding: '4px 8px', border: '1px solid #d9d9d9' }}
-                    onChange={(e) => handleViewCountRangeChange('min', e.target.value)}
-                  />
-                  <input
-                    placeholder="最大值"
-                    type="number"
-                    style={{ width: '50%', padding: '4px 8px', border: '1px solid #d9d9d9' }}
-                    onChange={(e) => handleViewCountRangeChange('max', e.target.value)}
-                  />
-                </Space.Compact>
-              </Space>
-            </Col>
-            <Col xs={24} sm={8}>
-              <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
-                <Button onClick={handleResetFilters}>重置</Button>
-                <Button type="primary" onClick={handleApplyFilters}>
-                  应用筛选
-                </Button>
-                <Button icon={<DownloadOutlined />} onClick={handleExportCSV}>
-                  导出CSV
-                </Button>
-                <Button icon={<ReloadOutlined />} onClick={fetchStats}>
-                  刷新
-                </Button>
-              </Space>
-            </Col>
-          </Row>
-        </Card>
-
-        {/* 统计概览 */}
-        {statsData && (
-          <Row gutter={16} style={{ marginBottom: '24px' }}>
-            <Col xs={24} sm={6}>
-              <Card>
-                <Statistic
-                  title="软件总数"
-                  value={statsData.summary.totalSoftware}
-                  prefix={<AppstoreOutlined />}
-                  valueStyle={{ color: '#1890ff' }}
-                />
-              </Card>
-            </Col>
-            <Col xs={24} sm={6}>
-              <Card>
-                <Statistic
-                  title="总访问量"
-                  value={statsData.summary.totalViews}
-                  prefix={<EyeOutlined />}
-                  valueStyle={{ color: '#fa8c16' }}
-                />
-              </Card>
-            </Col>
-            <Col xs={24} sm={6}>
-              <Card>
-                <Statistic
-                  title="平均访问量"
-                  value={statsData.summary.averageViews}
-                  prefix={<RiseOutlined />}
-                  valueStyle={{ color: '#52c41a' }}
-                />
-              </Card>
-            </Col>
-            <Col xs={24} sm={6}>
-              <Card>
-                <Statistic
-                  title="最高访问量"
-                  value={statsData.summary.maxViews}
-                  prefix={<BarChartOutlined />}
-                  valueStyle={{ color: '#722ed1' }}
-                />
-              </Card>
-            </Col>
-          </Row>
-        )}
-
-        {/* 访问量分布 */}
-        <Row gutter={16} style={{ marginBottom: '24px' }}>
-          <Col xs={24} lg={8}>
-            <Card title="访问量分布" extra={<BarChartOutlined />}>
-              <div>
-                {distribution.map(range => (
-                  <div key={range.label} style={{ marginBottom: 12 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                      <Text>{range.label} 次</Text>
-                      <Text strong>{range.count} 个软件</Text>
-                    </div>
-                    <Progress 
-                      percent={statsData ? Math.round((range.count / statsData.summary.totalSoftware) * 100) : 0}
-                      size="small"
-                      showInfo={false}
-                    />
-                  </div>
-                ))}
-              </div>
-            </Card>
-          </Col>
-          <Col xs={24} lg={16}>
-            <Card title="访问量排行" extra={<EyeOutlined />}>
-              <Table
-                columns={columns}
-                dataSource={statsData?.statistics.slice(0, 10) || []}
-                rowKey="id"
-                loading={loading}
-                pagination={false}
-                size="small"
+      {/* 筛选器 */}
+      <Card>
+        <CardHeader>
+          <CardTitle>筛选条件</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">开始日期</label>
+              <Input
+                type="date"
+                value={filters.startDate}
+                onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
               />
-            </Card>
-          </Col>
-        </Row>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">结束日期</label>
+              <Input
+                type="date"
+                value={filters.endDate}
+                onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">最小访问量</label>
+              <Input
+                type="number"
+                placeholder="最小值"
+                value={filters.minViewCount}
+                onChange={(e) => setFilters({ ...filters, minViewCount: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">最大访问量</label>
+              <Input
+                type="number"
+                placeholder="最大值"
+                value={filters.maxViewCount}
+                onChange={(e) => setFilters({ ...filters, maxViewCount: e.target.value })}
+              />
+            </div>
+          </div>
+          <div className="flex items-center gap-2 mt-4">
+            <Button variant="outline" onClick={handleResetFilters}>
+              重置
+            </Button>
+            <Button onClick={fetchStats}>
+              应用筛选
+            </Button>
+            <Button variant="outline" onClick={handleExportCSV}>
+              <Download className="mr-2 h-4 w-4" />
+              导出CSV
+            </Button>
+            <Button variant="outline" onClick={fetchStats}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              刷新
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
-        {/* 完整数据表格 */}
-        <Card title="完整统计数据">
-          <Table
-            columns={columns}
-            dataSource={statsData?.statistics || []}
-            rowKey="id"
-            loading={loading}
-            pagination={{
-              pageSize: 20,
-              showSizeChanger: true,
-              showQuickJumper: true,
-              showTotal: (total, range) =>
-                `第 ${range[0]}-${range[1]} 条，共 ${total} 条`
-            }}
-            scroll={{ x: 800 }}
-          />
+      {/* 统计概览 */}
+      {statsData && (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">软件总数</CardTitle>
+              <AppWindow className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-blue-600">
+                {statsData.summary.totalSoftware}
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">总访问量</CardTitle>
+              <Eye className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-orange-600">
+                {statsData.summary.totalViews.toLocaleString()}
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">平均访问量</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">
+                {Math.round(statsData.summary.averageViews)}
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">最高访问量</CardTitle>
+              <BarChart3 className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-purple-600">
+                {statsData.summary.maxViews.toLocaleString()}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* 访问量分布和排行 */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* 访问量分布 */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-primary" />
+              访问量分布
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {distribution.map(range => (
+              <div key={range.label} className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span>{range.label} 次</span>
+                  <span className="font-medium">{range.count} 个软件</span>
+                </div>
+                <Progress 
+                  value={statsData ? (range.count / statsData.summary.totalSoftware) * 100 : 0}
+                  className="h-2"
+                />
+              </div>
+            ))}
+          </CardContent>
         </Card>
-      </Content>
-    </Layout>
+
+        {/* 访问量排行 */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Eye className="h-5 w-5 text-primary" />
+              访问量排行 TOP 10
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[80px]">排名</TableHead>
+                  <TableHead>软件名称</TableHead>
+                  <TableHead>分类</TableHead>
+                  <TableHead>访问量</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {statsData?.statistics.slice(0, 10).map((item, index) => {
+                  const maxViews = statsData.summary.maxViews || 1
+                  const percentage = (item.viewCount / maxViews) * 100
+                  
+                  return (
+                    <TableRow key={item.id}>
+                      <TableCell>
+                        <Badge variant={index < 3 ? "default" : "secondary"} className={index < 3 ? "bg-yellow-500" : ""}>
+                          #{index + 1}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{item.name}</div>
+                          {item.nameEn && (
+                            <div className="text-xs text-muted-foreground">{item.nameEn}</div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {item.category ? (
+                          <Badge variant="secondary" className="bg-purple-100 text-purple-800">
+                            {item.category}
+                          </Badge>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">未分类</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <div className="font-bold text-base">
+                            {item.viewCount.toLocaleString()}
+                          </div>
+                          <Progress value={percentage} className="h-1" />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* 完整数据表格 */}
+      <Card>
+        <CardHeader>
+          <CardTitle>完整统计数据</CardTitle>
+          <CardDescription>
+            所有软件的访问量统计信息
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[80px]">排名</TableHead>
+                <TableHead>软件名称</TableHead>
+                <TableHead>分类</TableHead>
+                <TableHead>访问量</TableHead>
+                <TableHead>更新时间</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-8">
+                    <RefreshCw className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+                  </TableCell>
+                </TableRow>
+              ) : statsData?.statistics.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    暂无数据
+                  </TableCell>
+                </TableRow>
+              ) : (
+                statsData?.statistics.map((item, index) => {
+                  const maxViews = statsData.summary.maxViews || 1
+                  const percentage = (item.viewCount / maxViews) * 100
+                  
+                  return (
+                    <TableRow key={item.id}>
+                      <TableCell>
+                        <Badge variant={index < 3 ? "default" : "secondary"} className={index < 3 ? "bg-yellow-500" : ""}>
+                          #{index + 1}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{item.name}</div>
+                          {item.nameEn && (
+                            <div className="text-xs text-muted-foreground">{item.nameEn}</div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {item.category ? (
+                          <Badge variant="secondary" className="bg-purple-100 text-purple-800">
+                            {item.category}
+                          </Badge>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">未分类</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1 min-w-[120px]">
+                          <div className="font-bold text-base">
+                            {item.viewCount.toLocaleString()}
+                          </div>
+                          <Progress value={percentage} className="h-1" />
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {dayjs(item.updatedAt).format('YYYY-MM-DD HH:mm')}
+                      </TableCell>
+                    </TableRow>
+                  )
+                })
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
   )
 }

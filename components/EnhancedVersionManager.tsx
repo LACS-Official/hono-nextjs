@@ -1,49 +1,89 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import * as z from 'zod'
 import dayjs from 'dayjs'
 import {
-  Card,
-  Table,
-  Button,
-  Tag,
-  Space,
-  Modal,
-  Form,
-  Input,
-  DatePicker,
-  Switch,
-  Select,
-  message,
-  Tooltip,
-  Divider,
-  Row,
-  Col,
-  Statistic,
-  Alert,
-  Checkbox
-} from 'antd'
+  Plus,
+  Edit,
+  Trash2,
+  Download,
+  RefreshCw,
+  RefreshCcw,
+  Rocket,
+  Bug,
+  Shield,
+  Zap,
+  GitCompare,
+  X,
+  ExternalLink
+} from 'lucide-react'
 
-const { TextArea } = Input
-const { Option } = Select
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
-  PlusOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  DownloadOutlined,
-  InfoCircleOutlined,
-  RocketOutlined,
-  BugOutlined,
-  SafetyOutlined,
-  ThunderboltOutlined,
-  SwapOutlined,
-  ReloadOutlined,
-  SyncOutlined
-} from '@ant-design/icons'
-import type { ColumnsType } from 'antd/es/table'
-import VersionComparison from './VersionComparison'
-
-
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import { useToast } from "@/hooks/use-toast"
 
 interface DownloadLinks {
   official?: string
@@ -91,22 +131,72 @@ interface EnhancedVersionManagerProps {
   onVersionAdded?: () => void
 }
 
+// 表单验证 schema
+const versionFormSchema = z.object({
+  version: z.string()
+    .min(1, '请输入版本号')
+    .regex(/^\d+\.\d+\.\d+(-[a-zA-Z0-9.-]+)?$/, '请输入有效的语义化版本号 (如: 1.0.0)'),
+  releaseDate: z.string().min(1, '请选择发布日期'),
+  releaseNotes: z.string().min(1, '请输入更新日志'),
+  releaseNotesEn: z.string().optional(),
+  fileSize: z.string().optional(),
+  versionType: z.enum(['release', 'beta', 'alpha', 'rc']),
+  isStable: z.boolean().default(true),
+  isBeta: z.boolean().default(false),
+  isPrerelease: z.boolean().default(false),
+  downloadLinks: z.object({
+    official: z.string().optional(),
+    quark: z.string().optional(),
+    pan123: z.string().optional(),
+    baidu: z.string().optional(),
+    thunder: z.string().optional(),
+    thunderPan: z.string().optional(),
+  }).optional(),
+})
+
+type VersionFormValues = z.infer<typeof versionFormSchema>
+
 export default function EnhancedVersionManager({ 
   softwareId, 
   softwareName, 
   onVersionAdded 
 }: EnhancedVersionManagerProps) {
+  const { toast } = useToast()
   const [versions, setVersions] = useState<VersionHistory[]>([])
   const [loading, setLoading] = useState(false)
   const [modalVisible, setModalVisible] = useState(false)
   const [editingVersion, setEditingVersion] = useState<VersionHistory | null>(null)
-  const [form] = Form.useForm()
   const [stats, setStats] = useState<VersionStats | null>(null)
   const [selectedVersions, setSelectedVersions] = useState<VersionHistory[]>([])
   const [comparisonVisible, setComparisonVisible] = useState(false)
   const [autoUpdateLoading, setAutoUpdateLoading] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<number | null>(null)
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL
+
+  const form = useForm<VersionFormValues>({
+    resolver: zodResolver(versionFormSchema),
+    defaultValues: {
+      version: '',
+      releaseDate: '',
+      releaseNotes: '',
+      releaseNotesEn: '',
+      fileSize: '',
+      versionType: 'release',
+      isStable: true,
+      isBeta: false,
+      isPrerelease: false,
+      downloadLinks: {
+        official: '',
+        quark: '',
+        pan123: '',
+        baidu: '',
+        thunder: '',
+        thunderPan: '',
+      },
+    },
+  })
 
   // 获取版本历史
   const fetchVersions = async () => {
@@ -121,11 +211,19 @@ export default function EnhancedVersionManager({
         )
         setVersions(sortedVersions)
       } else {
-        message.error('获取版本历史失败')
+        toast({
+          variant: "destructive",
+          title: "获取失败",
+          description: "获取版本历史失败",
+        })
       }
     } catch (error) {
       console.error('获取版本历史失败:', error)
-      message.error('获取版本历史失败')
+      toast({
+        variant: "destructive",
+        title: "请求失败",
+        description: "网络错误或服务器无响应",
+      })
     } finally {
       setLoading(false)
     }
@@ -163,13 +261,26 @@ export default function EnhancedVersionManager({
       const data = await response.json()
       
       if (data.success) {
-        message.success(data.message || '版本更新成功')
+        toast({
+          title: "更新成功",
+          description: data.message || '版本更新成功',
+        })
+        fetchVersions()
+        fetchStats()
         onVersionAdded?.()
       } else {
-        message.error(data.error || '版本更新失败')
+        toast({
+          variant: "destructive",
+          title: "更新失败",
+          description: data.error || '版本更新失败',
+        })
       }
     } catch (error) {
-      message.error('版本更新失败')
+      toast({
+        variant: "destructive",
+        title: "请求失败",
+        description: "网络错误或服务器无响应",
+      })
     } finally {
       setAutoUpdateLoading(false)
     }
@@ -182,13 +293,24 @@ export default function EnhancedVersionManager({
       const data = await response.json()
       
       if (data.success) {
-        form.setFieldsValue({ version: data.data.suggestedVersion })
-        message.success(`建议版本号: ${data.data.suggestedVersion}`)
+        form.setValue('version', data.data.suggestedVersion)
+        toast({
+          title: "建议版本号",
+          description: `建议版本号: ${data.data.suggestedVersion}`,
+        })
       } else {
-        message.error('获取建议版本号失败')
+        toast({
+          variant: "destructive",
+          title: "获取失败",
+          description: "获取建议版本号失败",
+        })
       }
     } catch (error) {
-      message.error('获取建议版本号失败')
+      toast({
+        variant: "destructive",
+        title: "请求失败",
+        description: "网络错误或服务器无响应",
+      })
     }
   }
 
@@ -198,7 +320,10 @@ export default function EnhancedVersionManager({
       if (selectedVersions.length < 2) {
         setSelectedVersions([...selectedVersions, version])
       } else {
-        message.warning('最多只能选择两个版本进行比较')
+        toast({
+          title: "选择限制",
+          description: "最多只能选择两个版本进行比较",
+        })
       }
     } else {
       setSelectedVersions(selectedVersions.filter(v => v.id !== version.id))
@@ -215,7 +340,10 @@ export default function EnhancedVersionManager({
     if (selectedVersions.length === 2) {
       setComparisonVisible(true)
     } else {
-      message.warning('请选择两个版本进行比较')
+      toast({
+        title: "选择不足",
+        description: "请选择两个版本进行比较",
+      })
     }
   }
 
@@ -226,117 +354,135 @@ export default function EnhancedVersionManager({
 
   // 渲染下载链接
   const renderDownloadLinks = (links: DownloadLinks) => {
-    if (!links) return <span style={{ color: '#999' }}>暂无下载链接</span>
+    if (!links) return <span className="text-muted-foreground">暂无下载链接</span>
     
     const linkButtons = []
     
     if (links.official) {
       linkButtons.push(
-        <Button key="official" size="small" type="primary" icon={<DownloadOutlined />} href={links.official} target="_blank">
-          官方
+        <Button key="official" size="sm" variant="default" asChild>
+          <a href={links.official} target="_blank" rel="noopener noreferrer">
+            <Download className="mr-1 h-3 w-3" />
+            官方
+          </a>
         </Button>
       )
     }
     
     if (links.quark) {
       linkButtons.push(
-        <Button key="quark" size="small" href={links.quark} target="_blank">
-          夸克
+        <Button key="quark" size="sm" variant="outline" asChild>
+          <a href={links.quark} target="_blank" rel="noopener noreferrer">夸克</a>
         </Button>
       )
     }
     
     if (links.pan123) {
       linkButtons.push(
-        <Button key="pan123" size="small" href={links.pan123} target="_blank">
-          123
+        <Button key="pan123" size="sm" variant="outline" asChild>
+          <a href={links.pan123} target="_blank" rel="noopener noreferrer">123</a>
         </Button>
       )
     }
     
     if (links.baidu) {
       linkButtons.push(
-        <Button key="baidu" size="small" href={links.baidu} target="_blank">
-          百度
+        <Button key="baidu" size="sm" variant="outline" asChild>
+          <a href={links.baidu} target="_blank" rel="noopener noreferrer">百度</a>
         </Button>
       )
     }
     
     if (links.thunder) {
       linkButtons.push(
-        <Button key="thunder" size="small" href={links.thunder} target="_blank">
-          迅雷
+        <Button key="thunder" size="sm" variant="outline" asChild>
+          <a href={links.thunder} target="_blank" rel="noopener noreferrer">迅雷</a>
         </Button>
       )
     }
 
     if (links.thunderPan) {
       linkButtons.push(
-        <Button key="thunderPan" size="small" href={links.thunderPan} target="_blank">
-          迅雷网盘
+        <Button key="thunderPan" size="sm" variant="outline" asChild>
+          <a href={links.thunderPan} target="_blank" rel="noopener noreferrer">迅雷网盘</a>
         </Button>
       )
     }
     
-    return <Space wrap>{linkButtons}</Space>
+    return <div className="flex flex-wrap gap-1">{linkButtons}</div>
   }
 
   // 处理编辑
   const handleEdit = (version: VersionHistory) => {
     setEditingVersion(version)
-    form.setFieldsValue({
-      ...version,
-      releaseDate: version.releaseDate ? dayjs(version.releaseDate) : null,
-      downloadLinks: version.downloadLinks || {}
+    form.reset({
+      version: version.version,
+      releaseDate: dayjs(version.releaseDate).format('YYYY-MM-DDTHH:mm'),
+      releaseNotes: version.releaseNotes || '',
+      releaseNotesEn: version.releaseNotesEn || '',
+      fileSize: version.fileSize || '',
+      versionType: version.versionType,
+      isStable: version.isStable,
+      isBeta: version.isBeta,
+      isPrerelease: version.isPrerelease,
+      downloadLinks: version.downloadLinks || {},
     })
     setModalVisible(true)
   }
 
   // 处理删除
-  const handleDelete = async (versionId: number) => {
-    Modal.confirm({
-      title: '确认删除',
-      content: '确定要删除这个版本吗？此操作不可撤销。',
-      onOk: async () => {
-        try {
-          const response = await fetch(`${API_BASE_URL}/software/id/${softwareId}/versions/${versionId}`, {
-            method: 'DELETE',
-            headers: {
-              'Content-Type': 'application/json'
-            }
-          })
+  const handleDelete = async () => {
+    if (!deleteTarget) return
 
-          const data = await response.json()
-
-          if (data.success) {
-            message.success('版本删除成功')
-            fetchVersions()
-            fetchStats()
-          } else {
-            message.error(data.error || '删除失败')
-          }
-        } catch (error) {
-          console.error('删除版本失败:', error)
-          message.error('删除失败')
+    try {
+      const response = await fetch(`${API_BASE_URL}/software/id/${softwareId}/versions/${deleteTarget}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
         }
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        toast({
+          title: "删除成功",
+          description: "版本已删除",
+        })
+        fetchVersions()
+        fetchStats()
+      } else {
+        toast({
+          variant: "destructive",
+          title: "删除失败",
+          description: data.error || '删除失败',
+        })
       }
-    })
+    } catch (error) {
+      console.error('删除版本失败:', error)
+      toast({
+        variant: "destructive",
+        title: "请求失败",
+        description: "网络错误或服务器无响应",
+      })
+    } finally {
+      setDeleteDialogOpen(false)
+      setDeleteTarget(null)
+    }
   }
 
   // 处理提交
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = async (values: VersionFormValues) => {
     try {
-      // 处理日期格式
       const submitData = {
         ...values,
         softwareId,
-        releaseDate: values.releaseDate ? values.releaseDate.toISOString() : new Date().toISOString(),
+        releaseDate: new Date(values.releaseDate).toISOString(),
         downloadLinks: values.downloadLinks || {}
       }
 
       let response
       if (editingVersion) {
-        // 编辑模式
         response = await fetch(`${API_BASE_URL}/software/id/${softwareId}/versions/${editingVersion.id}`, {
           method: 'PUT',
           headers: {
@@ -345,7 +491,6 @@ export default function EnhancedVersionManager({
           body: JSON.stringify(submitData)
         })
       } else {
-        // 新增模式
         response = await fetch(`${API_BASE_URL}/software/id/${softwareId}/versions`, {
           method: 'POST',
           headers: {
@@ -358,510 +503,628 @@ export default function EnhancedVersionManager({
       const data = await response.json()
 
       if (data.success) {
-        message.success(editingVersion ? '版本更新成功' : '版本添加成功')
+        toast({
+          title: editingVersion ? "更新成功" : "添加成功",
+          description: editingVersion ? '版本更新成功' : '版本添加成功',
+        })
         setModalVisible(false)
         setEditingVersion(null)
-        form.resetFields()
+        form.reset()
         fetchVersions()
         fetchStats()
         onVersionAdded?.()
       } else {
-        message.error(data.error || (editingVersion ? '更新失败' : '添加失败'))
+        toast({
+          variant: "destructive",
+          title: editingVersion ? "更新失败" : "添加失败",
+          description: data.error || (editingVersion ? '更新失败' : '添加失败'),
+        })
       }
     } catch (error) {
       console.error('提交版本失败:', error)
-      message.error(editingVersion ? '更新失败' : '添加失败')
+      toast({
+        variant: "destructive",
+        title: "请求失败",
+        description: "网络错误或服务器无响应",
+      })
     }
   }
 
-  // 表格列定义
-  const columns: ColumnsType<VersionHistory> = [
-    {
-      title: '选择',
-      key: 'select',
-      width: 60,
-      render: (_, record) => (
-        <Checkbox
-          checked={selectedVersions.some(v => v.id === record.id)}
-          onChange={(e) => handleVersionSelect(record, e.target.checked)}
-          disabled={selectedVersions.length >= 2 && !selectedVersions.some(v => v.id === record.id)}
-        />
-      )
-    },
-    {
-      title: '版本号',
-      dataIndex: 'version',
-      key: 'version',
-      width: 120,
-      render: (version: string, record: VersionHistory) => (
-        <div>
-          <Tag color={record.isStable ? 'green' : record.isBeta ? 'orange' : 'red'}>
-            {version}
-          </Tag>
-          <div style={{ marginTop: 4 }}>
-            {record.isStable && <Tag color="green" style={{ fontSize: '12px' }}>稳定</Tag>}
-            {record.isBeta && <Tag color="orange" style={{ fontSize: '12px' }}>测试</Tag>}
-            {record.isPrerelease && <Tag color="red" style={{ fontSize: '12px' }}>预发布</Tag>}
-          </div>
-        </div>
-      )
-    },
-    {
-      title: '发布日期',
-      dataIndex: 'releaseDate',
-      key: 'releaseDate',
-      width: 120,
-      render: (date: string) => new Date(date).toLocaleDateString('zh-CN')
-    },
-    {
-      title: '更新类型',
-      dataIndex: 'changelogCategory',
-      key: 'changelogCategory',
-      width: 150,
-      render: (categories: string[]) => (
-        <div>
-          {categories?.map(cat => {
-            const icons = {
-              feature: <RocketOutlined />,
-              bugfix: <BugOutlined />,
-              security: <SafetyOutlined />,
-              performance: <ThunderboltOutlined />
-            }
-            const colors = {
-              feature: 'blue',
-              bugfix: 'orange',
-              security: 'red',
-              performance: 'green'
-            }
-            const labels = {
-              feature: '新功能',
-              bugfix: '错误修复',
-              security: '安全更新',
-              performance: '性能优化'
-            }
-            return (
-              <Tag
-                key={cat}
-                color={colors[cat as keyof typeof colors]}
-                icon={icons[cat as keyof typeof icons]}
-                style={{ fontSize: '12px' }}
-              >
-                {labels[cat as keyof typeof labels] || cat}
-              </Tag>
-            )
-          })}
-        </div>
-      )
-    },
-    {
-      title: '下载链接',
-      dataIndex: 'downloadLinks',
-      key: 'downloadLinks',
-      width: 200,
-      render: (links: DownloadLinks) => renderDownloadLinks(links)
-    },
-    {
-      title: '文件大小',
-      dataIndex: 'fileSize',
-      key: 'fileSize',
-      width: 100
-    },
-    {
-      title: '更新日志',
-      dataIndex: 'releaseNotes',
-      key: 'releaseNotes',
-      width: 200,
-      render: (notes: string) => (
-        notes ? (
-          <Tooltip title={notes} placement="topLeft">
-            <div style={{
-              maxWidth: 180,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap'
-            }}>
-              {notes}
-            </div>
-          </Tooltip>
-        ) : (
-          <span style={{ color: '#999' }}>无更新日志</span>
-        )
-      )
-    },
-    {
-      title: '操作',
-      key: 'action',
-      width: 120,
-      fixed: 'right',
-      render: (_, record: VersionHistory) => (
-        <Space size="small">
-          <Tooltip title="编辑版本">
-            <Button
-              type="link"
-              icon={<EditOutlined />}
-              size="small"
-              onClick={() => handleEdit(record)}
-            >
-              编辑
-            </Button>
-          </Tooltip>
-          <Tooltip title="删除版本">
-            <Button
-              type="link"
-              danger
-              icon={<DeleteOutlined />}
-              size="small"
-              onClick={() => handleDelete(record.id)}
-            >
-              删除
-            </Button>
-          </Tooltip>
-        </Space>
-      )
+  // 渲染更新类型标签
+  const renderChangelogCategory = (categories: string[]) => {
+    if (!categories || categories.length === 0) return null
+
+    const categoryConfig: Record<string, { icon: React.ReactNode; color: string; label: string }> = {
+      feature: { icon: <Rocket className="h-3 w-3" />, color: 'bg-blue-100 text-blue-800', label: '新功能' },
+      bugfix: { icon: <Bug className="h-3 w-3" />, color: 'bg-orange-100 text-orange-800', label: '错误修复' },
+      security: { icon: <Shield className="h-3 w-3" />, color: 'bg-red-100 text-red-800', label: '安全更新' },
+      performance: { icon: <Zap className="h-3 w-3" />, color: 'bg-green-100 text-green-800', label: '性能优化' },
     }
-  ]
+
+    return (
+      <div className="flex flex-wrap gap-1">
+        {categories.map(cat => {
+          const config = categoryConfig[cat]
+          if (!config) return null
+          return (
+            <Badge key={cat} variant="secondary" className={config.color}>
+              {config.icon}
+              <span className="ml-1">{config.label}</span>
+            </Badge>
+          )
+        })}
+      </div>
+    )
+  }
 
   return (
-    <div>
+    <div className="space-y-4">
       {/* 版本统计卡片 */}
       {stats && (
-        <Card style={{ marginBottom: 16 }}>
-          <Row gutter={16}>
-            <Col span={4}>
-              <Statistic title="总版本数" value={stats.totalVersions} />
-            </Col>
-            <Col span={4}>
-              <Statistic title="稳定版本" value={stats.stableVersions} />
-            </Col>
-            <Col span={4}>
-              <Statistic title="测试版本" value={stats.betaVersions} />
-            </Col>
-            <Col span={4}>
-              <Statistic title="预发布版本" value={stats.prereleaseVersions} />
-            </Col>
-            <Col span={4}>
-              <Statistic title="最新版本" value={stats.latestVersion} />
-            </Col>
-            <Col span={4}>
-              <Statistic
-                title="平均发布间隔"
-                value={stats.averageReleaseInterval}
-                suffix="天"
-                precision={1}
-              />
-            </Col>
-          </Row>
-        </Card>
+        <div className="grid gap-4 md:grid-cols-6">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">总版本数</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.totalVersions}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">稳定版本</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">{stats.stableVersions}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">测试版本</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-orange-600">{stats.betaVersions}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">预发布版本</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-red-600">{stats.prereleaseVersions}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">最新版本</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.latestVersion}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">平均发布间隔</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.averageReleaseInterval?.toFixed(1) || '0.0'}<span className="text-sm font-normal ml-1">天</span></div>
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       {/* 操作按钮 */}
-      <Card style={{ marginBottom: 16 }}>
-        <Row justify="space-between" align="middle">
-          <Col>
-            <Space>
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={() => {
-                  setEditingVersion(null)
-                  form.resetFields()
-                  setModalVisible(true)
-                }}
-              >
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex flex-col md:flex-row justify-between gap-4">
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={() => {
+                setEditingVersion(null)
+                form.reset()
+                setModalVisible(true)
+              }}>
+                <Plus className="mr-2 h-4 w-4" />
                 添加新版本
               </Button>
-              <Button
-                icon={<SyncOutlined />}
-                loading={autoUpdateLoading}
-                onClick={handleAutoUpdate}
-              >
+              <Button variant="outline" onClick={handleAutoUpdate} disabled={autoUpdateLoading}>
+                <RefreshCcw className={`mr-2 h-4 w-4 ${autoUpdateLoading ? 'animate-spin' : ''}`} />
                 自动更新版本
               </Button>
-              <Button onClick={() => suggestVersion('patch')}>
+              <Button variant="outline" onClick={() => suggestVersion('patch')}>
                 建议补丁版本
               </Button>
-              <Button onClick={() => suggestVersion('minor')}>
+              <Button variant="outline" onClick={() => suggestVersion('minor')}>
                 建议次要版本
               </Button>
-              <Button onClick={() => suggestVersion('major')}>
+              <Button variant="outline" onClick={() => suggestVersion('major')}>
                 建议主要版本
               </Button>
-            </Space>
-          </Col>
-          <Col>
-            <Space>
+            </div>
+            <div className="flex flex-wrap gap-2">
               {selectedVersions.length > 0 && (
                 <>
-                  <span>已选择 {selectedVersions.length}/2 个版本</span>
+                  <span className="flex items-center text-sm text-muted-foreground">
+                    已选择 {selectedVersions.length}/2 个版本
+                  </span>
                   <Button
-                    type="primary"
-                    icon={<SwapOutlined />}
+                    variant="outline"
                     onClick={showVersionComparison}
                     disabled={selectedVersions.length !== 2}
                   >
+                    <GitCompare className="mr-2 h-4 w-4" />
                     版本比较
                   </Button>
-                  <Button onClick={clearVersionSelection}>
+                  <Button variant="ghost" size="sm" onClick={clearVersionSelection}>
+                    <X className="mr-2 h-4 w-4" />
                     清除选择
                   </Button>
                 </>
               )}
-              <Button
-                icon={<ReloadOutlined />}
-                onClick={() => {
-                  fetchVersions()
-                  fetchStats()
-                }}
-              >
+              <Button variant="outline" onClick={() => {
+                fetchVersions()
+                fetchStats()
+              }}>
+                <RefreshCw className="mr-2 h-4 w-4" />
                 刷新
               </Button>
-            </Space>
-          </Col>
-        </Row>
+            </div>
+          </div>
+        </CardContent>
       </Card>
 
-      {/* 版本列表表格 */}
-      <Card title={`${softwareName} - 版本历史`}>
-        {selectedVersions.length > 0 && (
-          <Alert
-            message={`已选择 ${selectedVersions.length} 个版本: ${selectedVersions.map(v => v.version).join(', ')}`}
-            type="info"
-            showIcon
-            style={{ marginBottom: 16 }}
-            action={
-              <Space>
-                {selectedVersions.length === 2 && (
-                  <Button size="small" type="primary" onClick={showVersionComparison}>
-                    比较版本
+      {/* 版本列表 */}
+      <Card>
+        <CardHeader>
+          <CardTitle>{softwareName} - 版本历史</CardTitle>
+          <CardDescription>管理软件的所有版本信息</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {selectedVersions.length > 0 && (
+            <Alert className="mb-4">
+              <AlertDescription className="flex items-center justify-between">
+                <span>已选择 {selectedVersions.length} 个版本: {selectedVersions.map(v => v.version).join(', ')}</span>
+                <div className="flex gap-2">
+                  {selectedVersions.length === 2 && (
+                    <Button size="sm" onClick={showVersionComparison}>
+                      比较版本
+                    </Button>
+                  )}
+                  <Button size="sm" variant="outline" onClick={clearVersionSelection}>
+                    清除
                   </Button>
-                )}
-                <Button size="small" onClick={clearVersionSelection}>
-                  清除
-                </Button>
-              </Space>
-            }
-          />
-        )}
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
 
-        <Table
-          columns={columns}
-          dataSource={versions}
-          rowKey="id"
-          loading={loading}
-          pagination={{
-            pageSize: 10,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`
-          }}
-          scroll={{ x: 1200 }}
-        />
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[50px]">选择</TableHead>
+                <TableHead className="w-[120px]">版本号</TableHead>
+                <TableHead className="w-[120px]">发布日期</TableHead>
+                <TableHead className="w-[150px]">更新类型</TableHead>
+                <TableHead>下载链接</TableHead>
+                <TableHead className="w-[100px]">文件大小</TableHead>
+                <TableHead className="w-[200px]">更新日志</TableHead>
+                <TableHead className="w-[120px]">操作</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center py-8">
+                    <RefreshCw className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+                  </TableCell>
+                </TableRow>
+              ) : versions.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                    暂无版本记录
+                  </TableCell>
+                </TableRow>
+              ) : (
+                versions.map((version) => (
+                  <TableRow key={version.id}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedVersions.some(v => v.id === version.id)}
+                        onCheckedChange={(checked) => handleVersionSelect(version, checked as boolean)}
+                        disabled={selectedVersions.length >= 2 && !selectedVersions.some(v => v.id === version.id)}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <div className="space-y-1">
+                        <Badge variant={version.isStable ? 'default' : version.isBeta ? 'secondary' : 'destructive'}>
+                          {version.version}
+                        </Badge>
+                        <div className="flex gap-1">
+                          {version.isStable && <Badge variant="outline" className="text-xs bg-green-50">稳定</Badge>}
+                          {version.isBeta && <Badge variant="outline" className="text-xs bg-orange-50">测试</Badge>}
+                          {version.isPrerelease && <Badge variant="outline" className="text-xs bg-red-50">预发布</Badge>}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {new Date(version.releaseDate).toLocaleDateString('zh-CN')}
+                    </TableCell>
+                    <TableCell>
+                      {renderChangelogCategory(version.changelogCategory || [])}
+                    </TableCell>
+                    <TableCell>
+                      {renderDownloadLinks(version.downloadLinks || {})}
+                    </TableCell>
+                    <TableCell className="text-sm">{version.fileSize || '-'}</TableCell>
+                    <TableCell>
+                      {version.releaseNotes ? (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="max-w-[180px] truncate text-sm">
+                                {version.releaseNotes}
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-sm">
+                              <p>{version.releaseNotes}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">无更新日志</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => handleEdit(version)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setDeleteTarget(version.id)
+                            setDeleteDialogOpen(true)
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
       </Card>
 
-      {/* 版本比较组件 */}
-      <VersionComparison
-        visible={comparisonVisible}
-        onClose={() => setComparisonVisible(false)}
-        versions={versions}
-        selectedVersions={selectedVersions}
-      />
+      {/* 新增/编辑版本对话框 */}
+      <Dialog open={modalVisible} onOpenChange={setModalVisible}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editingVersion ? '编辑版本' : '新增版本'}</DialogTitle>
+            <DialogDescription>
+              {editingVersion ? '修改版本信息' : '添加新的软件版本'}
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="version"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>版本号</FormLabel>
+                    <FormControl>
+                      <Input placeholder="请输入版本号 (如: 1.0.0)" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      请使用语义化版本号格式
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-      {/* 新增/编辑版本模态框 */}
-      <Modal
-        title={editingVersion ? '编辑版本' : '新增版本'}
-        open={modalVisible}
-        onCancel={() => {
-          setModalVisible(false)
-          setEditingVersion(null)
-          form.resetFields()
-        }}
-        footer={null}
-        width={800}
-        destroyOnClose
-      >
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={handleSubmit}
-          initialValues={{
-            isStable: true,
-            isBeta: false,
-            isPrerelease: false,
-            versionType: 'release'
-          }}
-        >
-          <Form.Item
-            label="版本号"
-            name="version"
-            rules={[
-              { required: true, message: '请输入版本号' },
-              { pattern: /^\d+\.\d+\.\d+(-[a-zA-Z0-9.-]+)?$/, message: '请输入有效的语义化版本号 (如: 1.0.0)' }
-            ]}
-          >
-            <Input placeholder="请输入版本号 (如: 1.0.0)" />
-          </Form.Item>
+              <FormField
+                control={form.control}
+                name="releaseDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>发布日期</FormLabel>
+                    <FormControl>
+                      <Input type="datetime-local" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-          <Form.Item
-            label="发布日期"
-            name="releaseDate"
-            rules={[{ required: true, message: '请选择发布日期' }]}
-          >
-            <DatePicker
-              showTime
-              style={{ width: '100%' }}
-              placeholder="选择发布日期"
-            />
-          </Form.Item>
+              <FormField
+                control={form.control}
+                name="releaseNotes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>更新日志</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="请输入更新日志"
+                        className="min-h-[100px]"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-          <Form.Item
-            label="更新日志"
-            name="releaseNotes"
-            rules={[{ required: true, message: '请输入更新日志' }]}
-          >
-            <TextArea
-              rows={4}
-              placeholder="请输入更新日志"
-              showCount
-              maxLength={1000}
-            />
-          </Form.Item>
+              <FormField
+                control={form.control}
+                name="releaseNotesEn"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>英文更新日志 (可选)</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="请输入英文更新日志"
+                        className="min-h-[100px]"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-          <Form.Item
-            label="英文更新日志"
-            name="releaseNotesEn"
-          >
-            <TextArea
-              rows={4}
-              placeholder="请输入英文更新日志（可选）"
-              showCount
-              maxLength={1000}
-            />
-          </Form.Item>
+              <FormField
+                control={form.control}
+                name="fileSize"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>文件大小 (可选)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="请输入文件大小 (如: 100MB)" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-          <Form.Item
-            label="文件大小"
-            name="fileSize"
-          >
-            <Input placeholder="请输入文件大小 (如: 100MB)" />
-          </Form.Item>
+              <FormField
+                control={form.control}
+                name="versionType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>版本类型</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="请选择版本类型" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="release">正式版</SelectItem>
+                        <SelectItem value="beta">测试版</SelectItem>
+                        <SelectItem value="alpha">内测版</SelectItem>
+                        <SelectItem value="rc">候选版</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-          <Form.Item
-            label="版本类型"
-            name="versionType"
-            rules={[{ required: true, message: '请选择版本类型' }]}
-          >
-            <Select placeholder="请选择版本类型">
-              <Option value="release">正式版</Option>
-              <Option value="beta">测试版</Option>
-              <Option value="alpha">内测版</Option>
-              <Option value="rc">候选版</Option>
-            </Select>
-          </Form.Item>
+              <div className="grid grid-cols-3 gap-4">
+                <FormField
+                  control={form.control}
+                  name="isStable"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                      <div className="space-y-0.5">
+                        <FormLabel>稳定版本</FormLabel>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="isBeta"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                      <div className="space-y-0.5">
+                        <FormLabel>测试版本</FormLabel>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="isPrerelease"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                      <div className="space-y-0.5">
+                        <FormLabel>预发布版本</FormLabel>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
 
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item
-                label="稳定版本"
-                name="isStable"
-                valuePropName="checked"
-              >
-                <Switch />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item
-                label="测试版本"
-                name="isBeta"
-                valuePropName="checked"
-              >
-                <Switch />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item
-                label="预发布版本"
-                name="isPrerelease"
-                valuePropName="checked"
-              >
-                <Switch />
-              </Form.Item>
-            </Col>
-          </Row>
+              <div className="border-t my-4" />
 
-          <Form.Item
-            label="下载链接"
-            name="downloadLinks"
-          >
-            <Input.Group>
-              <Row gutter={8}>
-                <Col span={12}>
-                  <Form.Item
-                    name={['downloadLinks', 'official']}
-                    style={{ marginBottom: 8 }}
-                  >
-                    <Input placeholder="官方下载链接" />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item
-                    name={['downloadLinks', 'quark']}
-                    style={{ marginBottom: 8 }}
-                  >
-                    <Input placeholder="夸克网盘链接" />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item
-                    name={['downloadLinks', 'pan123']}
-                    style={{ marginBottom: 8 }}
-                  >
-                    <Input placeholder="123网盘链接" />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item
-                    name={['downloadLinks', 'baidu']}
-                    style={{ marginBottom: 8 }}
-                  >
-                    <Input placeholder="百度网盘链接" />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item
-                    name={['downloadLinks', 'thunder']}
-                    style={{ marginBottom: 8 }}
-                  >
-                    <Input placeholder="迅雷下载链接" />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item
-                    name={['downloadLinks', 'thunderPan']}
-                    style={{ marginBottom: 8 }}
-                  >
-                    <Input placeholder="迅雷网盘链接" />
-                  </Form.Item>
-                </Col>
-              </Row>
-            </Input.Group>
-          </Form.Item>
+              <div className="space-y-2">
+                <h4 className="font-medium">下载链接</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="downloadLinks.official"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>官方下载链接</FormLabel>
+                        <FormControl>
+                          <Input placeholder="https://..." {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="downloadLinks.quark"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>夸克网盘链接</FormLabel>
+                        <FormControl>
+                          <Input placeholder="https://..." {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="downloadLinks.pan123"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>123网盘链接</FormLabel>
+                        <FormControl>
+                          <Input placeholder="https://..." {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="downloadLinks.baidu"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>百度网盘链接</FormLabel>
+                        <FormControl>
+                          <Input placeholder="https://..." {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="downloadLinks.thunder"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>迅雷下载链接</FormLabel>
+                        <FormControl>
+                          <Input placeholder="https://..." {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="downloadLinks.thunderPan"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>迅雷网盘链接</FormLabel>
+                        <FormControl>
+                          <Input placeholder="https://..." {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
 
-          <Form.Item style={{ marginTop: 24, textAlign: 'right' }}>
-            <Space>
-              <Button onClick={() => {
-                setModalVisible(false)
-                setEditingVersion(null)
-                form.resetFields()
-              }}>
-                取消
-              </Button>
-              <Button type="primary" htmlType="submit">
-                {editingVersion ? '更新版本' : '添加版本'}
-              </Button>
-            </Space>
-          </Form.Item>
-        </Form>
-      </Modal>
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setModalVisible(false)
+                    setEditingVersion(null)
+                    form.reset()
+                  }}
+                >
+                  取消
+                </Button>
+                <Button type="submit">
+                  {editingVersion ? '更新版本' : '添加版本'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* 删除确认对话框 */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认删除</AlertDialogTitle>
+            <AlertDialogDescription>
+              确定要删除这个版本吗？此操作不可撤销。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
+              删除
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* 版本比较对话框 (简化版) */}
+      <Dialog open={comparisonVisible} onOpenChange={setComparisonVisible}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>版本比较</DialogTitle>
+            <DialogDescription>
+              比较两个版本之间的差异
+            </DialogDescription>
+          </DialogHeader>
+          {selectedVersions.length === 2 && (
+            <div className="grid grid-cols-2 gap-4">
+              {selectedVersions.map((version, index) => (
+                <Card key={version.id}>
+                  <CardHeader>
+                    <CardTitle className="text-lg">版本 {version.version}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <div>
+                      <span className="font-medium">发布日期:</span>
+                      <span className="ml-2">{new Date(version.releaseDate).toLocaleDateString('zh-CN')}</span>
+                    </div>
+                    <div>
+                      <span className="font-medium">文件大小:</span>
+                      <span className="ml-2">{version.fileSize || '-'}</span>
+                    </div>
+                    <div>
+                      <span className="font-medium">更新日志:</span>
+                      <p className="mt-1 text-sm text-muted-foreground whitespace-pre-wrap">
+                        {version.releaseNotes || '无'}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

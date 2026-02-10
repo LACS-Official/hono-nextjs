@@ -1,7 +1,10 @@
 'use client'
 
 import React from 'react'
-import { Skeleton } from 'antd'
+import { Skeleton } from "@/components/ui/skeleton"
+import TableSkeleton from './TableSkeleton'
+import CardSkeleton from './CardSkeleton'
+import StatsCardSkeleton from './StatsCardSkeleton'
 
 interface LoadingSkeletonProps {
   type?: 'table' | 'card' | 'stats' | 'form'
@@ -16,58 +19,48 @@ const LoadingSkeleton: React.FC<LoadingSkeletonProps> = ({
   rows,
   columns,
   count,
-  active = true
 }) => {
-  // 动态导入骨架屏组件，避免不必要的加载
-  const [TableSkeleton, setTableSkeleton] = React.useState<any>(null)
-  const [CardSkeleton, setCardSkeleton] = React.useState<any>(null)
-  const [StatsCardSkeleton, setStatsCardSkeleton] = React.useState<any>(null)
-
-  React.useEffect(() => {
-    const loadComponents = async () => {
-      try {
-        if (type === 'table') {
-          const module = await import('./TableSkeleton')
-          setTableSkeleton(() => module.default)
-        }
-        if (type === 'card') {
-          const module = await import('./CardSkeleton')
-          setCardSkeleton(() => module.default)
-        }
-        if (type === 'stats') {
-          const module = await import('./StatsCardSkeleton')
-          setStatsCardSkeleton(() => module.default)
-        }
-      } catch (error) {
-        console.error('Error loading skeleton components:', error)
-      }
-    }
-
-    loadComponents()
-  }, [type])
-
-  if (type === 'table' && TableSkeleton) {
-    return <TableSkeleton rows={rows} columns={columns} active={active} />
+  if (type === 'table') {
+    return <TableSkeleton rows={rows} columns={columns} />
   }
 
-  if (type === 'card' && CardSkeleton) {
-    return <CardSkeleton count={count} active={active} />
+  if (type === 'card') {
+    return <CardSkeleton count={count} />
   }
 
-  if (type === 'stats' && StatsCardSkeleton) {
-    return <StatsCardSkeleton count={count} active={active} />
+  if (type === 'stats') {
+    return <StatsCardSkeleton count={count} />
   }
 
   if (type === 'form') {
     return (
-      <div style={{ padding: '24px' }}>
-        <Skeleton active={active} paragraph={{ rows: 8 }} />
+      <div className="space-y-6 p-6">
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-[100px]" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-[80px]" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-[120px]" />
+          <Skeleton className="h-32 w-full" />
+        </div>
+        <Skeleton className="h-10 w-32" />
       </div>
     )
   }
 
   // 默认骨架屏
-  return <Skeleton active={active} paragraph={{ rows: 5 }} />
+  return (
+    <div className="space-y-4 p-4">
+      <Skeleton className="h-4 w-full" />
+      <Skeleton className="h-4 w-[90%]" />
+      <Skeleton className="h-4 w-[80%]" />
+      <Skeleton className="h-4 w-[70%]" />
+    </div>
+  )
 }
 
 export default LoadingSkeleton

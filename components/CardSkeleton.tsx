@@ -1,7 +1,8 @@
 'use client'
 
 import React from 'react'
-import { Skeleton, Card, Row, Col } from 'antd'
+import { Skeleton } from "@/components/ui/skeleton"
+import { Card, CardHeader, CardContent } from "@/components/ui/card"
 
 interface CardSkeletonProps {
   count?: number
@@ -11,31 +12,25 @@ interface CardSkeletonProps {
 
 const CardSkeleton: React.FC<CardSkeletonProps> = ({
   count = 6,
-  rows = 3,
-  active = true
 }) => {
   return (
-    <Row gutter={[16, 16]}>
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
       {Array.from({ length: count }).map((_, index) => (
-        <Col
-          key={index}
-          xs={24}      // 手机: 1列
-          sm={12}      // 小屏幕: 2列
-          lg={8}       // 大屏幕: 3列
-          xl={6}       // 超大屏幕: 4列
-          xxl={4}      // 超超大屏幕: 6列
-        >
-          <Card>
-            <Skeleton
-              avatar
-              title
-              paragraph={{ rows }}
-              active={active}
-            />
-          </Card>
-        </Col>
+        <Card key={index}>
+          <CardHeader className="space-y-2">
+            <Skeleton className="h-4 w-1/2" />
+            <Skeleton className="h-4 w-1/4" />
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Skeleton className="h-32 w-full" />
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-5/6" />
+            </div>
+          </CardContent>
+        </Card>
       ))}
-    </Row>
+    </div>
   )
 }
 

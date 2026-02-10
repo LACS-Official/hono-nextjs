@@ -3,41 +3,29 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  Card,
-  Row,
-  Col,
-  Statistic,
-  Typography,
-  Button,
-  List,
-  Tag,
-  Progress,
-  Spin,
-  Alert,
-  Space,
-  Divider,
-  Tooltip,
-  Badge
-} from 'antd'
-import {
-  AppstoreOutlined,
-  NotificationOutlined,
-  KeyOutlined,
-  UserOutlined,
-  ReloadOutlined,
-  PlusOutlined,
-  TrophyOutlined,
-  ClockCircleOutlined,
-  CheckCircleOutlined,
-  ExclamationCircleOutlined,
-  DatabaseOutlined,
-  ApiOutlined,
-  RiseOutlined,
-  FallOutlined,
-  HeartOutlined
-} from '@ant-design/icons'
-
-const { Title, Paragraph, Text } = Typography
+  AppWindow,
+  Bell,
+  Key,
+  User,
+  RefreshCw,
+  Plus,
+  Trophy,
+  Clock,
+  CheckCircle,
+  AlertCircle,
+  Database,
+  Activity,
+  TrendingUp,
+  Heart
+} from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Progress } from "@/components/ui/progress"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Separator } from "@/components/ui/separator"
+import { ScrollArea } from "@/components/ui/scroll-area"
 
 // 统计数据接口
 interface DashboardStats {
@@ -78,7 +66,7 @@ interface DashboardStats {
 }
 
 // 活动记录接口
-interface Activity {
+interface ActivityItem {
   id: string
   type: 'software_created' | 'software_updated' | 'activation_code_generated' | 'activation_code_used' | 'software_activated'
   title: string
@@ -88,7 +76,7 @@ interface Activity {
 }
 
 interface ActivitiesData {
-  activities: Activity[]
+  activities: ActivityItem[]
   total: number
   timeRange: {
     start: string
@@ -205,17 +193,17 @@ export default function AdminDashboard() {
   const getActivityIcon = (type: string) => {
     switch (type) {
       case 'software_created':
-        return <PlusOutlined style={{ color: '#52c41a' }} />
+        return <Plus className="h-4 w-4 text-green-500" />
       case 'software_updated':
-        return <AppstoreOutlined style={{ color: '#1890ff' }} />
+        return <AppWindow className="h-4 w-4 text-blue-500" />
       case 'activation_code_generated':
-        return <KeyOutlined style={{ color: '#722ed1' }} />
+        return <Key className="h-4 w-4 text-purple-500" />
       case 'activation_code_used':
-        return <CheckCircleOutlined style={{ color: '#52c41a' }} />
+        return <CheckCircle className="h-4 w-4 text-green-500" />
       case 'software_activated':
-        return <UserOutlined style={{ color: '#fa8c16' }} />
+        return <User className="h-4 w-4 text-orange-500" />
       default:
-        return <ClockCircleOutlined style={{ color: '#8c8c8c' }} />
+        return <Clock className="h-4 w-4 text-gray-500" />
     }
   }
 
@@ -249,12 +237,22 @@ export default function AdminDashboard() {
   // 如果正在加载，显示加载状态
   if (loading) {
     return (
-      <div className="responsive-container" style={{ paddingTop: '0', paddingBottom: '24px' }}>
-        <div style={{ textAlign: 'center', padding: '100px 0' }}>
-          <Spin size="large" />
-          <div style={{ marginTop: '16px' }}>
-            <Text type="secondary">正在加载仪表板数据...</Text>
+      <div className="space-y-6 pt-6 pb-8">
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-[200px]" />
+            <Skeleton className="h-4 w-[300px]" />
           </div>
+          <Skeleton className="h-10 w-[100px]" />
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-[120px] rounded-xl" />
+          ))}
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+          <Skeleton className="col-span-4 h-[400px] rounded-xl" />
+          <Skeleton className="col-span-3 h-[400px] rounded-xl" />
         </div>
       </div>
     )
@@ -263,333 +261,271 @@ export default function AdminDashboard() {
   // 如果有错误，显示错误信息
   if (error) {
     return (
-      <div className="responsive-container" style={{ paddingTop: '0', paddingBottom: '24px' }}>
-        <Alert
-          message="数据加载失败"
-          description={error}
-          type="error"
-          showIcon
-          action={
-            <Button size="small" onClick={fetchDashboardData}>
-              重试
-            </Button>
-          }
-        />
+      <div className="container mx-auto py-10">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>错误</AlertTitle>
+          <AlertDescription>
+            {error}
+            <div className="mt-4">
+               <Button size="sm" variant="outline" onClick={fetchDashboardData}>重试</Button>
+            </div>
+          </AlertDescription>
+        </Alert>
       </div>
     )
   }
 
   return (
-    <div className="responsive-container" style={{ paddingTop: '0', paddingBottom: '24px' }}>
+    <div className="space-y-6">
       {/* 页面头部 */}
-      <div className="responsive-card-spacing">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
-          <div>
-            <Title level={2} className="responsive-title" style={{ margin: 0 }}>
-              API管理仪表板
-            </Title>
-            <Paragraph style={{ color: '#666', margin: '8px 0 0 0' }}>
-              实时监控您的API系统状态和使用情况
-            </Paragraph>
-          </div>
-          <Space>
-            <Tooltip title="刷新数据">
-              <Button
-                icon={<ReloadOutlined />}
-                onClick={fetchDashboardData}
-                loading={loading}
-              >
-                刷新
-              </Button>
-            </Tooltip>
-          </Space>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">API管理仪表板</h2>
+          <p className="text-muted-foreground mt-1">
+            实时监控您的API系统状态和使用情况
+          </p>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Button variant="outline" onClick={fetchDashboardData} disabled={loading}>
+            <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            刷新
+          </Button>
         </div>
       </div>
 
       {/* 主要统计卡片 */}
-      <Row gutter={[16, 16]} className="responsive-card-spacing">
-        <Col xs={24} sm={12} lg={6}>
-          <Card className="responsive-statistic-card" style={{ height: '100%' }}>
-            <Statistic
-              title="软件总数"
-              value={stats?.software.total || 0}
-              prefix={<AppstoreOutlined style={{ color: '#1890ff' }} />}
-              suffix={
-                <div style={{ fontSize: '12px', color: '#8c8c8c' }}>
-                  <div>活跃: {stats?.software.active || 0}</div>
-                  <div>停用: {stats?.software.inactive || 0}</div>
-                </div>
-              }
-            />
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">软件总数</CardTitle>
+            <AppWindow className="h-4 w-4 text-blue-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats?.software.total || 0}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+               活跃: {stats?.software.active || 0} | 停用: {stats?.software.inactive || 0}
+            </p>
             {stats?.software.recentlyAdded ? (
-              <div style={{ marginTop: '8px' }}>
-                <Tag color="green" icon={<RiseOutlined />}>
-                  最近7天新增 {stats.software.recentlyAdded}
-                </Tag>
-              </div>
-            ) : null}
-          </Card>
-        </Col>
-
-        <Col xs={24} sm={12} lg={6}>
-          <Card className="responsive-statistic-card" style={{ height: '100%' }}>
-            <Statistic
-              title="激活码总数"
-              value={stats?.activationCodes.total || 0}
-              prefix={<KeyOutlined style={{ color: '#722ed1' }} />}
-              suffix={
-                <div style={{ fontSize: '12px', color: '#8c8c8c' }}>
-                  <div>可用: {stats?.activationCodes.available || 0}</div>
-                  <div>已用: {stats?.activationCodes.used || 0}</div>
+                <div className="mt-4">
+                   <Badge variant="secondary" className="bg-green-100 text-green-700 hover:bg-green-100/80">
+                      <TrendingUp className="mr-1 h-3 w-3" />
+                      最近7天新增 {stats.software.recentlyAdded}
+                   </Badge>
                 </div>
-              }
-            />
+            ) : null}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">激活码总数</CardTitle>
+            <Key className="h-4 w-4 text-purple-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats?.activationCodes.total || 0}</div>
+             <p className="text-xs text-muted-foreground mt-1">
+                可用: {stats?.activationCodes.available || 0} | 已用: {stats?.activationCodes.used || 0}
+             </p>
             {stats?.activationCodes.usageRate !== undefined && (
-              <div style={{ marginTop: '8px' }}>
-                <Progress
-                  percent={stats.activationCodes.usageRate}
-                  size="small"
-                  status={stats.activationCodes.usageRate > 80 ? 'exception' : 'active'}
+              <div className="mt-4 space-y-2">
+                <Progress 
+                    value={stats.activationCodes.usageRate} 
+                    className="h-2" 
+                    indicatorColor={stats.activationCodes.usageRate > 80 ? "bg-orange-500" : "bg-primary"}
                 />
-                <Text type="secondary" style={{ fontSize: '12px' }}>
+                <p className="text-xs text-muted-foreground text-right">
                   使用率 {stats.activationCodes.usageRate}%
-                </Text>
+                </p>
               </div>
             )}
-          </Card>
-        </Col>
+          </CardContent>
+        </Card>
 
-        <Col xs={24} sm={12} lg={6}>
-          <Card className="responsive-statistic-card" style={{ height: '100%' }}>
-            <Statistic
-              title="总使用次数"
-              value={stats?.userBehavior.totalUsage || 0}
-              prefix={<UserOutlined style={{ color: '#fa8c16' }} />}
-              suffix={
-                <div style={{ fontSize: '12px', color: '#8c8c8c' }}>
-                  <div>设备: {stats?.userBehavior.uniqueDevices || 0}</div>
-                  <div>最近7天: {stats?.userBehavior.recentUsage || 0}</div>
-                </div>
-              }
-            />
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">总使用次数</CardTitle>
+            <User className="h-4 w-4 text-orange-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats?.userBehavior.totalUsage || 0}</div>
+             <p className="text-xs text-muted-foreground mt-1">
+                 设备: {stats?.userBehavior.uniqueDevices || 0} | 最近7天: {stats?.userBehavior.recentUsage || 0}
+             </p>
             {stats?.userBehavior.recentUsage ? (
-              <div style={{ marginTop: '8px' }}>
-                <Tag color="orange" icon={<TrophyOutlined />}>
-                  近期活跃
-                </Tag>
+              <div className="mt-4">
+                  <Badge variant="secondary" className="bg-orange-100 text-orange-700 hover:bg-orange-100/80">
+                      <Trophy className="mr-1 h-3 w-3" />
+                      近期活跃
+                   </Badge>
               </div>
             ) : null}
-          </Card>
-        </Col>
+          </CardContent>
+        </Card>
 
-        <Col xs={24} sm={12} lg={6}>
-          <Card className="responsive-statistic-card" style={{ height: '100%' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <div style={{ fontSize: '14px', color: '#8c8c8c', marginBottom: '8px' }}>
-                  系统状态
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+             <div className="space-y-1">
+                <CardTitle className="text-sm font-medium">系统状态</CardTitle>
+                <div className="flex items-center gap-2">
+                    <span className={`relative flex h-2 w-2`}>
+                      <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                          stats?.system.status === 'healthy' ? 'bg-green-400' : stats?.system.status === 'degraded' ? 'bg-orange-400' : 'bg-red-400'
+                      }`}></span>
+                      <span className={`relative inline-flex rounded-full h-2 w-2 ${
+                          stats?.system.status === 'healthy' ? 'bg-green-500' : stats?.system.status === 'degraded' ? 'bg-orange-500' : 'bg-red-500'
+                      }`}></span>
+                    </span>
+                    <span className={`text-xs font-semibold ${
+                        stats?.system.status === 'healthy' ? 'text-green-500' : stats?.system.status === 'degraded' ? 'text-orange-500' : 'text-red-500'
+                    }`}>
+                        {stats?.system.status === 'healthy' ? '健康' : stats?.system.status === 'degraded' ? '降级' : '异常'}
+                    </span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Badge
-                    status={stats?.system.status === 'healthy' ? 'success' : stats?.system.status === 'degraded' ? 'warning' : 'error'}
-                  />
-                  <Text strong style={{
-                    color: stats?.system.status === 'healthy' ? '#52c41a' : stats?.system.status === 'degraded' ? '#fa8c16' : '#ff4d4f'
-                  }}>
-                    {stats?.system.status === 'healthy' ? '健康' : stats?.system.status === 'degraded' ? '降级' : '异常'}
-                  </Text>
-                </div>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '12px', color: '#8c8c8c' }}>
-                  运行时间
-                </div>
-                <Text strong>
-                  {stats?.system.uptime ? formatUptime(stats.system.uptime) : '未知'}
-                </Text>
-              </div>
             </div>
-            <Divider style={{ margin: '12px 0' }} />
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-              <span>
-                <DatabaseOutlined style={{ marginRight: '4px' }} />
-                数据库: {stats?.system.checks.database ? '正常' : '异常'}
+          </CardHeader>
+          <CardContent>
+             <div className="flex flex-col gap-1 mb-4">
+                  <div className="text-xs text-muted-foreground">运行时间</div>
+                  <div className="text-sm font-bold">
+                     {stats?.system.uptime ? formatUptime(stats.system.uptime) : '未知'}
+                  </div>
+             </div>
+             
+             <Separator className="my-2"/>
+             
+            <div className="flex justify-between text-xs mt-2">
+              <span className="flex items-center gap-1">
+                <Database className="h-3 w-3 text-muted-foreground" />
+                数据库: {stats?.system.checks.database ? <span className="text-green-500">正常</span> : <span className="text-red-500">异常</span>}
               </span>
-              <span>
-                <ApiOutlined style={{ marginRight: '4px' }} />
-                API: {stats?.system.checks.apiResponse ? '正常' : '异常'}
+              <span className="flex items-center gap-1">
+                <Activity className="h-3 w-3 text-muted-foreground" />
+                API: {stats?.system.checks.apiResponse ? <span className="text-green-500">正常</span> : <span className="text-red-500">异常</span>}
               </span>
             </div>
-          </Card>
-        </Col>
-      </Row>
+          </CardContent>
+        </Card>
+      </div>
 
-      {/* 快速操作和详细信息 */}
-      <Row gutter={[16, 16]} className="responsive-card-spacing">
-        {/* 快速操作 */}
-        <Col xs={24} lg={12}>
-          <Card
-            title={
-              <Space>
-                <PlusOutlined />
-                快速操作
-              </Space>
-            }
-            extra={
-              <Button
-                type="link"
-                size="small"
-                onClick={() => router.push('/admin/software')}
-              >
-                查看全部
-              </Button>
-            }
-          >
-            <Row gutter={[12, 12]}>
-              <Col xs={24} sm={12}>
-                <Button
-                  type="primary"
-                  block
-                  icon={<AppstoreOutlined />}
-                  onClick={() => handleQuickAction('create-software')}
-                >
-                  新增软件
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+        {/* 快速操作 & 热门软件 */}
+        <Card className="col-span-4">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                    <Plus className="h-5 w-5" />
+                    快速操作
+                </CardTitle>
+                <Button variant="link" className="text-xs h-auto p-0" onClick={() => router.push('/admin/software')}>
+                    查看全部
                 </Button>
-              </Col>
-              <Col xs={24} sm={12}>
-                <Button
-                  block
-                  icon={<KeyOutlined />}
-                  onClick={() => handleQuickAction('create-activation-code')}
-                >
-                  生成激活码
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-6">
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Button className="w-full justify-start" onClick={() => handleQuickAction('create-software')}>
+                    <AppWindow className="mr-2 h-4 w-4" />
+                    新增软件
                 </Button>
-              </Col>
-              <Col xs={24} sm={12}>
-                <Button
-                  block
-                  icon={<AppstoreOutlined />}
-                  onClick={() => handleQuickAction('manage-software')}
-                >
-                  管理软件
+                 <Button variant="secondary" className="w-full justify-start" onClick={() => handleQuickAction('create-activation-code')}>
+                    <Key className="mr-2 h-4 w-4" />
+                    生成激活码
                 </Button>
-              </Col>
-              <Col xs={24} sm={12}>
-                <Button
-                  block
-                  icon={<NotificationOutlined />}
-                  onClick={() => handleQuickAction('manage-announcements')}
-                >
-                  管理公告
+                 <Button variant="outline" className="w-full justify-start" onClick={() => handleQuickAction('manage-software')}>
+                    <AppWindow className="mr-2 h-4 w-4" />
+                    管理软件
                 </Button>
-              </Col>
-              <Col xs={24} sm={12}>
-                <Button
-                  block
-                  icon={<HeartOutlined />}
-                  onClick={() => handleQuickAction('manage-donors')}
-                >
-                  捐赠人员管理
+                 <Button variant="outline" className="w-full justify-start" onClick={() => handleQuickAction('manage-announcements')}>
+                    <Bell className="mr-2 h-4 w-4" />
+                    管理公告
                 </Button>
-              </Col>
-            </Row>
+                <Button variant="outline" className="w-full justify-start" onClick={() => handleQuickAction('manage-donors')}>
+                    <Heart className="mr-2 h-4 w-4" />
+                    捐赠人员管理
+                </Button>
+             </div>
 
-            {/* 热门软件 */}
-            {stats?.userBehavior.popularSoftware && stats.userBehavior.popularSoftware.length > 0 && (
-              <>
-                <Divider />
-                <div style={{ marginBottom: '12px' }}>
-                  <Text strong>
-                    <TrophyOutlined style={{ marginRight: '8px', color: '#fa8c16' }} />
-                    热门软件
-                  </Text>
-                </div>
-                <List
-                  size="small"
-                  dataSource={stats.userBehavior.popularSoftware.slice(0, 3)}
-                  renderItem={(item, index) => (
-                    <List.Item style={{ padding: '4px 0' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                        <span>
-                          <Badge
-                            count={index + 1}
-                            style={{
-                              backgroundColor: index === 0 ? '#fa8c16' : index === 1 ? '#8c8c8c' : '#d9d9d9',
-                              color: '#fff',
-                              fontSize: '10px',
-                              minWidth: '16px',
-                              height: '16px',
-                              lineHeight: '16px',
-                              marginRight: '8px'
-                            }}
-                          />
-                          {item.softwareName}
-                        </span>
-                        <Text type="secondary">{item.totalUsed} 次使用</Text>
-                      </div>
-                    </List.Item>
-                  )}
-                />
-              </>
-            )}
-          </Card>
-        </Col>
+             {/* 热门软件 */}
+             {stats?.userBehavior.popularSoftware && stats.userBehavior.popularSoftware.length > 0 && (
+                 <>
+                    <Separator />
+                    <div className="space-y-4">
+                        <h4 className="flex items-center font-semibold text-sm">
+                            <Trophy className="mr-2 h-4 w-4 text-orange-500" />
+                            热门软件
+                        </h4>
+                        <div className="space-y-2">
+                            {stats.userBehavior.popularSoftware.slice(0, 3).map((item, index) => (
+                                <div key={index} className="flex items-center justify-between bg-muted/50 p-2 rounded-md">
+                                    <div className="flex items-center gap-3">
+                                        <Badge variant={index === 0 ? "default" : "secondary"} className={`
+                                            h-5 w-5 flex items-center justify-center rounded-full p-0
+                                            ${index === 0 ? 'bg-orange-500 hover:bg-orange-600' : ''}
+                                        `}>
+                                            {index + 1}
+                                        </Badge>
+                                        <span className="text-sm font-medium">{item.softwareName}</span>
+                                    </div>
+                                    <span className="text-xs text-muted-foreground">{item.totalUsed} 次使用</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                 </>
+             )}
+          </CardContent>
+        </Card>
 
         {/* 最近活动 */}
-        <Col xs={24} lg={12}>
-          <Card
-            title={
-              <Space>
-                <ClockCircleOutlined />
-                最近活动
-              </Space>
-            }
-            extra={
-              <Text type="secondary" style={{ fontSize: '12px' }}>
-                最近7天
-              </Text>
-            }
-          >
-            {activities && activities.activities.length > 0 ? (
-              <List
-                size="small"
-                dataSource={activities.activities.slice(0, 8)}
-                renderItem={(item) => (
-                  <List.Item style={{ padding: '8px 0' }}>
-                    <List.Item.Meta
-                      avatar={getActivityIcon(item.type)}
-                      title={
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <Text strong style={{ fontSize: '13px' }}>{item.title}</Text>
-                          <Text type="secondary" style={{ fontSize: '11px' }}>
-                            {formatTime(item.timestamp)}
-                          </Text>
+        <Card className="col-span-3">
+            <CardHeader>
+                <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2">
+                        <Clock className="h-5 w-5" />
+                        最近活动
+                    </CardTitle>
+                    <span className="text-xs text-muted-foreground">最近7天</span>
+                </div>
+            </CardHeader>
+            <CardContent>
+                 <ScrollArea className="h-[300px] w-full pr-4">
+                    {activities && activities.activities.length > 0 ? (
+                        <div className="space-y-4">
+                            {activities.activities.map((item) => (
+                                <div key={item.id} className="flex gap-4">
+                                     <div className="mt-1 bg-muted p-2 rounded-full h-8 w-8 flex items-center justify-center shrink-0">
+                                         {getActivityIcon(item.type)}
+                                     </div>
+                                     <div className="space-y-1 overflow-hidden">
+                                         <div className="flex items-center justify-between gap-2">
+                                             <p className="text-sm font-medium leading-none truncate">{item.title}</p>
+                                             <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                                 {formatTime(item.timestamp)}
+                                             </span>
+                                         </div>
+                                         <p className="text-xs text-muted-foreground line-clamp-2">
+                                             {item.description}
+                                         </p>
+                                     </div>
+                                </div>
+                            ))}
                         </div>
-                      }
-                      description={
-                        <Text type="secondary" style={{ fontSize: '12px' }}>
-                          {item.description}
-                        </Text>
-                      }
-                    />
-                  </List.Item>
-                )}
-              />
-            ) : (
-              <div style={{ textAlign: 'center', padding: '20px 0', color: '#8c8c8c' }}>
-                <ClockCircleOutlined style={{ fontSize: '24px', marginBottom: '8px' }} />
-                <div>暂无最近活动</div>
-              </div>
-            )}
-          </Card>
-        </Col>
-      </Row>
+                    ) : (
+                        <div className="flex flex-col items-center justify-center h-[200px] text-muted-foreground">
+                            <Clock className="h-8 w-8 mb-2 opacity-50" />
+                            <p>暂无最近活动</p>
+                        </div>
+                    )}
+                 </ScrollArea>
+            </CardContent>
+        </Card>
+      </div>
 
-      {/* 数据更新时间 */}
-      <div style={{ textAlign: 'center', marginTop: '24px' }}>
-        <Text type="secondary" style={{ fontSize: '12px' }}>
-          数据更新时间: {stats?.lastUpdated ? new Date(stats.lastUpdated).toLocaleString() : '未知'}
-        </Text>
+      <div className="text-center">
+            <p className="text-xs text-muted-foreground">
+                 数据更新时间: {stats?.lastUpdated ? new Date(stats.lastUpdated).toLocaleString() : '未知'}
+            </p>
       </div>
     </div>
   )

@@ -3,30 +3,51 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import {
-  Card,
-  Button,
-  Space,
-  Typography,
-  Row,
-  Col,
-  Tag,
-  Descriptions,
-  Alert,
-  message,
-  Modal,
-  Spin
-} from 'antd'
+  ArrowLeft,
+  Copy,
+  Trash2,
+  Key,
+  CheckCircle,
+  Clock,
+  AlertCircle,
+  Calendar,
+  Package,
+  Info
+} from 'lucide-react'
+
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import {
-  ArrowLeftOutlined,
-  CopyOutlined,
-  DeleteOutlined,
-  ExclamationCircleOutlined,
-  KeyOutlined,
-  CheckCircleOutlined,
-  ClockCircleOutlined
-} from '@ant-design/icons'
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Separator } from "@/components/ui/separator"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { useToast } from "@/hooks/use-toast"
+import { DetailSkeleton } from '@/components/SkeletonScreen'
 import ErrorBoundaryWrapper from '@/components/ErrorBoundaryWrapper'
-import { EmptyState, NetworkError } from '@/components/ErrorComponents'
+
 import {
   activationCodeApi,
   type ActivationCode,
@@ -35,17 +56,17 @@ import {
   getActivationCodeStatusColor
 } from '@/utils/activation-codes-api'
 
-const { Title, Text, Paragraph } = Typography
-const { confirm } = Modal
-
 export default function ActivationCodeDetailPage() {
   const router = useRouter()
   const params = useParams()
+  const { toast } = useToast()
   const id = params.id as string
 
   const [code, setCode] = useState<ActivationCode | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   // 加载激活码详情
   const loadActivationCode = async () => {
@@ -74,42 +95,36 @@ export default function ActivationCodeDetailPage() {
   const handleCopyCode = () => {
     if (code) {
       navigator.clipboard.writeText(code.code)
-      message.success('激活码已复制到剪贴板')
+      toast({
+        title: "复制成功",
+        description: "激活码已复制到剪贴板",
+      })
     }
   }
 
   // 删除激活码
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!code) return
-
-    confirm({
-      title: '确认删除',
-      icon: <ExclamationCircleOutlined />,
-      content: (
-        <div>
-          <p>您确定要删除激活码 <Text code>{code.code}</Text> 吗？</p>
-          <Alert
-            message="此操作无法撤销"
-            type="warning"
-            showIcon
-            style={{ marginTop: 12 }}
-          />
-        </div>
-      ),
-      okText: '删除',
-      okType: 'danger',
-      cancelText: '取消',
-      onOk: async () => {
-        try {
-          await activationCodeApi.deleteActivationCode(code.id)
-          message.success('激活码删除成功')
-          router.push('/admin/activation-codes')
-        } catch (error) {
-          const apiError = error as ActivationCodeApiError
-          message.error(apiError.message)
-        }
-      },
-    })
+    
+    setDeleting(true)
+    try {
+      await activationCodeApi.deleteActivationCode(code.id)
+      toast({
+        title: "删除成功",
+        description: "激活码已被删除",
+      })
+      router.push('/admin/activation-codes')
+    } catch (error) {
+      const apiError = error as ActivationCodeApiError
+      toast({
+        variant: "destructive",
+        title: "删除失败",
+        description: apiError.message,
+      })
+    } finally {
+      setDeleting(false)
+      setDeleteDialogOpen(false)
+    }
   }
 
   // 格式化日期
@@ -127,26 +142,46 @@ export default function ActivationCodeDetailPage() {
   // 获取状态图标
   const getStatusIcon = (code: ActivationCode) => {
     if (code.isUsed) {
-      return <CheckCircleOutlined style={{ color: '#52c41a' }} />
+      return <CheckCircle className="h-5 w-5 text-green-500" />
     }
 
     const now = new Date()
     const expiresAt = new Date(code.expiresAt)
 
     if (expiresAt < now) {
-      return <ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />
+      return <AlertCircle className="h-5 w-5 text-destructive" />
     }
 
-    return <ClockCircleOutlined style={{ color: '#1890ff' }} />
+    return <Clock className="h-5 w-5 text-blue-500" />
+  }
+
+  // 获取状态颜色 (用于 Badge)
+  const getStatusVariant = (code: ActivationCode): "default" | "secondary" | "destructive" => {
+    const color = getActivationCodeStatusColor(code)
+    if (color === 'green') return 'default'
+    if (color === 'red') return 'destructive'
+    return 'secondary'
   }
 
   if (loading) {
     return (
-      <div style={{ textAlign: 'center', padding: '50px' }}>
-        <Spin size="large" />
-        <div style={{ marginTop: '16px' }}>
-          <Text>正在加载激活码详情...</Text>
-        </div>
+      <div className="space-y-6">
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/admin">管理后台</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/admin/activation-codes">激活码管理</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>激活码详情</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+        <DetailSkeleton />
       </div>
     )
   }
@@ -154,12 +189,13 @@ export default function ActivationCodeDetailPage() {
   if (error && !code) {
     return (
       <ErrorBoundaryWrapper>
-        <div className="responsive-container" style={{ paddingTop: '0' }}>
-          <NetworkError
-            title="网络错误"
-            subTitle={error}
-            onRetry={loadActivationCode}
-          />
+        <div className="space-y-6">
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>网络错误</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+          <Button onClick={loadActivationCode}>重试</Button>
         </div>
       </ErrorBoundaryWrapper>
     )
@@ -168,13 +204,17 @@ export default function ActivationCodeDetailPage() {
   if (!code) {
     return (
       <ErrorBoundaryWrapper>
-        <div className="responsive-container" style={{ paddingTop: '0' }}>
-          <EmptyState
-            title="激活码不存在"
-            subTitle="未找到指定的激活码，可能已被删除或ID不正确"
-            onAction={() => router.push('/admin/activation-codes')}
-            actionText="返回列表"
-          />
+        <div className="space-y-6">
+          <Alert variant="destructive">
+            <Info className="h-4 w-4" />
+            <AlertTitle>激活码不存在</AlertTitle>
+            <AlertDescription>
+              未找到指定的激活码,可能已被删除或ID不正确
+            </AlertDescription>
+          </Alert>
+          <Button onClick={() => router.push('/admin/activation-codes')}>
+            返回列表
+          </Button>
         </div>
       </ErrorBoundaryWrapper>
     )
@@ -182,131 +222,228 @@ export default function ActivationCodeDetailPage() {
 
   return (
     <ErrorBoundaryWrapper>
-      <div className="responsive-container" style={{ paddingTop: '0', paddingBottom: '24px' }}>
+      <div className="space-y-6 pb-24">
+        {/* 面包屑导航 */}
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/admin">管理后台</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/admin/activation-codes">激活码管理</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>激活码详情</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+
         {/* 页面头部 */}
-        <div className="responsive-card-spacing">
-          <Space align="center" style={{ marginBottom: '16px' }}>
-            <Button
-              icon={<ArrowLeftOutlined />}
-              onClick={() => router.back()}
-            >
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <Key className="h-8 w-8 text-primary" />
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight">激活码详情</h2>
+              <div className="flex items-center gap-2 mt-1">
+                {getStatusIcon(code)}
+                <Badge variant={getStatusVariant(code)}>
+                  {getActivationCodeStatusText(code)}
+                </Badge>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => router.back()}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
               返回
             </Button>
-            <Title level={2} style={{ margin: 0 }}>
-              <KeyOutlined style={{ marginRight: '8px' }} />
-              激活码详情
-            </Title>
-            {getStatusIcon(code)}
-            <Tag color={getActivationCodeStatusColor(code)}>
-              {getActivationCodeStatusText(code)}
-            </Tag>
-          </Space>
+            <Button variant="outline" onClick={handleCopyCode}>
+              <Copy className="mr-2 h-4 w-4" />
+              复制激活码
+            </Button>
+            <Button variant="destructive" onClick={() => setDeleteDialogOpen(true)}>
+              <Trash2 className="mr-2 h-4 w-4" />
+              删除
+            </Button>
+          </div>
         </div>
 
-        {/* 激活码信息 */}
-        <Card
-          title="基础信息"
-          extra={
-            <Space>
-              <Button
-                icon={<CopyOutlined />}
-                onClick={handleCopyCode}
-              >
-                复制激活码
-              </Button>
-              <Button
-                danger
-                icon={<DeleteOutlined />}
-                onClick={handleDelete}
-              >
-                删除
-              </Button>
-            </Space>
-          }
-        >
-          <Descriptions column={{ xs: 1, sm: 2, md: 2 }} bordered>
-            <Descriptions.Item label="激活码">
-              <Text code copyable style={{ fontSize: '14px' }}>
-                {code.code}
-              </Text>
-            </Descriptions.Item>
-            <Descriptions.Item label="状态">
-              <Space>
-                {getStatusIcon(code)}
-                <Tag color={getActivationCodeStatusColor(code)}>
-                  {getActivationCodeStatusText(code)}
-                </Tag>
-              </Space>
-            </Descriptions.Item>
-            <Descriptions.Item label="创建时间">
-              {formatDate(code.createdAt)}
-            </Descriptions.Item>
-            <Descriptions.Item label="过期时间">
-              {formatDate(code.expiresAt)}
-            </Descriptions.Item>
-            {code.isUsed && code.usedAt && (
-              <Descriptions.Item label="使用时间">
-                {formatDate(code.usedAt)}
-              </Descriptions.Item>
-            )}
-          </Descriptions>
+        {/* 基础信息 */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Info className="h-5 w-5 text-primary" />
+              基础信息
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">激活码</p>
+                <div className="flex items-center gap-2">
+                  <code className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm">
+                    {code.code}
+                  </code>
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleCopyCode}>
+                    <Copy className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">状态</p>
+                <div className="flex items-center gap-2">
+                  {getStatusIcon(code)}
+                  <Badge variant={getStatusVariant(code)}>
+                    {getActivationCodeStatusText(code)}
+                  </Badge>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  创建时间
+                </p>
+                <p className="text-sm">{formatDate(code.createdAt)}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  过期时间
+                </p>
+                <p className="text-sm">{formatDate(code.expiresAt)}</p>
+              </div>
+              {code.isUsed && code.usedAt && (
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4" />
+                    使用时间
+                  </p>
+                  <p className="text-sm">{formatDate(code.usedAt)}</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
         </Card>
 
         {/* 产品信息 */}
         {code.productInfo && (
-          <Card title="产品信息" style={{ marginTop: '16px' }}>
-            <Descriptions column={{ xs: 1, sm: 2, md: 2 }} bordered>
-              <Descriptions.Item label="产品名称">
-                {code.productInfo.name}
-              </Descriptions.Item>
-              <Descriptions.Item label="产品版本">
-                {code.productInfo.version}
-              </Descriptions.Item>
-              <Descriptions.Item label="包含功能" span={2}>
-                <Space wrap>
-                  {code.productInfo.features?.map((feature, index) => (
-                    <Tag key={index} color="blue">
-                      {feature}
-                    </Tag>
-                  ))}
-                </Space>
-              </Descriptions.Item>
-            </Descriptions>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="h-5 w-5 text-primary" />
+                产品信息
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-muted-foreground">产品名称</p>
+                  <p className="text-sm">{code.productInfo.name}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-muted-foreground">产品版本</p>
+                  <p className="text-sm">{code.productInfo.version}</p>
+                </div>
+              </div>
+              {code.productInfo.features && code.productInfo.features.length > 0 && (
+                <>
+                  <Separator />
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-muted-foreground">包含功能</p>
+                    <div className="flex flex-wrap gap-2">
+                      {code.productInfo.features.map((feature, index) => (
+                        <Badge key={index} variant="secondary" className="bg-blue-100 text-blue-800">
+                          {feature}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+            </CardContent>
           </Card>
         )}
 
         {/* 元数据信息 */}
         {code.metadata && Object.keys(code.metadata).length > 0 && (
-          <Card title="元数据信息" style={{ marginTop: '16px' }}>
-            <Descriptions column={{ xs: 1, sm: 2, md: 2 }} bordered>
-              {code.metadata.customerEmail && (
-                <Descriptions.Item label="客户邮箱">
-                  {String(code.metadata.customerEmail)}
-                </Descriptions.Item>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Info className="h-5 w-5 text-primary" />
+                元数据信息
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                {code.metadata.customerEmail && (
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">客户邮箱</p>
+                    <p className="text-sm">{String(code.metadata.customerEmail)}</p>
+                  </div>
+                )}
+                {code.metadata.licenseType && (
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">许可证类型</p>
+                    <Badge variant="secondary" className="bg-green-100 text-green-800">
+                      {String(code.metadata.licenseType)}
+                    </Badge>
+                  </div>
+                )}
+                {code.metadata.purchaseId && (
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">订单ID</p>
+                    <p className="text-sm">{String(code.metadata.purchaseId)}</p>
+                  </div>
+                )}
+                {code.metadata.customerId && (
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">客户ID</p>
+                    <p className="text-sm">{String(code.metadata.customerId)}</p>
+                  </div>
+                )}
+              </div>
+              {code.metadata.notes && (
+                <>
+                  <Separator />
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">备注</p>
+                    <p className="text-sm leading-relaxed">{String(code.metadata.notes)}</p>
+                  </div>
+                </>
               )}
-              {code.metadata.licenseType && (
-                <Descriptions.Item label="许可证类型">
-                  <Tag color="green">{String(code.metadata.licenseType)}</Tag>
-                </Descriptions.Item>
-              )}
-              {code.metadata.purchaseId && (
-                <Descriptions.Item label="订单ID">
-                  {String(code.metadata.purchaseId)}
-                </Descriptions.Item>
-              )}
-              {code.metadata.customerId && (
-                <Descriptions.Item label="客户ID">
-                  {String(code.metadata.customerId)}
-                </Descriptions.Item>
-              )}
-              {code.metadata.notes ? (
-                <Descriptions.Item label="备注" span={2}>
-                  {String(code.metadata.notes)}
-                </Descriptions.Item>
-              ) : null}
-            </Descriptions>
+            </CardContent>
           </Card>
         )}
+
+        {/* 删除确认对话框 */}
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>确认删除</AlertDialogTitle>
+              <AlertDialogDescription>
+                您确定要删除激活码 <code className="font-mono">{code.code}</code> 吗？
+                <Alert variant="destructive" className="mt-3">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    此操作无法撤销
+                  </AlertDescription>
+                </Alert>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>取消</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleDelete} 
+                disabled={deleting}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {deleting ? "删除中..." : "删除"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </ErrorBoundaryWrapper>
   )

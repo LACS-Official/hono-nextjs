@@ -2,29 +2,30 @@
 
 import React, { useState } from 'react'
 import {
-  Modal,
-  Tag,
-  Button,
-  Space,
-  Divider,
-  Typography,
-  Card,
-  Row,
-  Col,
-  Timeline,
-  Collapse
-} from 'antd'
+  Download,
+  Info,
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+  ArrowLeftRight,
+  ChevronDown
+} from 'lucide-react'
 import {
-  SwapOutlined,
-  DownloadOutlined,
-  InfoCircleOutlined,
-  ClockCircleOutlined,
-  CheckCircleOutlined,
-  ExclamationCircleOutlined
-} from '@ant-design/icons'
-
-const { Text } = Typography
-const { Panel } = Collapse
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Separator } from "@/components/ui/separator"
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { cn } from "@/lib/utils"
 
 interface VersionHistory {
   id: number
@@ -62,347 +63,163 @@ interface VersionComparisonProps {
 export default function VersionComparison({ 
   visible, 
   onClose, 
-  versions, 
   selectedVersions 
 }: VersionComparisonProps) {
   
   const [compareMode, setCompareMode] = useState<'side-by-side' | 'timeline'>('side-by-side')
 
-  // 版本比较数据
-  const getComparisonData = () => {
-    if (selectedVersions.length !== 2) return null
-
-    const [version1, version2] = selectedVersions.sort((a, b) => 
-      new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime()
-    )
-
-    return {
-      newer: version1,
-      older: version2,
-      timeDiff: Math.abs(
-        new Date(version1.releaseDate).getTime() - new Date(version2.releaseDate).getTime()
-      ) / (1000 * 60 * 60 * 24), // 天数差
-      sizeDiff: version1.fileSizeBytes && version2.fileSizeBytes 
-        ? version1.fileSizeBytes - version2.fileSizeBytes 
-        : null
-    }
-  }
-
-  const comparisonData = getComparisonData()
-
-  // 渲染下载链接
-  const renderDownloadLinks = (links?: any) => {
-    if (!links) return '-'
-    
-    const linkTypes = [
-      { key: 'official', label: '官方', color: 'blue' },
-      { key: 'quark', label: '夸克', color: 'purple' },
-      { key: 'pan123', label: '123', color: 'green' },
-      { key: 'baidu', label: '百度', color: 'red' },
-      { key: 'thunder', label: '迅雷', color: 'orange' },
-      { key: 'thunderPan', label: '迅雷网盘', color: 'gold' }
-    ]
-
+  if (selectedVersions.length !== 2) {
     return (
-      <Space direction="vertical" size="small">
-        {linkTypes.map(type => 
-          links[type.key] ? (
-            <Button 
-              key={type.key}
-              size="small" 
-              type="link"
-              icon={<DownloadOutlined />}
-              href={links[type.key]}
-              target="_blank"
-            >
-              {type.label}
-            </Button>
-          ) : null
-        )}
-      </Space>
+      <Dialog open={visible} onOpenChange={onClose}>
+        <DialogContent className="sm:max-w-md">
+          <div className="flex flex-col items-center justify-center p-10 text-center space-y-4">
+            <Info className="h-12 w-12 text-slate-300" />
+            <p className="text-slate-500 font-medium">请选择两个版本进行比较</p>
+            <Button onClick={onClose}>关闭</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     )
   }
 
-  // 渲染更新类型标签
-  const renderChangelogTags = (categories?: string[]) => {
-    if (!categories || categories.length === 0) return '-'
-    
-    const tagColors = {
-      feature: 'blue',
-      bugfix: 'orange', 
-      security: 'red',
-      performance: 'green'
-    }
+  const [version1, version2] = [...selectedVersions].sort((a, b) => 
+    new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime()
+  )
 
-    const tagLabels = {
-      feature: '新功能',
-      bugfix: '错误修复',
-      security: '安全更新',
-      performance: '性能优化'
-    }
+  const timeDiff = Math.abs(
+    new Date(version1.releaseDate).getTime() - new Date(version2.releaseDate).getTime()
+  ) / (1000 * 60 * 60 * 24)
 
-    return (
-      <Space wrap>
-        {categories.map(cat => (
-          <Tag 
-            key={cat} 
-            color={tagColors[cat as keyof typeof tagColors]}
-          >
-            {tagLabels[cat as keyof typeof tagLabels] || cat}
-          </Tag>
-        ))}
-      </Space>
-    )
-  }
+  const sizeDiff = version1.fileSizeBytes && version2.fileSizeBytes 
+    ? version1.fileSizeBytes - version2.fileSizeBytes 
+    : null
 
-  // 并排比较视图
-  const renderSideBySideComparison = () => {
-    if (!comparisonData) return null
-
-    const { newer, older, timeDiff, sizeDiff } = comparisonData
-
-    return (
-      <div>
-        <Row gutter={16}>
-          <Col span={12}>
-            <Card 
-              title={
-                <Space>
-                  <Tag color="green">较新版本</Tag>
-                  <Text strong>{newer.version}</Text>
-                </Space>
-              }
-              size="small"
-            >
-              <Space direction="vertical" style={{ width: '100%' }}>
-                <div>
-                  <Text type="secondary">发布日期：</Text>
-                  <Text>{new Date(newer.releaseDate).toLocaleDateString()}</Text>
-                </div>
-                <div>
-                  <Text type="secondary">版本类型：</Text>
-                  <Tag color={newer.versionType === 'release' ? 'green' : 'orange'}>
-                    {newer.versionType}
-                  </Tag>
-                </div>
-                <div>
-                  <Text type="secondary">文件大小：</Text>
-                  <Text>{newer.fileSize || '-'}</Text>
-                </div>
-                <div>
-                  <Text type="secondary">更新类型：</Text>
-                  {renderChangelogTags(newer.changelogCategory)}
-                </div>
-                <div>
-                  <Text type="secondary">下载链接：</Text>
-                  {renderDownloadLinks(newer.downloadLinks)}
-                </div>
-                {newer.releaseNotes && (
-                  <div>
-                    <Text type="secondary">更新日志：</Text>
-                    <div style={{ 
-                      background: '#f5f5f5', 
-                      padding: '8px', 
-                      borderRadius: '4px',
-                      marginTop: '4px'
-                    }}>
-                      <Text>{newer.releaseNotes}</Text>
-                    </div>
-                  </div>
-                )}
-              </Space>
-            </Card>
-          </Col>
-          
-          <Col span={12}>
-            <Card 
-              title={
-                <Space>
-                  <Tag color="orange">较旧版本</Tag>
-                  <Text strong>{older.version}</Text>
-                </Space>
-              }
-              size="small"
-            >
-              <Space direction="vertical" style={{ width: '100%' }}>
-                <div>
-                  <Text type="secondary">发布日期：</Text>
-                  <Text>{new Date(older.releaseDate).toLocaleDateString()}</Text>
-                </div>
-                <div>
-                  <Text type="secondary">版本类型：</Text>
-                  <Tag color={older.versionType === 'release' ? 'green' : 'orange'}>
-                    {older.versionType}
-                  </Tag>
-                </div>
-                <div>
-                  <Text type="secondary">文件大小：</Text>
-                  <Text>{older.fileSize || '-'}</Text>
-                </div>
-                <div>
-                  <Text type="secondary">更新类型：</Text>
-                  {renderChangelogTags(older.changelogCategory)}
-                </div>
-                <div>
-                  <Text type="secondary">下载链接：</Text>
-                  {renderDownloadLinks(older.downloadLinks)}
-                </div>
-                {older.releaseNotes && (
-                  <div>
-                    <Text type="secondary">更新日志：</Text>
-                    <div style={{ 
-                      background: '#f5f5f5', 
-                      padding: '8px', 
-                      borderRadius: '4px',
-                      marginTop: '4px'
-                    }}>
-                      <Text>{older.releaseNotes}</Text>
-                    </div>
-                  </div>
-                )}
-              </Space>
-            </Card>
-          </Col>
-        </Row>
-
-        <Divider>比较摘要</Divider>
+  const renderVersionCard = (version: VersionHistory, title: string, color: string) => (
+    <Card className={cn("flex-1 border-slate-200", color)}>
+      <CardHeader className="pb-3">
+        <div className="flex justify-between items-center">
+          <Badge variant="outline" className="font-bold">{title}</Badge>
+          <span className="text-xl font-bold">{version.version}</span>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4 text-sm">
+        <div className="flex justify-between">
+          <span className="text-slate-500">发布日期</span>
+          <span className="font-medium">{new Date(version.releaseDate).toLocaleDateString()}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-slate-500">类型</span>
+          <Badge variant={version.versionType === 'release' ? 'default' : 'secondary'}>
+            {version.versionType}
+          </Badge>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-slate-500">文件大小</span>
+          <span className="font-medium">{version.fileSize || '-'}</span>
+        </div>
         
-        <Card size="small">
-          <Row gutter={16}>
-            <Col span={8}>
-              <div style={{ textAlign: 'center' }}>
-                <ClockCircleOutlined style={{ fontSize: '24px', color: '#1890ff' }} />
-                <div style={{ marginTop: '8px' }}>
-                  <Text strong>{Math.round(timeDiff)}</Text>
-                  <div><Text type="secondary">天间隔</Text></div>
-                </div>
-              </div>
-            </Col>
-            <Col span={8}>
-              <div style={{ textAlign: 'center' }}>
-                {sizeDiff !== null ? (
-                  <>
-                    {sizeDiff > 0 ? (
-                      <ExclamationCircleOutlined style={{ fontSize: '24px', color: '#ff4d4f' }} />
-                    ) : (
-                      <CheckCircleOutlined style={{ fontSize: '24px', color: '#52c41a' }} />
-                    )}
-                    <div style={{ marginTop: '8px' }}>
-                      <Text strong>
-                        {sizeDiff > 0 ? '+' : ''}{(sizeDiff / 1024 / 1024).toFixed(1)} MB
-                      </Text>
-                      <div><Text type="secondary">大小变化</Text></div>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <InfoCircleOutlined style={{ fontSize: '24px', color: '#d9d9d9' }} />
-                    <div style={{ marginTop: '8px' }}>
-                      <Text type="secondary">无大小信息</Text>
-                    </div>
-                  </>
-                )}
-              </div>
-            </Col>
-            <Col span={8}>
-              <div style={{ textAlign: 'center' }}>
-                <SwapOutlined style={{ fontSize: '24px', color: '#722ed1' }} />
-                <div style={{ marginTop: '8px' }}>
-                  <Text strong>
-                    {newer.changelogCategory?.length || 0}
-                  </Text>
-                  <div><Text type="secondary">更新类型</Text></div>
-                </div>
-              </div>
-            </Col>
-          </Row>
-        </Card>
-      </div>
-    )
-  }
+        <Separator />
+        
+        <div className="space-y-2">
+          <span className="text-slate-500 block">更新点:</span>
+          <div className="flex flex-wrap gap-1">
+            {version.changelogCategory?.map(cat => (
+              <Badge key={cat} variant="outline" className="text-[10px]">{cat}</Badge>
+            ))}
+          </div>
+        </div>
 
-  // 时间线比较视图
-  const renderTimelineComparison = () => {
-    const sortedVersions = [...selectedVersions].sort((a, b) => 
-      new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime()
-    )
-
-    return (
-      <Timeline mode="left">
-        {sortedVersions.map((version, index) => (
-          <Timeline.Item
-            key={version.id}
-            color={index === 0 ? 'green' : 'blue'}
-            label={new Date(version.releaseDate).toLocaleDateString()}
-          >
-            <Card size="small">
-              <Space direction="vertical" style={{ width: '100%' }}>
-                <div>
-                  <Tag color={version.versionType === 'release' ? 'green' : 'orange'}>
-                    {version.version}
-                  </Tag>
-                  {index === 0 && <Tag color="green">最新</Tag>}
-                </div>
-                <div>{renderChangelogTags(version.changelogCategory)}</div>
-                {version.releaseNotes && (
-                  <Collapse size="small">
-                    <Panel header="更新日志" key="1">
-                      <Text>{version.releaseNotes}</Text>
-                    </Panel>
-                  </Collapse>
-                )}
-              </Space>
-            </Card>
-          </Timeline.Item>
-        ))}
-      </Timeline>
-    )
-  }
+        {version.releaseNotes && (
+          <div className="space-y-1">
+            <span className="text-slate-500 block">日志:</span>
+            <p className="p-2 bg-slate-50 rounded text-xs line-clamp-3">{version.releaseNotes}</p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
 
   return (
-    <Modal
-      title="版本比较"
-      open={visible}
-      onCancel={onClose}
-      width={1000}
-      footer={[
-        <Button key="close" onClick={onClose}>
-          关闭
-        </Button>
-      ]}
-    >
-      {selectedVersions.length !== 2 ? (
-        <div style={{ textAlign: 'center', padding: '40px' }}>
-          <InfoCircleOutlined style={{ fontSize: '48px', color: '#d9d9d9' }} />
-          <div style={{ marginTop: '16px' }}>
-            <Text type="secondary">请选择两个版本进行比较</Text>
-          </div>
+    <Dialog open={visible} onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <ArrowLeftRight className="h-5 w-5" /> 版本比对
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="flex gap-2 mb-6">
+          <Button 
+            variant={compareMode === 'side-by-side' ? 'default' : 'outline'}
+            onClick={() => setCompareMode('side-by-side')}
+            size="sm"
+          >
+            并排比较
+          </Button>
+          <Button 
+            variant={compareMode === 'timeline' ? 'default' : 'outline'}
+            onClick={() => setCompareMode('timeline')}
+            size="sm"
+          >
+            时间线视图
+          </Button>
         </div>
-      ) : (
-        <div>
-          <div style={{ marginBottom: '16px' }}>
-            <Space>
-              <Button 
-                type={compareMode === 'side-by-side' ? 'primary' : 'default'}
-                onClick={() => setCompareMode('side-by-side')}
-              >
-                并排比较
-              </Button>
-              <Button 
-                type={compareMode === 'timeline' ? 'primary' : 'default'}
-                onClick={() => setCompareMode('timeline')}
-              >
-                时间线视图
-              </Button>
-            </Space>
+
+        {compareMode === 'side-by-side' ? (
+          <div className="space-y-6">
+            <div className="flex flex-col md:flex-row gap-4">
+              {renderVersionCard(version1, "较新版本", "bg-green-50/20")}
+              {renderVersionCard(version2, "较旧版本", "bg-slate-50/50")}
+            </div>
+
+            <Card className="bg-slate-50/50">
+              <CardContent className="grid grid-cols-3 gap-4 pt-6 text-center">
+                <div className="space-y-1">
+                  <div className="flex justify-center mb-1"><Clock className="h-5 w-5 text-blue-500" /></div>
+                  <div className="text-lg font-bold">{Math.round(timeDiff)}</div>
+                  <div className="text-xs text-slate-500 uppercase">天数间隔</div>
+                </div>
+                <div className="space-y-1">
+                  <div className="flex justify-center mb-1">
+                    {sizeDiff && sizeDiff > 0 ? <AlertCircle className="h-5 w-5 text-red-500" /> : <CheckCircle2 className="h-5 w-5 text-green-500" />}
+                  </div>
+                  <div className="text-lg font-bold">
+                    {sizeDiff !== null ? `${sizeDiff > 0 ? '+' : ''}${(sizeDiff / 1024 / 1024).toFixed(1)} MB` : '-'}
+                  </div>
+                  <div className="text-xs text-slate-500 uppercase">大小变化</div>
+                </div>
+                <div className="space-y-1">
+                  <div className="flex justify-center mb-1"><ArrowLeftRight className="h-5 w-5 text-purple-500" /></div>
+                  <div className="text-lg font-bold">{version1.changelogCategory?.length || 0}</div>
+                  <div className="text-xs text-slate-500 uppercase">更新条目</div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-          
-          {compareMode === 'side-by-side' 
-            ? renderSideBySideComparison() 
-            : renderTimelineComparison()
-          }
-        </div>
-      )}
-    </Modal>
+        ) : (
+          <div className="space-y-6 border-l-2 border-slate-100 ml-4 pl-8 pt-2">
+             {[version1, version2].map((v, i) => (
+               <div key={v.id} className="relative mb-8">
+                 <div className={cn(
+                   "absolute -left-[41px] top-0 h-4 w-4 rounded-full border-2 border-white shadow-sm",
+                   i === 0 ? "bg-green-500" : "bg-blue-400"
+                 )} />
+                 <div className="space-y-2">
+                   <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-slate-500">{new Date(v.releaseDate).toLocaleDateString()}</span>
+                      <Badge>{v.version}</Badge>
+                   </div>
+                   <Card className="shadow-none border-dashed bg-slate-50/30">
+                     <CardContent className="pt-4 pb-3">
+                        <p className="text-sm">{v.releaseNotes || "暂无日志"}</p>
+                     </CardContent>
+                   </Card>
+                 </div>
+               </div>
+             ))}
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
   )
 }

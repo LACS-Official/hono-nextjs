@@ -1,9 +1,10 @@
 'use client'
 
-import { Spin, Card, Skeleton, Space, Typography } from 'antd'
-import { LoadingOutlined } from '@ant-design/icons'
-
-const { Text } = Typography
+import React from 'react'
+import { Loader2 } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
+import { cn } from "@/lib/utils"
 
 interface LoadingStateProps {
   loading?: boolean
@@ -11,6 +12,7 @@ interface LoadingStateProps {
   tip?: string
   size?: 'small' | 'default' | 'large'
   style?: React.CSSProperties
+  className?: string
 }
 
 // 通用加载状态组件
@@ -18,23 +20,20 @@ export function LoadingState({
   loading = false,
   children,
   tip = '加载中...',
-  size = 'default',
+  className,
   style
 }: LoadingStateProps) {
   if (loading) {
     return (
       <div
-        style={{
-          textAlign: 'center',
-          padding: '48px 24px',
-          ...style
-        }}
+        className={cn("flex flex-col items-center justify-center py-12 px-6", className)}
+        style={style}
         role="status"
         aria-live="polite"
         aria-label={tip}
       >
-        <Spin size={size} />
-        <div style={{ marginTop: '16px', color: '#666' }}>
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+        <div className="mt-4 text-slate-500 font-medium">
           {tip}
         </div>
       </div>
@@ -48,24 +47,15 @@ export function LoadingState({
 export function PageLoading({ tip = '页面加载中...' }: { tip?: string }) {
   return (
     <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '400px',
-        flexDirection: 'column'
-      }}
+      className="flex flex-col items-center justify-center min-h-[400px] w-full"
       role="status"
       aria-live="polite"
       aria-label={tip}
     >
-      <Spin
-        size="large"
-        indicator={<LoadingOutlined style={{ fontSize: 24 }} spin />}
-      />
-      <Text type="secondary" style={{ marginTop: '16px' }}>
+      <Loader2 className="h-10 w-10 animate-spin text-blue-600" />
+      <p className="mt-4 text-slate-500 font-medium">
         {tip}
-      </Text>
+      </p>
     </div>
   )
 }
@@ -81,16 +71,21 @@ export function CardLoading({
   rows?: number 
 }) {
   return (
-    <Card title={title}>
-      <Space direction="vertical" style={{ width: '100%' }}>
-        <Skeleton active paragraph={{ rows }} />
-        <div style={{ textAlign: 'center', marginTop: '16px' }}>
-          <Spin size="small" />
-          <Text type="secondary" style={{ marginLeft: '8px' }}>
-            {tip}
-          </Text>
+    <Card>
+      {title && (
+        <CardHeader>
+          <CardTitle className="text-lg">{title}</CardTitle>
+        </CardHeader>
+      )}
+      <CardContent className="space-y-4">
+        {Array.from({ length: rows }).map((_, i) => (
+          <Skeleton key={i} className="h-4 w-full" />
+        ))}
+        <div className="flex items-center justify-center pt-4">
+          <Loader2 className="h-4 w-4 animate-spin mr-2 text-slate-400" />
+          <span className="text-sm text-slate-500">{tip}</span>
         </div>
-      </Space>
+      </CardContent>
     </Card>
   )
 }
@@ -98,50 +93,42 @@ export function CardLoading({
 // 表格加载状态
 export function TableLoading({ tip = '正在加载数据...' }: { tip?: string }) {
   return (
-    <div style={{ padding: '24px', textAlign: 'center' }}>
-      <Skeleton active paragraph={{ rows: 6 }} />
-      <div style={{ marginTop: '16px' }}>
-        <Spin />
-        <Text type="secondary" style={{ marginLeft: '8px' }}>
-          {tip}
-        </Text>
+    <div className="p-6 space-y-4">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <Skeleton key={i} className="h-10 w-full" />
+      ))}
+      <div className="flex items-center justify-center pt-2">
+        <Loader2 className="h-4 w-4 animate-spin mr-2 text-slate-400" />
+        <span className="text-sm text-slate-500">{tip}</span>
       </div>
     </div>
   )
 }
 
 // 按钮加载状态（内联）
-interface ButtonLoadingProps {
-  loading: boolean
-  children: React.ReactNode
-}
-
-export function ButtonLoading({ loading, children }: ButtonLoadingProps) {
+export function ButtonLoading({ loading, children }: { loading: boolean, children: React.ReactNode }) {
   return (
-    <Space>
-      {loading && <Spin size="small" />}
+    <div className="flex items-center gap-2">
+      {loading && <Loader2 className="h-4 w-4 animate-spin text-current" />}
       {children}
-    </Space>
+    </div>
   )
 }
 
 // 内容加载骨架屏
 export function ContentSkeleton({ 
   rows = 3,
-  avatar = false,
-  title = true 
 }: { 
   rows?: number
   avatar?: boolean
   title?: boolean 
 }) {
   return (
-    <Skeleton 
-      active 
-      avatar={avatar}
-      title={title}
-      paragraph={{ rows }}
-    />
+    <div className="space-y-3">
+      {Array.from({ length: rows }).map((_, i) => (
+        <Skeleton key={i} className="h-4 w-full" />
+      ))}
+    </div>
   )
 }
 
@@ -149,7 +136,9 @@ export function ContentSkeleton({
 export function StatisticLoading() {
   return (
     <Card>
-      <Skeleton.Input style={{ width: '100%', height: '60px' }} active />
+      <CardContent className="pt-6">
+        <Skeleton className="h-12 w-full" />
+      </CardContent>
     </Card>
   )
 }
@@ -157,19 +146,11 @@ export function StatisticLoading() {
 // 移动端友好的加载状态
 export function MobileLoading({ tip = '加载中...' }: { tip?: string }) {
   return (
-    <div style={{
-      padding: '40px 20px',
-      textAlign: 'center',
-      minHeight: '200px',
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'center',
-      alignItems: 'center'
-    }}>
-      <Spin size="large" />
-      <Text type="secondary" style={{ marginTop: '16px', fontSize: '14px' }}>
+    <div className="flex flex-col items-center justify-center p-10 min-h-[200px]">
+      <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      <p className="mt-4 text-slate-500 text-sm">
         {tip}
-      </Text>
+      </p>
     </div>
   )
 }
@@ -177,19 +158,21 @@ export function MobileLoading({ tip = '加载中...' }: { tip?: string }) {
 // 响应式表格加载状态
 export function ResponsiveTableLoading() {
   return (
-    <div style={{ padding: '16px' }}>
-      {/* 移动端显示卡片式骨架屏 */}
-      <div className="block md:hidden">
+    <div className="p-4 space-y-4">
+      <div className="grid md:hidden gap-4">
         {[1, 2, 3].map(i => (
-          <Card key={i} style={{ marginBottom: '12px' }}>
-            <Skeleton active paragraph={{ rows: 2 }} />
+          <Card key={i}>
+            <CardContent className="py-4 space-y-2">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-2/3" />
+            </CardContent>
           </Card>
         ))}
       </div>
-
-      {/* 桌面端显示表格式骨架屏 */}
-      <div className="hidden md:block">
-        <Skeleton active paragraph={{ rows: 8 }} />
+      <div className="hidden md:block space-y-4">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <Skeleton key={i} className="h-10 w-full" />
+        ))}
       </div>
     </div>
   )
@@ -198,12 +181,14 @@ export function ResponsiveTableLoading() {
 // 列表项加载状态
 export function ListItemLoading({ count = 5 }: { count?: number }) {
   return (
-    <Space direction="vertical" style={{ width: '100%' }}>
+    <div className="space-y-4 w-full">
       {Array.from({ length: count }, (_, index) => (
-        <Card key={index} size="small">
-          <Skeleton active paragraph={{ rows: 2 }} />
+        <Card key={index} className="shadow-none">
+          <CardContent className="py-3 px-4">
+            <Skeleton className="h-10 w-full" />
+          </CardContent>
         </Card>
       ))}
-    </Space>
+    </div>
   )
 }

@@ -1,10 +1,8 @@
+
 import '../styles/globals.css';
-import { AntdRegistry } from '@ant-design/nextjs-registry';
-import { ConfigProvider } from 'antd';
-import zhCN from 'antd/locale/zh_CN';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
-import ConfigInitializer from '@/components/ConfigInitializer';
+import { Toaster } from "@/components/ui/toaster"
 
 export const metadata = {
   title: 'LACS API Server',
@@ -31,15 +29,10 @@ export default function RootLayout({
       </head>
       <body>
         <ThemeProvider>
-          <AntdRegistry>
-            <ConfigProvider locale={zhCN}>
-              <AuthProvider>
-                <ConfigInitializer>
-                  {children}
-                </ConfigInitializer>
-              </AuthProvider>
-            </ConfigProvider>
-          </AntdRegistry>
+          <AuthProvider>
+            {children}
+            <Toaster />
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

@@ -1,10 +1,16 @@
 'use client'
 
 import React from 'react'
-import { Typography, Breadcrumb } from 'antd'
-import { HomeOutlined } from '@ant-design/icons'
-
-const { Title, Paragraph } = Typography
+import { Home } from 'lucide-react'
+import { 
+  Breadcrumb, 
+  BreadcrumbItem, 
+  BreadcrumbLink, 
+  BreadcrumbList, 
+  BreadcrumbPage, 
+  BreadcrumbSeparator 
+} from "@/components/ui/breadcrumb"
+import { cn } from "@/lib/utils"
 
 interface PageContainerProps {
   title: string
@@ -28,81 +34,84 @@ export default function PageContainer({
 }: PageContainerProps) {
   return (
     <div 
-      className={`responsive-container ${className}`}
-      style={{ 
-        paddingTop: '0', 
-        paddingBottom: '24px',
-        ...style 
-      }}
+      className={cn("space-y-6 pb-12", className)}
+      style={style}
     >
       {/* 面包屑导航 */}
       {breadcrumb && breadcrumb.length > 0 && (
-        <div style={{ marginBottom: '16px' }}>
-          <Breadcrumb
-            items={[
-              {
-                title: <HomeOutlined />,
-                href: '/admin'
-              },
-              ...breadcrumb.map(item => ({
-                title: item.title,
-                ...(item.href && { href: item.href })
-              }))
-            ]}
-          />
-        </div>
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/admin" className="flex items-center gap-1">
+                <Home className="h-3.5 w-3.5" />
+                后台
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            {breadcrumb.map((item, index) => (
+              <React.Fragment key={index}>
+                <BreadcrumbItem>
+                  {item.href ? (
+                    <BreadcrumbLink href={item.href}>{item.title}</BreadcrumbLink>
+                  ) : (
+                    <BreadcrumbPage>{item.title}</BreadcrumbPage>
+                  )}
+                </BreadcrumbItem>
+                {index < breadcrumb.length - 1 && <BreadcrumbSeparator />}
+              </React.Fragment>
+            ))}
+          </BreadcrumbList>
+        </Breadcrumb>
       )}
 
       {/* 页面头部 */}
-      <div className="responsive-card-spacing">
-        <Title level={2} className="responsive-title">
+      <div className="space-y-1">
+        <h1 className="text-3xl font-bold tracking-tight text-slate-900">
           {title}
-        </Title>
+        </h1>
         {description && (
-          <Paragraph style={{ color: '#666', margin: 0 }}>
+          <p className="text-slate-500 text-lg">
             {description}
-          </Paragraph>
+          </p>
         )}
       </div>
 
       {/* 页面内容 */}
-      {children}
+      <div className="mt-6">
+        {children}
+      </div>
     </div>
   )
 }
 
 // 响应式搜索和操作栏组件
-interface SearchAndActionBarProps {
-  children: React.ReactNode
-  className?: string
-}
-
 export function SearchAndActionBar({
   children,
   className = ''
-}: SearchAndActionBarProps) {
+}: {
+  children: React.ReactNode
+  className?: string
+}) {
   return (
-    <div className={`responsive-search-container ${className}`}>
+    <div className={cn("flex flex-col md:flex-row gap-4 mb-6", className)}>
       {children}
     </div>
   )
 }
 
 // 响应式表格容器组件
-interface ResponsiveTableContainerProps {
-  children: React.ReactNode
-  className?: string
-  style?: React.CSSProperties
-}
-
 export function ResponsiveTableContainer({
   children,
   className = '',
   style = {}
-}: ResponsiveTableContainerProps) {
+}: {
+  children: React.ReactNode
+  className?: string
+  style?: React.CSSProperties
+}) {
   return (
     <div 
-      className={`responsive-table-container ${className}`}
+      className={cn("rounded-md border bg-white overflow-hidden", className)}
       style={style}
     >
       {children}
@@ -111,46 +120,30 @@ export function ResponsiveTableContainer({
 }
 
 // 响应式卡片组件
-interface ResponsiveCardProps {
-  title?: string
-  children: React.ReactNode
-  className?: string
-  style?: React.CSSProperties
-  bodyStyle?: React.CSSProperties
-}
-
 export function ResponsiveCard({
   title,
   children,
   className = '',
   style = {},
   bodyStyle = {}
-}: ResponsiveCardProps) {
+}: {
+  title?: string
+  children: React.ReactNode
+  className?: string
+  style?: React.CSSProperties
+  bodyStyle?: React.CSSProperties
+}) {
   return (
     <div 
-      className={`responsive-card-spacing ${className}`}
-      style={{
-        background: '#fff',
-        borderRadius: '8px',
-        border: '1px solid #f0f0f0',
-        ...style
-      }}
+      className={cn("bg-white rounded-lg border shadow-sm", className)}
+      style={style}
     >
       {title && (
-        <div style={{
-          padding: '16px 16px 0 16px',
-          borderBottom: '1px solid #f0f0f0',
-          marginBottom: '16px'
-        }}>
-          <Title level={4} style={{ margin: 0 }}>
-            {title}
-          </Title>
+        <div className="px-6 py-4 border-bottom font-bold text-lg border-b">
+          {title}
         </div>
       )}
-      <div style={{
-        padding: '16px',
-        ...bodyStyle
-      }}>
+      <div className="p-6" style={bodyStyle}>
         {children}
       </div>
     </div>
@@ -158,17 +151,15 @@ export function ResponsiveCard({
 }
 
 // 响应式统计卡片网格
-interface StatisticGridProps {
-  children: React.ReactNode
-  className?: string
-}
-
 export function StatisticGrid({
   children,
   className = ''
-}: StatisticGridProps) {
+}: {
+  children: React.ReactNode
+  className?: string
+}) {
   return (
-    <div className={`responsive-card-spacing ${className}`}>
+    <div className={cn("grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6", className)}>
       {children}
     </div>
   )

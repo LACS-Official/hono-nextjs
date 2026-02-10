@@ -123,6 +123,21 @@ export const loginLogs = pgTable('login_logs', {
   isActiveIdx: index('login_logs_is_active_idx').on(table.isActive),
 }))
 
+// 黑名单表（用于锁定IP或设备）
+export const blockedItems = pgTable('blocked_items', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  type: varchar('type', { length: 20 }).notNull(), // 'ip' 或 'device'
+  value: varchar('value', { length: 255 }).notNull(), // IP地址或设备指纹/UA
+  reason: text('reason'), // 拉黑原因
+  isActive: boolean('is_active').notNull().default(true), // 是否启用
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  expiresAt: timestamp('expires_at'), // 过期时间（可选）
+  createdBy: varchar('created_by', { length: 255 }), // 创建者ID
+}, (table) => ({
+  valueIdx: index('blocked_items_value_idx').on(table.value),
+  typeIdx: index('blocked_items_type_idx').on(table.type),
+}))
+
 // 定义关系
 export const systemSettingsRelations = relations(systemSettings, ({ many }) => ({
   auditLogs: many(systemSettingsAuditLog),
@@ -150,3 +165,5 @@ export type SystemNotificationConfig = typeof systemNotificationConfig.$inferSel
 export type NewSystemNotificationConfig = typeof systemNotificationConfig.$inferInsert
 export type LoginLog = typeof loginLogs.$inferSelect
 export type NewLoginLog = typeof loginLogs.$inferInsert
+export type BlockedItem = typeof blockedItems.$inferSelect
+export type NewBlockedItem = typeof blockedItems.$inferInsert

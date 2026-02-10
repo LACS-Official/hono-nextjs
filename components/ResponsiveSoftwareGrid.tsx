@@ -1,9 +1,11 @@
 'use client'
 
 import React from 'react'
-import { Row, Col, Empty, Spin } from 'antd'
 import SoftwareCard from './SoftwareCard'
 import type { Software } from '../utils/software-api'
+import { Card, CardContent } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
+import { PackageOpen } from "lucide-react"
 
 interface ResponsiveSoftwareGridProps {
   software: Software[]
@@ -24,42 +26,47 @@ const ResponsiveSoftwareGrid: React.FC<ResponsiveSoftwareGridProps> = ({
 }) => {
   if (loading) {
     return (
-      <div style={{ textAlign: 'center', padding: '50px 0' }}>
-        <Spin size="large" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-4">
+        {[...Array(6)].map((_, i) => (
+             <Card key={i} className="h-full">
+                <CardContent className="p-6 space-y-4">
+                    <Skeleton className="h-6 w-3/4" />
+                    <Skeleton className="h-4 w-1/2" />
+                    <Skeleton className="h-20 w-full" />
+                    <div className="flex justify-between">
+                         <Skeleton className="h-4 w-1/3" />
+                         <Skeleton className="h-4 w-1/3" />
+                    </div>
+                </CardContent>
+            </Card>
+        ))}
       </div>
     )
   }
 
   if (software.length === 0) {
     return (
-      <Empty
-        description="暂无软件数据"
-        style={{ margin: '50px 0' }}
-      />
+      <div className="flex flex-col items-center justify-center p-12 text-muted-foreground border rounded-lg bg-muted/10 border-dashed">
+        <PackageOpen className="h-12 w-12 mb-4 opacity-50" />
+        <p className="text-lg font-medium">暂无软件数据</p>
+        <p className="text-sm">点击"新增软件"开始添加</p>
+      </div>
     )
   }
 
   return (
-    <Row gutter={[16, 16]}>
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-4">
       {software.map((item) => (
-        <Col
-          key={item.id}
-          xs={24}      // 手机: 1列
-          sm={12}      // 小屏幕: 2列
-          lg={8}       // 大屏幕: 3列
-          xl={6}       // 超大屏幕: 4列
-          xxl={4}      // 超超大屏幕: 6列
-        >
-          <SoftwareCard
+         <SoftwareCard
+            key={item.id}
             software={item}
             onEdit={onEdit}
             onDelete={onDelete}
             onView={onView}
             onViewStats={onViewStats}
           />
-        </Col>
       ))}
-    </Row>
+    </div>
   )
 }
 

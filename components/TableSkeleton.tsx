@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { Skeleton, Card, Row, Col } from 'antd'
+import { Skeleton } from "@/components/ui/skeleton"
 
 interface TableSkeletonProps {
   rows?: number
@@ -15,29 +15,16 @@ interface TableSkeletonProps {
 const TableSkeleton: React.FC<TableSkeletonProps> = ({
   rows = 5,
   columns = 4,
-  avatar = false,
-  title = true,
-  paragraph = true,
-  active = true
 }) => {
   return (
-    <div style={{ padding: '16px 0' }}>
+    <div className="space-y-4 py-4">
       {Array.from({ length: rows }).map((_, index) => (
-        <div key={index} style={{ marginBottom: 16 }}>
-          <Row gutter={16} align="middle">
-            {Array.from({ length: columns }).map((_, colIndex) => (
-              <Col key={colIndex} flex={1}>
-                <Skeleton
-                  key={`${index}-${colIndex}`}
-                  avatar={avatar && colIndex === 0}
-                  title={title && colIndex === 0}
-                  paragraph={paragraph && colIndex === 0}
-                  active={active}
-                  style={{ padding: '8px 0' }}
-                />
-              </Col>
-            ))}
-          </Row>
+        <div key={index} className="flex items-center space-x-4">
+          {Array.from({ length: columns }).map((_, colIndex) => (
+            <div key={colIndex} className="flex-1">
+              <Skeleton className="h-10 w-full" />
+            </div>
+          ))}
         </div>
       ))}
     </div>

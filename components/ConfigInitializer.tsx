@@ -1,18 +1,8 @@
-'use client';
-
-import { useEffect } from 'react';
-import { ConfigProvider } from 'antd';
-import zhCN from 'antd/locale/zh_CN';
-
+/**
+ * 已弃用的配置文件。
+ * 由于 Ant Design 已从项目中完全移除，此组件不再需要。
+ * 请在清理代码时安全删除此文件。
+ */
 export default function ConfigInitializer({ children }: { children: React.ReactNode }) {
-  useEffect(() => {
-    ConfigProvider.config({
-      holderRender: (children) => (
-        <ConfigProvider locale={zhCN}>
-          {children}
-        </ConfigProvider>
-      ),
-    });
-  }, []);
   return <>{children}</>;
 }

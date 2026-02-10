@@ -1,134 +1,54 @@
 'use client'
 
-import { message, notification } from 'antd'
-import { 
-  CheckCircleOutlined, 
-  ExclamationCircleOutlined, 
-  InfoCircleOutlined, 
-  CloseCircleOutlined 
-} from '@ant-design/icons'
-
-// 响应式通知配置
-const getNotificationConfig = () => {
-  return {
-    placement: 'topRight' as const,
-    duration: 4.5,
-    style: {
-      width: '400px',
-      marginTop: '80px', // 避免被导航栏遮挡
-    }
-  }
-}
-
-// 响应式消息配置
-const getMessageConfig = () => {
-  return {
-    duration: 3,
-    maxCount: 3,
-    style: {
-      marginTop: '80px',
-      fontSize: '14px',
-    }
-  }
-}
+import { toast } from '@/hooks/use-toast'
 
 // 响应式通知工具类
 export class ResponsiveNotification {
   // 成功通知
   static success(title: string, description?: string) {
-    if (description) {
-      // 有描述的通知
-      const config = getNotificationConfig()
-      notification.success({
-        message: title,
-        description,
-        icon: <CheckCircleOutlined style={{ color: '#52c41a' }} />,
-        ...config
-      })
-    } else {
-      // 简单消息
-      message.success({
-        content: title,
-        ...getMessageConfig()
-      })
-    }
+    toast({
+      title,
+      description,
+    })
   }
 
   // 错误通知
   static error(title: string, description?: string) {
-    if (description) {
-      // 有描述的通知
-      const config = getNotificationConfig()
-      notification.error({
-        message: title,
-        description,
-        icon: <CloseCircleOutlined style={{ color: '#ff4d4f' }} />,
-        ...config
-      })
-    } else {
-      // 简单消息
-      message.error({
-        content: title,
-        ...getMessageConfig()
-      })
-    }
+    toast({
+      variant: "destructive",
+      title,
+      description,
+    })
   }
 
   // 警告通知
   static warning(title: string, description?: string) {
-    if (description) {
-      // 有描述的通知
-      const config = getNotificationConfig()
-      notification.warning({
-        message: title,
-        description,
-        icon: <ExclamationCircleOutlined style={{ color: '#faad14' }} />,
-        ...config
-      })
-    } else {
-      // 简单消息
-      message.warning({
-        content: title,
-        ...getMessageConfig()
-      })
-    }
+    toast({
+      title: `警告: ${title}`,
+      description,
+    })
   }
 
   // 信息通知
   static info(title: string, description?: string) {
-    if (description) {
-      // 有描述的通知
-      const config = getNotificationConfig()
-      notification.info({
-        message: title,
-        description,
-        icon: <InfoCircleOutlined style={{ color: '#1890ff' }} />,
-        ...config
-      })
-    } else {
-      // 简单消息
-      message.info({
-        content: title,
-        ...getMessageConfig()
-      })
-    }
+    toast({
+      title,
+      description,
+    })
   }
 
   // 加载中通知
   static loading(title: string) {
-    const config = getMessageConfig()
-
-    return message.loading({
-      content: title,
-      ...config,
-      duration: 0, // 不自动关闭，覆盖 config 中的 duration
+    // Shadcn Toast 不直接支持 Loading 状态持续保持，通常由调用方控制 loading 状态
+    return toast({
+      title: "处理中",
+      description: title,
     })
   }
 
   // 关闭所有通知
   static destroy() {
-    message.destroy()
-    notification.destroy()
+    // 目前没有直接的全局销毁方法，Toast 会自动消失
   }
 }
 
@@ -161,31 +81,18 @@ export class ApiResponseHandler {
     let errorMessage = '操作失败，请稍后重试'
     
     if (error.response) {
-      // HTTP 错误响应
       const status = error.response.status
       const data = error.response.data
       
       switch (status) {
-        case 400:
-          errorMessage = data?.error || '请求参数错误'
-          break
-        case 401:
-          errorMessage = '身份验证失败，请重新登录'
-          break
-        case 403:
-          errorMessage = '权限不足，无法执行此操作'
-          break
-        case 404:
-          errorMessage = '请求的资源不存在'
-          break
-        case 500:
-          errorMessage = '服务器内部错误'
-          break
-        default:
-          errorMessage = data?.error || `请求失败 (${status})`
+        case 400: errorMessage = data?.error || '请求参数错误'; break
+        case 401: errorMessage = '身份验证失败，请重新登录'; break
+        case 403: errorMessage = '权限不足，无法执行此操作'; break
+        case 404: errorMessage = '请求的资源不存在'; break
+        case 500: errorMessage = '服务器内部错误'; break
+        default: errorMessage = data?.error || `请求失败 (${status})`
       }
     } else if (error.message) {
-      // 网络错误或其他错误
       if (error.message.includes('Network Error')) {
         errorMessage = '网络连接失败，请检查网络设置'
       } else {
@@ -202,14 +109,10 @@ export class ApiResponseHandler {
     promise: Promise<T>, 
     loadingMessage: string = '处理中...'
   ): Promise<T> {
-    const hide = showLoading(loadingMessage)
-    
+    // 注意: shadcn toast 不支持直接的 API 级 loading 覆盖，这里简单提示
     try {
-      const result = await promise
-      hide()
-      return result
+      return await promise
     } catch (error) {
-      hide()
       throw error
     }
   }
@@ -217,7 +120,6 @@ export class ApiResponseHandler {
 
 // 表单验证消息处理
 export class FormMessageHandler {
-  // 显示表单验证错误
   static showValidationErrors(errors: Record<string, string[]>) {
     const errorMessages = Object.entries(errors)
       .map(([field, messages]) => `${field}: ${messages.join(', ')}`)
@@ -226,12 +128,10 @@ export class FormMessageHandler {
     showError('表单验证失败', errorMessages)
   }
 
-  // 显示表单提交成功
   static showSubmitSuccess(message: string = '提交成功') {
     showSuccess(message)
   }
 
-  // 显示表单提交失败
   static showSubmitError(error: any) {
     ApiResponseHandler.handleError(error, 'form submission')
   }

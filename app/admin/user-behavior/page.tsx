@@ -2,34 +2,50 @@
 
 import React, { useState, useEffect } from 'react'
 import {
-  Card,
-  Row,
-  Col,
-  Statistic,
-  Table,
-  DatePicker,
-  Select,
-  Button,
-  Space,
-  Typography,
-  Tabs,
-  message,
-  Spin,
-  Tag
-} from 'antd'
-import {
-  UserOutlined,
-  MobileOutlined,
-  BarChartOutlined,
-  ReloadOutlined,
-  DownloadOutlined
-} from '@ant-design/icons'
+  User,
+  Smartphone,
+  BarChart3,
+  RefreshCw,
+  Download,
+  Calendar
+} from 'lucide-react'
 import dayjs from 'dayjs'
 
-const { Title } = Typography
-const { RangePicker } = DatePicker
-const { Option } = Select
-const { TabPane } = Tabs
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useToast } from "@/hooks/use-toast"
 
 interface UsageRecord {
   id: string
@@ -73,11 +89,13 @@ interface DeviceConnectionStats {
 }
 
 export default function UserBehaviorPage() {
+  const { toast } = useToast()
   const [loading, setLoading] = useState(false)
   const [usageStats, setUsageStats] = useState<UsageStats | null>(null)
   const [deviceStats, setDeviceStats] = useState<DeviceConnectionStats | null>(null)
-  const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(null)
-  const [selectedSoftware, setSelectedSoftware] = useState<number | undefined>(undefined)
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+  const [selectedSoftware, setSelectedSoftware] = useState<string>('all')
 
   // 获取使用统计数据
   const fetchUsageStats = async () => {
@@ -85,12 +103,12 @@ export default function UserBehaviorPage() {
       setLoading(true)
       const params = new URLSearchParams()
       
-      if (selectedSoftware) {
-        params.append('softwareId', selectedSoftware.toString())
+      if (selectedSoftware && selectedSoftware !== 'all') {
+        params.append('softwareId', selectedSoftware)
       }
-      if (dateRange && dateRange[0] && dateRange[1]) {
-        params.append('startDate', dateRange[0].format('YYYY-MM-DD'))
-        params.append('endDate', dateRange[1].format('YYYY-MM-DD'))
+      if (startDate && endDate) {
+        params.append('startDate', startDate)
+        params.append('endDate', endDate)
       }
 
       // 获取Supabase会话
@@ -99,7 +117,11 @@ export default function UserBehaviorPage() {
       const { data: { session } } = await supabase.auth.getSession()
       
       if (!session) {
-        message.error('用户未登录')
+        toast({
+          variant: "destructive",
+          title: "未登录",
+          description: "请先登录",
+        })
         return
       }
 
@@ -114,11 +136,19 @@ export default function UserBehaviorPage() {
       if (data.success) {
         setUsageStats(data.data)
       } else {
-        message.error('获取使用统计失败: ' + data.error)
+        toast({
+          variant: "destructive",
+          title: "获取失败",
+          description: data.error || "获取使用统计失败",
+        })
       }
     } catch (error) {
       console.error('Error fetching usage stats:', error)
-      message.error('获取使用统计失败')
+      toast({
+        variant: "destructive",
+        title: "请求失败",
+        description: "网络错误或服务器无响应",
+      })
     } finally {
       setLoading(false)
     }
@@ -130,12 +160,12 @@ export default function UserBehaviorPage() {
       setLoading(true)
       const params = new URLSearchParams()
       
-      if (selectedSoftware) {
-        params.append('softwareId', selectedSoftware.toString())
+      if (selectedSoftware && selectedSoftware !== 'all') {
+        params.append('softwareId', selectedSoftware)
       }
-      if (dateRange && dateRange[0] && dateRange[1]) {
-        params.append('startDate', dateRange[0].format('YYYY-MM-DD'))
-        params.append('endDate', dateRange[1].format('YYYY-MM-DD'))
+      if (startDate && endDate) {
+        params.append('startDate', startDate)
+        params.append('endDate', endDate)
       }
 
       // 获取Supabase会话
@@ -144,7 +174,11 @@ export default function UserBehaviorPage() {
       const { data: { session } } = await supabase.auth.getSession()
       
       if (!session) {
-        message.error('用户未登录')
+        toast({
+          variant: "destructive",
+          title: "未登录",
+          description: "请先登录",
+        })
         return
       }
 
@@ -159,11 +193,19 @@ export default function UserBehaviorPage() {
       if (data.success) {
         setDeviceStats(data.data)
       } else {
-        message.error('获取设备连接统计失败: ' + data.error)
+        toast({
+          variant: "destructive",
+          title: "获取失败",
+          description: data.error || "获取设备连接统计失败",
+        })
       }
     } catch (error) {
       console.error('Error fetching device stats:', error)
-      message.error('获取设备连接统计失败')
+      toast({
+        variant: "destructive",
+        title: "请求失败",
+        description: "网络错误或服务器无响应",
+      })
     } finally {
       setLoading(false)
     }
@@ -177,214 +219,272 @@ export default function UserBehaviorPage() {
 
   // 导出数据
   const handleExport = () => {
-    message.info('导出功能开发中...')
+    toast({
+      title: "开发中",
+      description: "导出功能正在开发中...",
+    })
   }
 
   useEffect(() => {
     fetchUsageStats()
     fetchDeviceStats()
-  }, [selectedSoftware, dateRange])
-
-  // 使用记录表格列定义
-  const usageColumns = [
-    {
-      title: '软件名称',
-      dataIndex: 'softwareName',
-      key: 'softwareName',
-    },
-    {
-      title: '软件版本',
-      dataIndex: 'softwareVersion',
-      key: 'softwareVersion',
-      render: (version: string) => version || '-',
-    },
-    {
-      title: '设备指纹',
-      dataIndex: 'deviceFingerprint',
-      key: 'deviceFingerprint',
-      render: (fingerprint: string) => (
-        <span style={{ fontFamily: 'monospace', fontSize: '12px' }}>
-          {fingerprint.substring(0, 16)}...
-        </span>
-      ),
-    },
-    {
-      title: '使用次数',
-      dataIndex: 'used',
-      key: 'used',
-      render: (used: number) => (
-        <Tag color="blue">{used}</Tag>
-      ),
-    },
-    {
-      title: '最后使用时间',
-      dataIndex: 'usedAt',
-      key: 'usedAt',
-      render: (date: string) => dayjs(date).format('YYYY-MM-DD HH:mm:ss'),
-    },
-  ]
-
-  // 设备连接表格列定义
-  const deviceColumns = [
-    {
-      title: '设备序列号',
-      dataIndex: 'deviceSerial',
-      key: 'deviceSerial',
-      render: (serial: string) => (
-        <span style={{ fontFamily: 'monospace', fontSize: '12px' }}>
-          {serial}
-        </span>
-      ),
-    },
-    {
-      title: '设备品牌',
-      dataIndex: 'deviceBrand',
-      key: 'deviceBrand',
-      render: (brand: string) => brand || '-',
-    },
-    {
-      title: '设备型号',
-      dataIndex: 'deviceModel',
-      key: 'deviceModel',
-      render: (model: string) => model || '-',
-    },
-    {
-      title: '软件ID',
-      dataIndex: 'softwareId',
-      key: 'softwareId',
-    },
-    {
-      title: '用户设备指纹',
-      dataIndex: 'userDeviceFingerprint',
-      key: 'userDeviceFingerprint',
-      render: (fingerprint: string) => fingerprint ? (
-        <span style={{ fontFamily: 'monospace', fontSize: '12px' }}>
-          {fingerprint.substring(0, 16)}...
-        </span>
-      ) : '-',
-    },
-    {
-      title: '连接时间',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
-      render: (date: string) => dayjs(date).format('YYYY-MM-DD HH:mm:ss'),
-    },
-  ]
+  }, [selectedSoftware, startDate, endDate])
 
   return (
-    <div style={{ padding: '24px' }}>
-      <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Title level={2}>用户行为统计</Title>
-        <Space>
-          <RangePicker
-            value={dateRange}
-            onChange={setDateRange}
-            placeholder={['开始日期', '结束日期']}
+    <div className="space-y-6 pb-24">
+      {/* 面包屑导航 */}
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink href="/admin">管理后台</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>用户行为统计</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
+      {/* 页面头部 */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <h2 className="text-3xl font-bold tracking-tight">用户行为统计</h2>
+          <p className="text-muted-foreground">
+            查看软件使用情况和设备连接统计
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Input
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            className="w-[150px]"
           />
-          <Select
-            placeholder="选择软件"
-            style={{ width: 200 }}
-            value={selectedSoftware}
-            onChange={setSelectedSoftware}
-            allowClear
-          >
-            <Option value={1}>玩机管家</Option>
-            {/* 这里可以动态加载软件列表 */}
+          <Input
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            className="w-[150px]"
+          />
+          <Select value={selectedSoftware} onValueChange={setSelectedSoftware}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="选择软件" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全部软件</SelectItem>
+              <SelectItem value="1">玩机管家</SelectItem>
+            </SelectContent>
           </Select>
-          <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
+          <Button variant="outline" onClick={handleRefresh} disabled={loading}>
+            <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             刷新
           </Button>
-          <Button icon={<DownloadOutlined />} onClick={handleExport}>
+          <Button variant="outline" onClick={handleExport}>
+            <Download className="mr-2 h-4 w-4" />
             导出
           </Button>
-        </Space>
+        </div>
       </div>
 
-      <Spin spinning={loading}>
-        <Tabs defaultActiveKey="usage">
-          <TabPane tab="软件使用统计" key="usage">
-            <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
-              <Col span={8}>
-                <Card>
-                  <Statistic
-                    title="总使用次数"
-                    value={usageStats?.totalUsage || 0}
-                    prefix={<BarChartOutlined />}
-                  />
-                </Card>
-              </Col>
-              <Col span={8}>
-                <Card>
-                  <Statistic
-                    title="独立设备数"
-                    value={usageStats?.uniqueDevices || 0}
-                    prefix={<UserOutlined />}
-                  />
-                </Card>
-              </Col>
-              <Col span={8}>
-                <Card>
-                  <Statistic
-                    title="平均使用次数/设备"
-                    value={usageStats?.summary.averageUsagePerDevice || '0'}
-                    precision={2}
-                  />
-                </Card>
-              </Col>
-            </Row>
+      {/* 标签页 */}
+      <Tabs defaultValue="usage" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="usage" className="flex items-center gap-2">
+            <BarChart3 className="h-4 w-4" />
+            软件使用统计
+          </TabsTrigger>
+          <TabsTrigger value="device" className="flex items-center gap-2">
+            <Smartphone className="h-4 w-4" />
+            设备连接统计
+          </TabsTrigger>
+        </TabsList>
 
-            <Card title="最近使用记录">
-              <Table
-                columns={usageColumns}
-                dataSource={usageStats?.recentUsage || []}
-                rowKey="id"
-                pagination={{ pageSize: 10 }}
-              />
+        <TabsContent value="usage" className="space-y-6">
+          {/* 使用统计卡片 */}
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">总使用次数</CardTitle>
+                <BarChart3 className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{usageStats?.totalUsage || 0}</div>
+              </CardContent>
             </Card>
-          </TabPane>
-
-          <TabPane tab="设备连接统计" key="device">
-            <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
-              <Col span={8}>
-                <Card>
-                  <Statistic
-                    title="总连接次数"
-                    value={deviceStats?.totalConnections || 0}
-                    prefix={<MobileOutlined />}
-                  />
-                </Card>
-              </Col>
-              <Col span={8}>
-                <Card>
-                  <Statistic
-                    title="独立设备数"
-                    value={deviceStats?.uniqueDevices || 0}
-                    prefix={<UserOutlined />}
-                  />
-                </Card>
-              </Col>
-              <Col span={8}>
-                <Card>
-                  <Statistic
-                    title="平均连接次数/设备"
-                    value={deviceStats?.summary.averageConnectionsPerDevice || '0'}
-                    precision={2}
-                  />
-                </Card>
-              </Col>
-            </Row>
-
-            <Card title="最近连接记录">
-              <Table
-                columns={deviceColumns}
-                dataSource={deviceStats?.recentConnections || []}
-                rowKey="id"
-                pagination={{ pageSize: 10 }}
-              />
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">独立设备数</CardTitle>
+                <User className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{usageStats?.uniqueDevices || 0}</div>
+              </CardContent>
             </Card>
-          </TabPane>
-        </Tabs>
-      </Spin>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">平均使用次数/设备</CardTitle>
+                <BarChart3 className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {usageStats?.summary.averageUsagePerDevice || '0'}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* 使用记录表格 */}
+          <Card>
+            <CardHeader>
+              <CardTitle>最近使用记录</CardTitle>
+              <CardDescription>
+                显示最近的软件使用记录
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>软件名称</TableHead>
+                    <TableHead>软件版本</TableHead>
+                    <TableHead>设备指纹</TableHead>
+                    <TableHead>使用次数</TableHead>
+                    <TableHead>最后使用时间</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-8">
+                        <RefreshCw className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+                      </TableCell>
+                    </TableRow>
+                  ) : usageStats?.recentUsage.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                        暂无数据
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    usageStats?.recentUsage.map((record) => (
+                      <TableRow key={record.id}>
+                        <TableCell className="font-medium">{record.softwareName}</TableCell>
+                        <TableCell>{record.softwareVersion || '-'}</TableCell>
+                        <TableCell>
+                          <code className="text-xs">
+                            {record.deviceFingerprint.substring(0, 16)}...
+                          </code>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">{record.used}</Badge>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {dayjs(record.usedAt).format('YYYY-MM-DD HH:mm:ss')}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="device" className="space-y-6">
+          {/* 设备统计卡片 */}
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">总连接次数</CardTitle>
+                <Smartphone className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{deviceStats?.totalConnections || 0}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">独立设备数</CardTitle>
+                <User className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{deviceStats?.uniqueDevices || 0}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">平均连接次数/设备</CardTitle>
+                <BarChart3 className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {deviceStats?.summary.averageConnectionsPerDevice || '0'}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* 设备连接记录表格 */}
+          <Card>
+            <CardHeader>
+              <CardTitle>最近连接记录</CardTitle>
+              <CardDescription>
+                显示最近的设备连接记录
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>设备序列号</TableHead>
+                    <TableHead>设备品牌</TableHead>
+                    <TableHead>设备型号</TableHead>
+                    <TableHead>软件ID</TableHead>
+                    <TableHead>用户设备指纹</TableHead>
+                    <TableHead>连接时间</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8">
+                        <RefreshCw className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+                      </TableCell>
+                    </TableRow>
+                  ) : deviceStats?.recentConnections.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                        暂无数据
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    deviceStats?.recentConnections.map((record) => (
+                      <TableRow key={record.id}>
+                        <TableCell>
+                          <code className="text-xs">{record.deviceSerial}</code>
+                        </TableCell>
+                        <TableCell>{record.deviceBrand || '-'}</TableCell>
+                        <TableCell>{record.deviceModel || '-'}</TableCell>
+                        <TableCell>{record.softwareId}</TableCell>
+                        <TableCell>
+                          {record.userDeviceFingerprint ? (
+                            <code className="text-xs">
+                              {record.userDeviceFingerprint.substring(0, 16)}...
+                            </code>
+                          ) : '-'}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {dayjs(record.createdAt).format('YYYY-MM-DD HH:mm:ss')}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

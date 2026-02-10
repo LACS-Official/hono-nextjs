@@ -126,7 +126,7 @@ const SoftwareAnnouncementManager: React.FC<SoftwareAnnouncementManagerProps> = 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL
 
   const form = useForm<AnnouncementFormValues>({
-    resolver: zodResolver(announcementFormSchema),
+    resolver: zodResolver(announcementFormSchema) as any,
     defaultValues: {
       title: '',
       titleEn: '',

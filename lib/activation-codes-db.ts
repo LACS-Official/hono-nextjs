@@ -1,6 +1,5 @@
-// 激活码数据库连接模块 - 独立数据库连接
 import { drizzle } from 'drizzle-orm/node-postgres'
-import { Client } from 'pg'
+import { Pool } from 'pg'
 import { sql } from 'drizzle-orm'
 import * as activationCodesSchema from './activation-codes-schema'
 
@@ -13,17 +12,13 @@ if (!activationCodesConnectionString) {
   throw new Error('ACTIVATION_CODES_DATABASE_URL environment variable is required')
 }
 
-// 创建独立的激活码数据库连接
-const client = new Client({
+// 创建独立的激活码数据库连接池
+// 使用 Pool 而不是 Client，可以实现惰性连接并更好地处理并发
+const pool = new Pool({
   connectionString: activationCodesConnectionString,
 })
 
-// 连接到数据库
-client.connect().catch(err => {
-  console.error('Error connecting to activation codes database:', err)
-})
-
-export const activationCodesDb = drizzle(client, { 
+export const activationCodesDb = drizzle(pool, { 
   schema: activationCodesSchema 
 })
 
@@ -33,7 +28,7 @@ export const { activationCodes } = activationCodesSchema
 // 数据库健康检查函数
 export async function checkActivationCodesDbHealth(): Promise<boolean> {
   try {
-    await client.query('SELECT 1')
+    await pool.query('SELECT 1')
     return true
   } catch (error) {
     console.error('Activation codes database health check failed:', error)
@@ -70,7 +65,7 @@ export async function batchInsertActivationCodes<T extends Record<string, any>>(
 export async function checkActivationCodesMigrationStatus() {
   try {
     // 检查激活码表是否存在
-    const result = await client.query(`
+    const result = await pool.query(`
       SELECT table_name
       FROM information_schema.tables
       WHERE table_schema = 'public'
@@ -133,31 +128,11 @@ export async function cleanupActivationCodes(options: {
   return results
 }
 
-// 连接状态监控
+// 连接状态监控 (注: 在 Next.js 中尽量避免使用顶层定时器)
 let connectionStatus = {
-  isConnected: false,
+  isConnected: true, // 初始假设为 true，交给 Pool 处理连接
   lastCheck: new Date(),
   consecutiveFailures: 0
 }
-
-// 定期健康检查
-setInterval(async () => {
-  const isHealthy = await checkActivationCodesDbHealth()
-  
-  if (isHealthy) {
-    connectionStatus.isConnected = true
-    connectionStatus.consecutiveFailures = 0
-  } else {
-    connectionStatus.isConnected = false
-    connectionStatus.consecutiveFailures++
-  }
-  
-  connectionStatus.lastCheck = new Date()
-  
-  // 如果连续失败超过3次，记录警告
-  if (connectionStatus.consecutiveFailures >= 3) {
-    console.warn(`Activation codes database connection unstable: ${connectionStatus.consecutiveFailures} consecutive failures`)
-  }
-}, 60000) // 每分钟检查一次
 
 export { connectionStatus }

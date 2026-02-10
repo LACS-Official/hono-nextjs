@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { systemSettingsDb } from '@/lib/system-settings-db'
 import { blockedItems } from '@/lib/system-settings-schema'

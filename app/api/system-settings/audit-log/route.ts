@@ -3,6 +3,7 @@
  * 处理系统设置变更历史记录
  */
 
+export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { 
   systemSettingsDb, 

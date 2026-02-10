@@ -176,7 +176,7 @@ export default function EnhancedVersionManager({
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL
 
   const form = useForm<VersionFormValues>({
-    resolver: zodResolver(versionFormSchema),
+    resolver: zodResolver(versionFormSchema) as any,
     defaultValues: {
       version: '',
       releaseDate: '',

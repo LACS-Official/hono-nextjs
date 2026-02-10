@@ -153,7 +153,7 @@ export default function ActivationCodeStats({ onRefresh, refreshTrigger }: Activ
                   {stats.expirationRate.toFixed(1)}%
                 </span>
               </div>
-              <Progress value={stats.expirationRate} className="h-2 bg-slate-100" indicatorClassName={stats.expirationRate > 20 ? 'bg-red-500' : 'bg-orange-400'} />
+              <Progress value={stats.expirationRate} className="h-2 bg-slate-100" indicatorColor={stats.expirationRate > 20 ? 'bg-red-500' : 'bg-orange-400'} />
             </div>
 
             <div className="space-y-2">
@@ -161,7 +161,7 @@ export default function ActivationCodeStats({ onRefresh, refreshTrigger }: Activ
                 <span className="text-slate-600">有效率</span>
                 <span className="text-green-600">{((stats.active / stats.total) * 100).toFixed(1)}%</span>
               </div>
-              <Progress value={(stats.active / stats.total) * 100} className="h-2" indicatorClassName="bg-green-500" />
+              <Progress value={(stats.active / stats.total) * 100} className="h-2" indicatorColor="bg-green-500" />
             </div>
           </CardContent>
         </Card>

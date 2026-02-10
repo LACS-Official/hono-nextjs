@@ -1,6 +1,5 @@
-// 系统设置数据库连接模块 - 独立数据库连接
 import { drizzle } from 'drizzle-orm/node-postgres'
-import { Client } from 'pg'
+import { Pool } from 'pg'
 import * as systemSettingsSchema from './system-settings-schema'
 
 /**
@@ -16,8 +15,8 @@ if (!systemSettingsConnectionString) {
   throw new Error('SYSTEM_SETTINGS_DATABASE_URL environment variable is required')
 }
 
-// 创建独立的数据库客户端
-const client = new Client({
+// 创建独立的数据库连接池
+const pool = new Pool({
   connectionString: systemSettingsConnectionString,
   // 增加 SSL 配置支持（特别是 Supabase/Neon 等云数据库）
   ssl: systemSettingsConnectionString.includes('sslmode=require') || 
@@ -26,13 +25,8 @@ const client = new Client({
        ? { rejectUnauthorized: false } : false
 })
 
-// 连接到数据库
-client.connect().catch(err => {
-  console.error('Error connecting to system settings database:', err)
-})
-
 // 创建 Drizzle 实例
-export const systemSettingsDb = drizzle(client, { 
+export const systemSettingsDb = drizzle(pool, { 
   schema: systemSettingsSchema 
 })
 
@@ -51,7 +45,7 @@ export const {
 // 数据库健康检查函数
 export async function checkSystemSettingsDbHealth(): Promise<boolean> {
   try {
-    await client.query('SELECT 1')
+    await pool.query('SELECT 1')
     return true
   } catch (error) {
     console.error('System settings database health check failed:', error)

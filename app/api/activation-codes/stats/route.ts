@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 // 激活码统计接口
 import { NextRequest } from 'next/server'
 import { activationCodesDb as db, activationCodes } from '@/lib/activation-codes-db'

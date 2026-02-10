@@ -404,7 +404,7 @@ export default function ActivationCodeDetailPage() {
                   </div>
                 )}
               </div>
-              {code.metadata.notes && (
+              {!!code.metadata.notes && (
                 <>
                   <Separator />
                   <div className="space-y-1">

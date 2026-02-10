@@ -32,6 +32,7 @@ export interface ActivationCode {
     licenseType?: string
     purchaseId?: string
     customerId?: string
+    notes?: string
     [key: string]: unknown
   }
   productInfo?: {

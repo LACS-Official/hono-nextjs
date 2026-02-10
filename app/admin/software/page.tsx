@@ -244,7 +244,7 @@ export default function SoftwareManagement() {
   // 批量删除
   const handleBatchDelete = async () => {
     if (selectedRowKeys.length === 0) {
-      toast({ title: '请选择要删除的软件', variant: 'warning' })
+      toast({ title: '请选择要删除的软件', variant: 'destructive' })
       return
     }
 

@@ -141,7 +141,7 @@ export default function BannersPage() {
   const [previewBanner, setPreviewBanner] = useState<Banner | null>(null)
 
   const form = useForm<BannerFormValues>({
-    resolver: zodResolver(bannerFormSchema),
+    resolver: zodResolver(bannerFormSchema) as any,
     defaultValues: {
       title: '',
       description: '',

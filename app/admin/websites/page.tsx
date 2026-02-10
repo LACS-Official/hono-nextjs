@@ -127,7 +127,7 @@ export default function WebsitesPage() {
   })
 
   const form = useForm<WebsiteFormValues>({
-    resolver: zodResolver(websiteFormSchema),
+    resolver: zodResolver(websiteFormSchema) as any,
     defaultValues: {
       name: '',
       domain: '',

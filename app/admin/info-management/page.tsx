@@ -196,19 +196,19 @@ export default function InfoManagementPage() {
 
   // 表单初始化
   const contactForm = useForm<z.infer<typeof contactSchema>>({
-    resolver: zodResolver(contactSchema),
+    resolver: zodResolver(contactSchema) as any,
     defaultValues: { title: '', description: '', info: '', action: '', analyticsEvent: '' }
   })
   const groupForm = useForm<z.infer<typeof groupSchema>>({
-    resolver: zodResolver(groupSchema),
+    resolver: zodResolver(groupSchema) as any,
     defaultValues: { name: '', limit: '', groupNumber: '', qrcode: '', joinLink: '', analyticsEvent: '' }
   })
   const mediaForm = useForm<z.infer<typeof mediaSchema>>({
-    resolver: zodResolver(mediaSchema),
+    resolver: zodResolver(mediaSchema) as any,
     defaultValues: { name: '', logo: '', account: '', accountId: '', qrcode: '', qrcodeTitle: '', qrcodeDesc: '', link: '', analyticsEvent: '' }
   })
   const projectForm = useForm<z.infer<typeof projectSchema>>({
-    resolver: zodResolver(projectSchema),
+    resolver: zodResolver(projectSchema) as any,
     defaultValues: { category: '', categoryName: '', title: '', description: '', platform: '', updateDate: '', link: '', icon: '', pLanguage: '' }
   })
 

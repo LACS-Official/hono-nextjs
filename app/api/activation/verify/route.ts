@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
 
     const responseData = await response.json()
 
-    // 返回相同的响应状态和数据
+    // 返回相同的响应状态 and data
     return corsResponse(responseData, { 
       status: response.status 
     }, origin, userAgent)
@@ -69,4 +69,3 @@ export async function POST(request: NextRequest) {
     }, { status: 500 }, origin, userAgent)
   }
 }
-

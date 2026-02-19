@@ -22,7 +22,10 @@ import {
   FileCode,
   Tags,
   Calendar,
-  Hash
+  Hash,
+  Upload,
+  Image as ImageIcon,
+  X
 } from 'lucide-react'
 
 import { Button } from "@/components/ui/button"
@@ -70,6 +73,7 @@ import {
 } from "@/components/ui/tooltip"
 import { useToast } from "@/hooks/use-toast"
 import { FormSkeleton } from '@/components/SkeletonScreen'
+import { uploadToImgBed } from '@/lib/imgbed-utils'
 
 // 定义表单验证 Schema (与新建页面相同)
 const formSchema = z.object({
@@ -90,6 +94,7 @@ const formSchema = z.object({
   storage: z.string().optional(),
   processor: z.string().optional(),
   otherRequirements: z.string().optional(),
+  logoUrl: z.string().optional().or(z.literal("")),
 })
 
 type FormValues = z.infer<typeof formSchema>
@@ -116,6 +121,7 @@ interface Software {
   filetype?: string
   isActive: boolean
   sortOrder: number
+  logoUrl?: string
   createdAt: string
   updatedAt: string
 }
@@ -150,7 +156,8 @@ export default function SoftwareEdit() {
       memory: "",
       storage: "",
       processor: "",
-      otherRequirements: ""
+      otherRequirements: "",
+      logoUrl: ""
     },
   })
 
@@ -184,7 +191,8 @@ export default function SoftwareEdit() {
             memory: softwareData.systemRequirements?.memory || "",
             storage: softwareData.systemRequirements?.storage || "",
             processor: softwareData.systemRequirements?.processor || "",
-            otherRequirements: softwareData.systemRequirements?.other || ""
+            otherRequirements: softwareData.systemRequirements?.other || "",
+            logoUrl: softwareData.logoUrl || ""
           })
         } else {
           toast({
@@ -250,6 +258,7 @@ export default function SoftwareEdit() {
           processor: values.processor,
           other: values.otherRequirements
         },
+        logoUrl: values.logoUrl,
         metadata: {}
       }
 
@@ -379,437 +388,532 @@ export default function SoftwareEdit() {
         </AlertDescription>
       </Alert>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* 左侧表单区域 */}
-        <div className="lg:col-span-2 space-y-6">
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-              
-              {/* 基本信息 */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Package className="h-5 w-5 text-primary" />
-                    基本信息
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <FormField
-                      control={form.control}
-                      name="name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>软件名称 <span className="text-destructive">*</span></FormLabel>
-                          <FormControl>
-                            <Input placeholder="请输入软件名称" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="nameEn"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>英文名称</FormLabel>
-                          <FormControl>
-                            <Input placeholder="请输入英文名称（可选）" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <FormField
-                    control={form.control}
-                    name="description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>软件描述</FormLabel>
-                        <FormControl>
-                          <Textarea placeholder="请输入软件描述" className="min-h-[100px]" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="descriptionEn"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>英文描述</FormLabel>
-                        <FormControl>
-                          <Textarea placeholder="请输入英文描述（可选）" className="min-h-[80px]" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <FormField
-                      control={form.control}
-                      name="currentVersion"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center gap-1">
-                            当前版本 <span className="text-destructive">*</span>
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <HelpCircle className="h-4 w-4 text-muted-foreground" />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>当前使用的版本号,可以手动修改</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          </FormLabel>
-                          <FormControl>
-                            <Input placeholder="例如：1.0.0" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="category"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>软件分类</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)}>
+          <div className="grid gap-6 lg:grid-cols-3">
+            {/* 左侧表单区域 */}
+            <div className="lg:col-span-2 space-y-6">
+              <div className="space-y-8">
+                
+                {/* 基本信息 */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Package className="h-5 w-5 text-primary" />
+                      基本信息
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <FormField
+                        control={form.control}
+                        name="name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>软件名称 <span className="text-destructive">*</span></FormLabel>
                             <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="请选择分类" />
-                              </SelectTrigger>
+                              <Input placeholder="请输入软件名称" {...field} />
                             </FormControl>
-                            <SelectContent>
-                              <SelectItem value="开发工具">开发工具</SelectItem>
-                              <SelectItem value="浏览器">浏览器</SelectItem>
-                              <SelectItem value="图像处理">图像处理</SelectItem>
-                              <SelectItem value="社交通讯">社交通讯</SelectItem>
-                              <SelectItem value="办公软件">办公软件</SelectItem>
-                              <SelectItem value="系统工具">系统工具</SelectItem>
-                              <SelectItem value="多媒体">多媒体</SelectItem>
-                              <SelectItem value="游戏">游戏</SelectItem>
-                              <SelectItem value="安全软件">安全软件</SelectItem>
-                              <SelectItem value="网络工具">网络工具</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* 技术细节 */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <FileCode className="h-5 w-5 text-primary" />
-                    技术细节
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <FormField
-                      control={form.control}
-                      name="openname"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center gap-1">
-                            启动文件名
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <HelpCircle className="h-4 w-4 text-muted-foreground" />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>软件的启动文件名或命令</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          </FormLabel>
-                          <FormControl>
-                            <Input placeholder="例如：bypass/bypass.cmd" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="filetype"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>文件类型</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="nameEn"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>英文名称</FormLabel>
                             <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="选择文件类型" />
-                              </SelectTrigger>
+                              <Input placeholder="请输入英文名称（可选）" {...field} />
                             </FormControl>
-                            <SelectContent>
-                              {['7z', 'zip', 'rar', 'exe', 'msi', 'dmg', 'pkg', 'deb', 'rpm', 'apk', 'tar.gz'].map(type => (
-                                <SelectItem key={type} value={type}>{type}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
 
-                  <div className="grid gap-4 md:grid-cols-2">
                     <FormField
                       control={form.control}
-                      name="officialWebsite"
+                      name="description"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="flex items-center gap-2">
-                            <Globe className="h-4 w-4" /> 官方网站
-                          </FormLabel>
+                          <FormLabel>软件描述</FormLabel>
                           <FormControl>
-                            <Input placeholder="https://example.com" {...field} />
+                            <Textarea placeholder="请输入软件描述" className="min-h-[100px]" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                    <FormField
-                      control={form.control}
-                      name="tags"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center gap-2">
-                            <Tags className="h-4 w-4" /> 标签
-                          </FormLabel>
-                          <FormControl>
-                            <Input placeholder="输入标签，用逗号分隔" {...field} />
-                          </FormControl>
-                          <FormDescription>
-                            例如：免费, 开源, 效率工具
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
 
-              {/* 系统要求 */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Monitor className="h-5 w-5 text-primary" />
-                    系统要求
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="os"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>支持系统</FormLabel>
-                        <div className="flex flex-wrap gap-2">
-                          {['Windows', 'macOS', 'Linux', 'Android', 'iOS'].map((os) => (
-                            <Button
-                              key={os}
-                              type="button"
-                              variant={field.value?.includes(os) ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => {
-                                const current = field.value || []
-                                if (current.includes(os)) {
-                                  field.onChange(current.filter(i => i !== os))
-                                } else {
-                                  field.onChange([...current, os])
-                                }
-                              }}
-                            >
-                              {os}
-                            </Button>
-                          ))}
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                    <FormField
+                      control={form.control}
+                      name="descriptionEn"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>英文描述</FormLabel>
+                          <FormControl>
+                            <Textarea placeholder="请输入英文描述（可选）" className="min-h-[80px]" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <FormField
-                      control={form.control}
-                      name="memory"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center gap-2">
-                            <Layers className="h-4 w-4" /> 内存要求
-                          </FormLabel>
-                          <FormControl>
-                            <Input placeholder="例如：4GB RAM" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="storage"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center gap-2">
-                            <HardDrive className="h-4 w-4" /> 存储空间
-                          </FormLabel>
-                          <FormControl>
-                            <Input placeholder="例如：500MB 可用空间" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <FormField
+                        control={form.control}
+                        name="currentVersion"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="flex items-center gap-1">
+                              当前版本 <span className="text-destructive">*</span>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>当前使用的版本号,可以手动修改</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </FormLabel>
+                            <FormControl>
+                              <Input placeholder="例如：1.0.0" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="category"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>软件分类</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="请选择分类" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {['开发工具', '浏览器', '图像处理', '社交通讯', '办公软件', '系统工具', '多媒体', '游戏', '安全软件', '网络工具'].map(type => (
+                                  <SelectItem key={type} value={type}>{type}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
 
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <FormField
-                      control={form.control}
-                      name="processor"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center gap-2">
-                            <Cpu className="h-4 w-4" /> 处理器
-                          </FormLabel>
-                          <FormControl>
-                            <Input placeholder="例如：Intel Core i3 或同等处理器" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="otherRequirements"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>其他要求</FormLabel>
-                          <FormControl>
-                            <Input placeholder="其他系统要求或依赖项" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
+                {/* 技术细节 */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <FileCode className="h-5 w-5 text-primary" />
+                      技术细节
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <FormField
+                        control={form.control}
+                        name="openname"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="flex items-center gap-1">
+                              启动文件名
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>软件的启动文件名或命令</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </FormLabel>
+                            <FormControl>
+                              <Input placeholder="例如：bypass/bypass.cmd" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="filetype"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>文件类型</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="选择文件类型" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {['7z', 'zip', 'rar', 'exe', 'msi', 'dmg', 'pkg', 'deb', 'rpm', 'apk', 'tar.gz'].map(type => (
+                                  <SelectItem key={type} value={type}>{type}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
 
-              {/* 设置 */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Settings className="h-5 w-5 text-primary" />
-                    设置
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <FormField
-                      control={form.control}
-                      name="isActive"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                          <div className="space-y-0.5">
-                            <FormLabel className="text-base">启用状态</FormLabel>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <FormField
+                        control={form.control}
+                        name="officialWebsite"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="flex items-center gap-2">
+                              <Globe className="h-4 w-4" /> 官方网站
+                            </FormLabel>
+                            <FormControl>
+                              <Input placeholder="https://example.com" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="tags"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="flex items-center gap-2">
+                              <Tags className="h-4 w-4" /> 标签
+                            </FormLabel>
+                            <FormControl>
+                              <Input placeholder="输入标签，用逗号分隔" {...field} />
+                            </FormControl>
                             <FormDescription>
-                              设置软件是否在前台可见
+                              例如：免费, 开源, 效率工具
                             </FormDescription>
-                          </div>
-                          <FormControl>
-                            <Switch
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* 系统要求 */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Monitor className="h-5 w-5 text-primary" />
+                      系统要求
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
                     <FormField
                       control={form.control}
-                      name="sortOrder"
+                      name="os"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>排序顺序</FormLabel>
-                          <FormControl>
-                            <Input type="number" {...field} />
-                          </FormControl>
-                          <FormDescription>
-                            数字越小排序越靠前
-                          </FormDescription>
+                          <FormLabel>支持系统</FormLabel>
+                          <div className="flex flex-wrap gap-2">
+                            {['Windows', 'macOS', 'Linux', 'Android', 'iOS'].map((os) => (
+                              <Button
+                                key={os}
+                                type="button"
+                                variant={field.value?.includes(os) ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => {
+                                  const current = field.value || []
+                                  if (current.includes(os)) {
+                                    field.onChange(current.filter(i => i !== os))
+                                  } else {
+                                    field.onChange([...current, os])
+                                  }
+                                }}
+                              >
+                                {os}
+                              </Button>
+                            ))}
+                          </div>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                  </div>
-                </CardContent>
-              </Card>
 
-              <div className="flex items-center gap-4">
-                <Button type="submit" size="lg" disabled={saving}>
-                  {saving && <RotateCcw className="mr-2 h-4 w-4 animate-spin" />}
-                  <Save className="mr-2 h-4 w-4" />
-                  保存修改
-                </Button>
-                <Button 
-                  type="button" 
-                  variant="secondary" 
-                  size="lg" 
-                  onClick={() => {
-                    if (software) {
-                      form.reset({
-                        name: software.name || "",
-                        nameEn: software.nameEn || "",
-                        description: software.description || "",
-                        descriptionEn: software.descriptionEn || "",
-                        currentVersion: software.currentVersion || "",
-                        category: software.category || "",
-                        officialWebsite: software.officialWebsite || "",
-                        openname: software.openname || "",
-                        filetype: software.filetype || "",
-                        tags: software.tags ? software.tags.join(', ') : "",
-                        isActive: software.isActive ?? true,
-                        sortOrder: software.sortOrder || 0,
-                        os: software.systemRequirements?.os || [],
-                        memory: software.systemRequirements?.memory || "",
-                        storage: software.systemRequirements?.storage || "",
-                        processor: software.systemRequirements?.processor || "",
-                        otherRequirements: software.systemRequirements?.other || ""
-                      })
-                    }
-                  }}
-                >
-                  重置
-                </Button>
-                <Button type="button" variant="ghost" size="lg" onClick={() => router.push(`/admin/software/${softwareId}`)}>
-                  取消
-                </Button>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <FormField
+                        control={form.control}
+                        name="memory"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="flex items-center gap-2">
+                              <Layers className="h-4 w-4" /> 内存要求
+                            </FormLabel>
+                            <FormControl>
+                              <Input placeholder="例如：4GB RAM" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="storage"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="flex items-center gap-2">
+                              <HardDrive className="h-4 w-4" /> 存储空间
+                            </FormLabel>
+                            <FormControl>
+                              <Input placeholder="例如：500MB 可用空间" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <FormField
+                        control={form.control}
+                        name="processor"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="flex items-center gap-2">
+                              <Cpu className="h-4 w-4" /> 处理器
+                            </FormLabel>
+                            <FormControl>
+                              <Input placeholder="例如：Intel Core i3 或同等处理器" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="otherRequirements"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>其他要求</FormLabel>
+                            <FormControl>
+                              <Input placeholder="其他系统要求或依赖项" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* 设置 */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Settings className="h-5 w-5 text-primary" />
+                      设置
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <FormField
+                        control={form.control}
+                        name="isActive"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                            <div className="space-y-0.5">
+                              <FormLabel className="text-base">启用状态</FormLabel>
+                              <FormDescription>
+                                设置软件是否在前台可见
+                              </FormDescription>
+                            </div>
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="sortOrder"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>排序顺序</FormLabel>
+                            <FormControl>
+                              <Input type="number" {...field} />
+                            </FormControl>
+                            <FormDescription>
+                              数字越小排序越靠前
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <div className="flex items-center gap-4">
+                  <Button type="submit" size="lg" disabled={saving}>
+                    {saving && <RotateCcw className="mr-2 h-4 w-4 animate-spin" />}
+                    <Save className="mr-2 h-4 w-4" />
+                    保存修改
+                  </Button>
+                  <Button 
+                    type="button" 
+                    variant="secondary" 
+                    size="lg" 
+                    onClick={() => {
+                      if (software) {
+                        form.reset({
+                          name: software.name || "",
+                          nameEn: software.nameEn || "",
+                          description: software.description || "",
+                          descriptionEn: software.descriptionEn || "",
+                          currentVersion: software.currentVersion || "",
+                          category: software.category || "",
+                          officialWebsite: software.officialWebsite || "",
+                          openname: software.openname || "",
+                          filetype: software.filetype || "",
+                          tags: software.tags ? software.tags.join(', ') : "",
+                          isActive: software.isActive ?? true,
+                          sortOrder: software.sortOrder || 0,
+                          os: software.systemRequirements?.os || [],
+                          memory: software.systemRequirements?.memory || "",
+                          storage: software.systemRequirements?.storage || "",
+                          processor: software.systemRequirements?.processor || "",
+                          otherRequirements: software.systemRequirements?.other || ""
+                        })
+                      }
+                    }}
+                  >
+                    重置
+                  </Button>
+                  <Button type="button" variant="ghost" size="lg" onClick={() => router.push(`/admin/software/${softwareId}`)}>
+                    取消
+                  </Button>
+                </div>
               </div>
-
-            </form>
-          </Form>
-        </div>
+            </div>
 
         {/* 右侧信息区域 */}
         <div className="space-y-6">
+          {/* Logo 上传卡片 */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <ImageIcon className="h-4 w-4" />
+                软件 Logo
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <FormField
+                control={form.control}
+                name="logoUrl"
+                render={({ field }) => (
+                  <FormItem className="space-y-4">
+                    <FormControl>
+                      <div className="flex flex-col items-center gap-4">
+                        {field.value ? (
+                          <div className="relative group">
+                            <div className="w-32 h-32 rounded-lg border-2 border-primary/20 overflow-hidden bg-muted">
+                              <img 
+                                src={field.value} 
+                                alt="Logo Preview" 
+                                className="w-full h-full object-contain"
+                              />
+                            </div>
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="icon"
+                              className="absolute -top-2 -right-2 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => field.onChange("")}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="w-32 h-32 rounded-lg border-2 border-dashed border-muted-foreground/25 flex flex-col items-center justify-center bg-muted/30">
+                            <ImageIcon className="h-8 w-8 text-muted-foreground/40 mb-2" />
+                            <span className="text-xs text-muted-foreground">暂无 Logo</span>
+                          </div>
+                        )}
+                        
+                        <div className="w-full space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              id="logo-upload"
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0]
+                                if (file) {
+                                  try {
+                                    toast({ title: "正在上传..." })
+                                    const url = await uploadToImgBed(file, 'appfun/icons', `${softwareId}-icon`)
+                                    field.onChange(url)
+                                    toast({ title: "上传成功" })
+                                  } catch (error) {
+                                    toast({ 
+                                      variant: "destructive", 
+                                      title: "上传失败", 
+                                      description: "请检查网络或稍后重试" 
+                                    })
+                                  }
+                                }
+                              }}
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="w-full"
+                              size="sm"
+                              onClick={() => document.getElementById('logo-upload')?.click()}
+                            >
+                              <Upload className="mr-2 h-4 w-4" />
+                              上传图片
+                            </Button>
+                          </div>
+                          
+                          <div className="relative">
+                            <Separator className="my-2" />
+                            <span className="absolute inset-0 flex items-center justify-center">
+                              <span className="bg-card px-2 text-[10px] text-muted-foreground uppercase">
+                                或输入 URL
+                              </span>
+                            </span>
+                          </div>
+                          
+                          <Input
+                            placeholder="输入图标链接地址"
+                            className="h-8 text-xs"
+                            {...field}
+                          />
+                        </div>
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle className="text-base">软件信息</CardTitle>
@@ -871,6 +975,8 @@ export default function SoftwareEdit() {
           </Card>
         </div>
       </div>
+        </form>
+      </Form>
     </div>
   )
 }

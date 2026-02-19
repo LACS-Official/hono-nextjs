@@ -208,6 +208,7 @@ export async function PUT(
       fileSize,
       isActive,
       sortOrder,
+      logoUrl,
       metadata = {}
     } = body
     
@@ -231,6 +232,7 @@ export async function PUT(
         ...(fileSize && { fileSize }),
         ...(typeof isActive === 'boolean' && { isActive }),
         ...(typeof sortOrder === 'number' && { sortOrder }),
+        ...(logoUrl !== undefined && { logoUrl }),
         metadata,
         updatedAt: new Date()
       })

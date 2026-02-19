@@ -64,6 +64,13 @@
       "when": 1765770682911,
       "tag": "0008_dazzling_killraven",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1771144034207,
+      "tag": "0009_useful_deathstrike",
+      "breakpoints": true
     }
   ]
 }

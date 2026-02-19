@@ -4,69 +4,118 @@
  * GET /api/user-behavior/usage - 获取使用统计
  */
 
-import { NextRequest } from 'next/server'
-import { unifiedDb as userBehaviorDb, softwareUsage } from '@/lib/unified-db-connection'
-import { eq, count, desc, and, gte, lte, sql } from 'drizzle-orm'
-import { corsResponse, handleOptions, getClientIp } from '@/lib/cors'
-import { checkUserBehaviorRateLimit } from '@/lib/user-behavior-rate-limit'
-import { z } from 'zod'
-import { UserBehaviorSecurity } from '@/lib/user-behavior-security'
-import { authenticateRequest, isAuthorizedAdmin } from '@/lib/auth'
+import { NextRequest } from "next/server";
+import {
+  unifiedDb as userBehaviorDb,
+  softwareUsage,
+} from "@/lib/unified-db-connection";
+import { blockedItems } from "@/lib/system-settings-schema";
+import { eq, count, desc, and, gte, lte, sql, ilike } from "drizzle-orm";
+import { corsResponse, handleOptions, getClientIp } from "@/lib/cors";
+import { checkUserBehaviorRateLimit } from "@/lib/user-behavior-rate-limit";
+import { z } from "zod";
+import { UserBehaviorSecurity } from "@/lib/user-behavior-security";
+import { authenticateRequest, isAuthorizedAdmin } from "@/lib/auth";
 
 // OPTIONS 方法处理 CORS 预检请求
 export async function OPTIONS(request: NextRequest) {
-  const origin = request.headers.get('Origin')
-  const userAgent = request.headers.get('User-Agent')
-  return handleOptions(origin, userAgent)
+  const origin = request.headers.get("Origin");
+  const userAgent = request.headers.get("User-Agent");
+  return handleOptions(origin, userAgent);
 }
 
 // 使用记录请求体验证（简化版本）
 const usageRequestSchema = z.object({
   softwareId: z.number().int().positive(),
-  softwareName: z.string().optional().default('玩机管家'),
+  softwareName: z.string().optional().default("玩机管家"),
   softwareVersion: z.string().optional(),
   deviceFingerprint: z.string().min(1),
   used: z.number().int().positive().optional().default(1), // 使用次数增量，默认为1
-})
+});
 
 // POST - 记录软件使用
 export async function POST(request: NextRequest) {
-  const origin = request.headers.get('Origin')
-  const userAgent = request.headers.get('User-Agent')
+  const origin = request.headers.get("Origin");
+  const userAgent = request.headers.get("User-Agent");
 
   try {
     // 获取客户端IP
-    const clientIp = getClientIp(request)
+    const clientIp = getClientIp(request);
 
     // 频率限制检查
-    const rateLimitResult = checkUserBehaviorRateLimit(clientIp, 'usage-post')
+    const rateLimitResult = checkUserBehaviorRateLimit(clientIp, "usage-post");
     if (!rateLimitResult.allowed) {
-      return corsResponse({
-        success: false,
-        error: rateLimitResult.error || 'Rate limit exceeded'
-      }, {
-        status: 429,
-        headers: rateLimitResult.retryAfter ? { 'Retry-After': rateLimitResult.retryAfter.toString() } : undefined
-      }, origin, userAgent)
+      return corsResponse(
+        {
+          success: false,
+          error: rateLimitResult.error || "Rate limit exceeded",
+        },
+        {
+          status: 429,
+          headers: rateLimitResult.retryAfter
+            ? { "Retry-After": rateLimitResult.retryAfter.toString() }
+            : undefined,
+        },
+        origin,
+        userAgent,
+      );
     }
 
     // 移除API Key验证 - 现在只依赖频率限制进行访问控制
-    console.log('ℹ️ [DEBUG] 跳过API Key验证，仅使用频率限制控制访问')
+    console.log("ℹ️ [DEBUG] 跳过API Key验证，仅使用频率限制控制访问");
 
     // 读取请求体
-    const bodyText = await request.text()
+    const bodyText = await request.text();
     if (!bodyText) {
-      return corsResponse({
-        success: false,
-        error: '请求体不能为空'
-      }, { status: 400 }, origin, userAgent)
+      return corsResponse(
+        {
+          success: false,
+          error: "请求体不能为空",
+        },
+        { status: 400 },
+        origin,
+        userAgent,
+      );
     }
 
     // 完全跳过安全检查 - POST记录端点只依赖频率限制
-    console.log('ℹ️ [DEBUG] 完全跳过安全检查，POST记录端点只使用频率限制')
+    console.log("ℹ️ [DEBUG] 完全跳过安全检查，POST记录端点只使用频率限制");
 
-    const body = JSON.parse(bodyText)
-    const validatedData = usageRequestSchema.parse(body)
+    const body = JSON.parse(bodyText);
+    const validatedData = usageRequestSchema.parse(body);
+
+    // 检查是否在黑名单中
+    const blocked = await userBehaviorDb
+      .select()
+      .from(blockedItems)
+      .where(
+        and(
+          eq(blockedItems.type, "device"),
+          eq(blockedItems.value, validatedData.deviceFingerprint),
+          eq(blockedItems.isActive, true),
+        ),
+      )
+      .limit(1);
+
+    if (blocked.length > 0) {
+      console.log(
+        `[DEBUG] 跳过记录已拉黑的设备: ${validatedData.deviceFingerprint}`,
+      );
+      return corsResponse(
+        {
+          success: true,
+          message: "设备由于在黑名单中被忽略",
+          data: {
+            softwareId: validatedData.softwareId,
+            deviceFingerprint: validatedData.deviceFingerprint,
+            ignored: true,
+          },
+        },
+        undefined,
+        origin,
+        userAgent,
+      );
+    }
 
     // 检查是否已经存在使用记录（基于设备指纹和软件ID）
     const existingUsage = await userBehaviorDb
@@ -75,10 +124,10 @@ export async function POST(request: NextRequest) {
       .where(
         and(
           eq(softwareUsage.deviceFingerprint, validatedData.deviceFingerprint),
-          eq(softwareUsage.softwareId, validatedData.softwareId)
-        )
+          eq(softwareUsage.softwareId, validatedData.softwareId),
+        ),
       )
-      .limit(1)
+      .limit(1);
 
     if (existingUsage.length > 0) {
       // 更新现有记录，增加使用次数
@@ -88,25 +137,34 @@ export async function POST(request: NextRequest) {
           used: sql`${softwareUsage.used} + ${validatedData.used}`,
           usedAt: new Date(),
           updatedAt: new Date(),
-          softwareVersion: validatedData.softwareVersion || existingUsage[0].softwareVersion,
+          softwareVersion:
+            validatedData.softwareVersion || existingUsage[0].softwareVersion,
         })
         .where(
           and(
-            eq(softwareUsage.deviceFingerprint, validatedData.deviceFingerprint),
-            eq(softwareUsage.softwareId, validatedData.softwareId)
-          )
+            eq(
+              softwareUsage.deviceFingerprint,
+              validatedData.deviceFingerprint,
+            ),
+            eq(softwareUsage.softwareId, validatedData.softwareId),
+          ),
         )
-        .returning()
+        .returning();
 
-      return corsResponse({
-        success: true,
-        message: '使用记录已更新',
-        data: {
-          softwareId: updatedUsage.softwareId,
-          deviceFingerprint: updatedUsage.deviceFingerprint,
-          usedAt: updatedUsage.usedAt
-        }
-      }, undefined, origin, userAgent)
+      return corsResponse(
+        {
+          success: true,
+          message: "使用记录已更新",
+          data: {
+            softwareId: updatedUsage.softwareId,
+            deviceFingerprint: updatedUsage.deviceFingerprint,
+            usedAt: updatedUsage.usedAt,
+          },
+        },
+        undefined,
+        origin,
+        userAgent,
+      );
     }
 
     // 创建新的使用记录
@@ -122,89 +180,123 @@ export async function POST(request: NextRequest) {
         createdAt: new Date(),
         updatedAt: new Date(),
       })
-      .returning()
+      .returning();
 
-    return corsResponse({
-      success: true,
-      message: '使用记录成功',
-      data: {
-        softwareId: newUsage.softwareId,
-        deviceFingerprint: newUsage.deviceFingerprint,
-        usedAt: newUsage.usedAt
-      }
-    }, undefined, origin, userAgent)
-
+    return corsResponse(
+      {
+        success: true,
+        message: "使用记录成功",
+        data: {
+          softwareId: newUsage.softwareId,
+          deviceFingerprint: newUsage.deviceFingerprint,
+          usedAt: newUsage.usedAt,
+        },
+      },
+      undefined,
+      origin,
+      userAgent,
+    );
   } catch (error) {
-    console.error('Error recording usage:', error)
-    
+    console.error("Error recording usage:", error);
+
     if (error instanceof z.ZodError) {
-      return corsResponse({
-        success: false,
-        error: '请求数据格式错误',
-        details: error.issues
-      }, { status: 400 }, origin, userAgent)
+      return corsResponse(
+        {
+          success: false,
+          error: "请求数据格式错误",
+          details: error.issues,
+        },
+        { status: 400 },
+        origin,
+        userAgent,
+      );
     }
 
-    return corsResponse({
-      success: false,
-      error: '记录使用失败'
-    }, { status: 500 }, origin, userAgent)
+    return corsResponse(
+      {
+        success: false,
+        error: "记录使用失败",
+      },
+      { status: 500 },
+      origin,
+      userAgent,
+    );
   }
 }
 
 // GET - 获取使用统计
 export async function GET(request: NextRequest) {
-  const origin = request.headers.get('Origin')
-  const userAgent = request.headers.get('User-Agent')
+  const origin = request.headers.get("Origin");
+  const userAgent = request.headers.get("User-Agent");
 
   try {
     // Supabase认证检查
-    const authResult = await authenticateRequest(request)
+    const authResult = await authenticateRequest(request);
     if (!authResult.success || !authResult.user) {
-      return corsResponse({
-        success: false,
-        error: authResult.error || 'Authentication required'
-      }, { status: 401 }, origin, userAgent)
+      return corsResponse(
+        {
+          success: false,
+          error: authResult.error || "Authentication required",
+        },
+        { status: 401 },
+        origin,
+        userAgent,
+      );
     }
 
     // 检查管理员权限
     if (!isAuthorizedAdmin(authResult.user)) {
-      return corsResponse({
-        success: false,
-        error: 'Insufficient permissions - admin access required'
-      }, { status: 403 }, origin, userAgent)
+      return corsResponse(
+        {
+          success: false,
+          error: "Insufficient permissions - admin access required",
+        },
+        { status: 403 },
+        origin,
+        userAgent,
+      );
     }
 
-    console.log('[DEBUG] GET端点使用Supabase认证，用户:', authResult.user.email)
+    console.log(
+      "[DEBUG] GET端点使用Supabase认证，用户:",
+      authResult.user.email,
+    );
 
-    const { searchParams } = new URL(request.url)
-    const softwareId = searchParams.get('softwareId')
-    const startDate = searchParams.get('startDate')
-    const endDate = searchParams.get('endDate')
+    const { searchParams } = new URL(request.url);
+    const softwareId = searchParams.get("softwareId");
+    const startDate = searchParams.get("startDate");
+    const endDate = searchParams.get("endDate");
+    const search = searchParams.get("search");
 
     // 构建查询条件
-    const conditions = []
+    const conditions = [];
     if (softwareId) {
-      conditions.push(eq(softwareUsage.softwareId, parseInt(softwareId)))
+      conditions.push(eq(softwareUsage.softwareId, parseInt(softwareId)));
     }
     if (startDate) {
-      conditions.push(gte(softwareUsage.usedAt, new Date(startDate)))
+      conditions.push(gte(softwareUsage.usedAt, new Date(startDate)));
     }
     if (endDate) {
-      conditions.push(lte(softwareUsage.usedAt, new Date(endDate)))
+      // 将结束日期设置为当天的最后一毫秒
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      conditions.push(lte(softwareUsage.usedAt, end));
+    }
+    if (search) {
+      conditions.push(ilike(softwareUsage.deviceFingerprint, `%${search}%`));
     }
 
     // 获取总使用次数
     const [totalUsageResult] = await userBehaviorDb
       .select({ totalUsed: sql<number>`sum(${softwareUsage.used})` })
       .from(softwareUsage)
-      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .where(conditions.length > 0 ? and(...conditions) : undefined);
 
     // 获取唯一设备数（基于设备指纹）
     const uniqueDevicesResult = await userBehaviorDb
       .selectDistinct({ deviceFingerprint: softwareUsage.deviceFingerprint })
       .from(softwareUsage)
-      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .where(conditions.length > 0 ? and(...conditions) : undefined);
 
     // 获取最近的使用记录
     const recentUsage = await userBehaviorDb
@@ -219,38 +311,133 @@ export async function GET(request: NextRequest) {
       .from(softwareUsage)
       .where(conditions.length > 0 ? and(...conditions) : undefined)
       .orderBy(desc(softwareUsage.usedAt))
-      .limit(10)
+      .limit(10);
 
-    // 对 deviceFingerprint 进行脱敏处理
-    const maskedRecentUsage = recentUsage.map(usage => ({
-      ...usage,
-      deviceFingerprint: usage.deviceFingerprint.length > 10 
-        ? `${usage.deviceFingerprint.substring(0, 5)}****${usage.deviceFingerprint.substring(usage.deviceFingerprint.length - 5)}`
-        : usage.deviceFingerprint
-    }));
+    // 移除脱敏处理，由前端负责展示层面的遮罩
+    const recentUsageData = recentUsage;
 
-    const totalUsage = totalUsageResult.totalUsed || 0
-    const uniqueDevices = uniqueDevicesResult.length
+    const totalUsage = totalUsageResult.totalUsed || 0;
+    const uniqueDevices = uniqueDevicesResult.length;
 
-    return corsResponse({
-      success: true,
-      data: {
-        totalUsage,
-        uniqueDevices,
-        recentUsage: maskedRecentUsage,
-        summary: {
+    return corsResponse(
+      {
+        success: true,
+        data: {
           totalUsage,
           uniqueDevices,
-          averageUsagePerDevice: uniqueDevices > 0 ? (totalUsage / uniqueDevices).toFixed(2) : '0'
-        }
-      }
-    }, undefined, origin, userAgent)
-
+          recentUsage: recentUsageData,
+          summary: {
+            totalUsage,
+            uniqueDevices,
+            averageUsagePerDevice:
+              uniqueDevices > 0 ? (totalUsage / uniqueDevices).toFixed(2) : "0",
+          },
+        },
+      },
+      undefined,
+      origin,
+      userAgent,
+    );
   } catch (error) {
-    console.error('Error getting usage stats:', error)
-    return corsResponse({
-      success: false,
-      error: '获取使用统计失败'
-    }, { status: 500 }, origin, userAgent)
+    console.error("Error getting usage stats:", error);
+    return corsResponse(
+      {
+        success: false,
+        error: "获取使用统计失败",
+      },
+      { status: 500 },
+      origin,
+      userAgent,
+    );
+  }
+}
+
+// DELETE - 删除使用记录
+export async function DELETE(request: NextRequest) {
+  const origin = request.headers.get("Origin");
+  const userAgent = request.headers.get("User-Agent");
+
+  try {
+    // Supabase认证检查
+    const authResult = await authenticateRequest(request);
+    if (!authResult.success || !authResult.user) {
+      return corsResponse(
+        {
+          success: false,
+          error: authResult.error || "Authentication required",
+        },
+        { status: 401 },
+        origin,
+        userAgent,
+      );
+    }
+
+    // 检查管理员权限
+    if (!isAuthorizedAdmin(authResult.user)) {
+      return corsResponse(
+        {
+          success: false,
+          error: "Insufficient permissions - admin access required",
+        },
+        { status: 403 },
+        origin,
+        userAgent,
+      );
+    }
+
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id");
+    const deviceFingerprint = searchParams.get("deviceFingerprint");
+    const softwareId = searchParams.get("softwareId");
+
+    if (!id && !deviceFingerprint) {
+      return corsResponse(
+        {
+          success: false,
+          error: "缺少参数 id 或 deviceFingerprint",
+        },
+        { status: 400 },
+        origin,
+        userAgent,
+      );
+    }
+
+    const deleteConditions = [];
+    if (id) {
+      deleteConditions.push(eq(softwareUsage.id, id));
+    } else if (deviceFingerprint) {
+      deleteConditions.push(eq(softwareUsage.deviceFingerprint, deviceFingerprint));
+    }
+
+    if (softwareId) {
+      deleteConditions.push(eq(softwareUsage.softwareId, parseInt(softwareId)));
+    }
+
+    const deletedRecords = await userBehaviorDb
+      .delete(softwareUsage)
+      .where(and(...deleteConditions))
+      .returning();
+
+    return corsResponse(
+      {
+        success: true,
+        message: `成功删除 ${deletedRecords.length} 条记录`,
+        data: { count: deletedRecords.length },
+      },
+      undefined,
+      origin,
+      userAgent,
+    );
+  } catch (error) {
+    console.error("Error deleting usage record:", error);
+    return corsResponse(
+      {
+        success: false,
+        error: "删除使用记录失败",
+      },
+      { status: 500 },
+      origin,
+      userAgent,
+    );
   }
 }

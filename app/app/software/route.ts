@@ -205,6 +205,7 @@ export async function POST(request: NextRequest) {
       filetype,
       isActive = true,
       sortOrder = 0,
+      logoUrl,
       metadata = {}
     } = body
 
@@ -247,6 +248,7 @@ export async function POST(request: NextRequest) {
         filetype,
         isActive,
         sortOrder,
+        logoUrl,
         metadata,
         // 确保日期字段正确处理
         createdAt: new Date(),

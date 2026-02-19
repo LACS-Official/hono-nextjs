@@ -174,7 +174,7 @@ export default function SoftwareManagement() {
   }
 
   // 获取软件列表
-  const fetchSoftware = async (page = 1, pageSize = 10) => {
+  const fetchSoftware = async (page = pagination.current, pageSize = pagination.pageSize) => {
     setLoading(true)
     try {
       const params = new URLSearchParams({
@@ -204,6 +204,11 @@ export default function SoftwareManagement() {
     } finally {
       setLoading(false)
     }
+  }
+
+  // 处理每页数量变化
+  const handlePageSizeChange = (newPageSize: number) => {
+    fetchSoftware(1, newPageSize)
   }
 
   // 删除软件
@@ -315,7 +320,7 @@ export default function SoftwareManagement() {
   }
 
   useEffect(() => {
-    fetchSoftware()
+    fetchSoftware(1, pagination.pageSize)
     fetchStats()
   }, [])
 
@@ -597,51 +602,72 @@ export default function SoftwareManagement() {
             )}
           </div>
 
-           {/* 分页 */}
-           <div className="flex justify-center">
-              <Pagination>
-                  <PaginationContent>
-                      <PaginationItem>
-                          <PaginationPrevious
-                              onClick={() => pagination.current > 1 && fetchSoftware(pagination.current - 1, pagination.pageSize)}
-                              className={pagination.current <= 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                          />
-                      </PaginationItem>
-                      
-                       {Array.from({length: Math.min(5, totalPages)}, (_, i) => {
-                          let pageNum = i + 1;
-                          if (totalPages > 5 && pagination.current > 3) {
-                              pageNum = pagination.current - 2 + i;
-                          }
-                          if (pageNum > totalPages) return null;
-                          
-                          return (
-                              <PaginationItem key={pageNum}>
-                                  <PaginationLink
-                                      isActive={pagination.current === pageNum}
-                                      onClick={() => fetchSoftware(pageNum, pagination.pageSize)}
-                                      className="cursor-pointer"
-                                  >
-                                      {pageNum}
-                                  </PaginationLink>
-                              </PaginationItem>
-                          )
-                      })}
+           {/* 分页和每页数量选择 */}
+           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-4 px-2">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground whitespace-nowrap">
+                  <span>每页显示</span>
+                  <Select
+                      value={pagination.pageSize.toString()}
+                      onValueChange={(value) => handlePageSizeChange(parseInt(value))}
+                  >
+                      <SelectTrigger className="h-8 w-[70px] bg-background">
+                          <SelectValue placeholder={pagination.pageSize.toString()} />
+                      </SelectTrigger>
+                      <SelectContent>
+                          <SelectItem value="10">10</SelectItem>
+                          <SelectItem value="20">20</SelectItem>
+                          <SelectItem value="50">50</SelectItem>
+                          <SelectItem value="100">100</SelectItem>
+                      </SelectContent>
+                  </Select>
+                  <span>条记录，共 {pagination.total} 条</span>
+              </div>
 
-                      {totalPages > 5 && (
+              <div className="flex justify-center">
+                  <Pagination>
+                      <PaginationContent>
                           <PaginationItem>
-                              <PaginationEllipsis />
+                              <PaginationPrevious
+                                  onClick={() => pagination.current > 1 && fetchSoftware(pagination.current - 1, pagination.pageSize)}
+                                  className={pagination.current <= 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                              />
                           </PaginationItem>
-                      )}
+                          
+                           {Array.from({length: Math.min(5, totalPages)}, (_, i) => {
+                              let pageNum = i + 1;
+                              if (totalPages > 5 && pagination.current > 3) {
+                                  pageNum = pagination.current - 2 + i;
+                              }
+                              if (pageNum > totalPages) return null;
+                              
+                              return (
+                                  <PaginationItem key={pageNum}>
+                                      <PaginationLink
+                                          isActive={pagination.current === pageNum}
+                                          onClick={() => fetchSoftware(pageNum, pagination.pageSize)}
+                                          className="cursor-pointer"
+                                      >
+                                          {pageNum}
+                                      </PaginationLink>
+                                  </PaginationItem>
+                              )
+                          })}
 
-                      <PaginationItem>
-                          <PaginationNext
-                              onClick={() => pagination.current < totalPages && fetchSoftware(pagination.current + 1, pagination.pageSize)}
-                              className={pagination.current >= totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                          />
-                      </PaginationItem>
-                  </PaginationContent>
-              </Pagination>
+                          {totalPages > 5 && (
+                              <PaginationItem>
+                                  <PaginationEllipsis />
+                              </PaginationItem>
+                          )}
+
+                          <PaginationItem>
+                              <PaginationNext
+                                  onClick={() => pagination.current < totalPages && fetchSoftware(pagination.current + 1, pagination.pageSize)}
+                                  className={pagination.current >= totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                              />
+                          </PaginationItem>
+                      </PaginationContent>
+                  </Pagination>
+              </div>
           </div>
       </div>
 

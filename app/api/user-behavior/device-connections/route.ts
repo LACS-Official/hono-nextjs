@@ -6,7 +6,8 @@
 
 import { NextRequest } from 'next/server'
 import { unifiedDb as userBehaviorDb, deviceConnections } from '@/lib/unified-db-connection'
-import { eq, count, desc, and, gte, lte, sql } from 'drizzle-orm'
+import { blockedItems } from '@/lib/system-settings-schema'
+import { eq, count, desc, and, gte, lte, sql, or, ilike } from 'drizzle-orm'
 import { corsResponse, handleOptions, getClientIp } from '@/lib/cors'
 import { checkUserBehaviorRateLimit } from '@/lib/user-behavior-rate-limit'
 import { z } from 'zod'
@@ -60,6 +61,32 @@ export async function POST(request: NextRequest) {
 
     const body = JSON.parse(bodyText)
     const validatedData = deviceConnectionRequestSchema.parse(body)
+
+    // 检查是否在黑名单中
+    const blocked = await userBehaviorDb
+      .select()
+      .from(blockedItems)
+      .where(
+        and(
+          eq(blockedItems.type, 'device'),
+          eq(blockedItems.value, validatedData.deviceSerial),
+          eq(blockedItems.isActive, true)
+        )
+      )
+      .limit(1)
+
+    if (blocked.length > 0) {
+      console.log(`[DEBUG] 跳过记录已拉黑的设备: ${validatedData.deviceSerial}`)
+      return corsResponse({
+        success: true,
+        message: '设备由于在黑名单中被忽略',
+        data: {
+          deviceSerial: validatedData.deviceSerial,
+          softwareId: validatedData.softwareId,
+          ignored: true
+        }
+      }, undefined, origin, userAgent)
+    }
 
     // 检查设备序列号是否已存在
     const existingDevice = await userBehaviorDb
@@ -157,6 +184,7 @@ export async function GET(request: NextRequest) {
     const softwareId = searchParams.get('softwareId')
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
+    const searchTerm = searchParams.get('searchTerm') || searchParams.get('search')
 
     // 构建查询条件
     const conditions = []
@@ -167,7 +195,19 @@ export async function GET(request: NextRequest) {
       conditions.push(gte(deviceConnections.createdAt, new Date(startDate)))
     }
     if (endDate) {
-      conditions.push(lte(deviceConnections.createdAt, new Date(endDate)))
+      // 将结束日期设置为当天的最后一毫秒
+      const end = new Date(endDate)
+      end.setHours(23, 59, 59, 999)
+      conditions.push(lte(deviceConnections.createdAt, end))
+    }
+    if (searchTerm) {
+      conditions.push(
+        or(
+          ilike(deviceConnections.deviceSerial, `%${searchTerm}%`),
+          ilike(deviceConnections.deviceBrand, `%${searchTerm}%`),
+          ilike(deviceConnections.deviceModel, `%${searchTerm}%`)
+        )
+      )
     }
 
     // 获取总连接次数（基于 linked 字段的总和）
@@ -226,13 +266,8 @@ export async function GET(request: NextRequest) {
       .orderBy(desc(deviceConnections.updatedAt))
       .limit(20)
 
-    // 对 deviceSerial 进行脱敏处理
-    const maskedRecentConnections = recentConnections.map(connection => ({
-      ...connection,
-      deviceSerial: connection.deviceSerial.length > 4
-        ? `${connection.deviceSerial.substring(0, 2)}****${connection.deviceSerial.substring(connection.deviceSerial.length - 2)}`
-        : connection.deviceSerial
-    }));
+    // 移除脱敏处理，由前端负责展示层面的遮罩
+    const recentConnectionsData = recentConnections;
 
     const totalConnections = totalConnectionsResult.totalConnections || 0
     const totalRecords = totalConnectionsResult.totalRecords || 0
@@ -246,7 +281,7 @@ export async function GET(request: NextRequest) {
         uniqueDevices, // 唯一设备数（与 totalRecords 相同）
         brandStats: brandStatsResult,
         deviceModelStats: deviceModelStatsResult,
-        recentConnections: maskedRecentConnections,
+        recentConnections: recentConnectionsData,
         summary: {
           totalConnections,
           totalRecords,
@@ -261,6 +296,72 @@ export async function GET(request: NextRequest) {
     return corsResponse({
       success: false,
       error: '获取设备连接统计失败'
+    }, { status: 500 }, origin, userAgent)
+  }
+}
+
+// DELETE - 删除设备连接记录
+export async function DELETE(request: NextRequest) {
+  const origin = request.headers.get('Origin')
+  const userAgent = request.headers.get('User-Agent')
+
+  try {
+    // Supabase认证检查
+    const authResult = await authenticateRequest(request)
+    if (!authResult.success || !authResult.user) {
+      return corsResponse({
+        success: false,
+        error: authResult.error || 'Authentication required'
+      }, { status: 401 }, origin, userAgent)
+    }
+
+    // 检查管理员权限
+    if (!isAuthorizedAdmin(authResult.user)) {
+      return corsResponse({
+        success: false,
+        error: 'Insufficient permissions - admin access required'
+      }, { status: 403 }, origin, userAgent)
+    }
+
+    const { searchParams } = new URL(request.url)
+    const id = searchParams.get('id')
+    const deviceSerial = searchParams.get('deviceSerial')
+    const softwareId = searchParams.get('softwareId')
+
+    if (!id && !deviceSerial) {
+      return corsResponse({
+        success: false,
+        error: '缺少参数 id 或 deviceSerial'
+      }, { status: 400 }, origin, userAgent)
+    }
+
+    const deleteConditions = []
+    if (id) {
+      deleteConditions.push(eq(deviceConnections.id, id))
+    } else if (deviceSerial) {
+      deleteConditions.push(eq(deviceConnections.deviceSerial, deviceSerial))
+    }
+
+    if (softwareId) {
+      deleteConditions.push(eq(deviceConnections.softwareId, parseInt(softwareId)))
+    }
+
+    const deletedRecords = await userBehaviorDb
+      .delete(deviceConnections)
+      .where(and(...deleteConditions))
+      .returning()
+
+    return corsResponse({
+      success: true,
+      message: `成功删除 ${deletedRecords.length} 条记录`,
+      data: { count: deletedRecords.length }
+    }, undefined, origin, userAgent)
+
+  } catch (error) {
+    console.error('Error deleting device connection record:', error)
+    return corsResponse({
+      success: false,
+      error: '删除设备连接记录失败'
     }, { status: 500 }, origin, userAgent)
   }
 }

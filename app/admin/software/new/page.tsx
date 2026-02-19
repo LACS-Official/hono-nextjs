@@ -20,7 +20,10 @@ import {
   Settings,
   HelpCircle,
   FileCode,
-  Tags
+  Tags,
+  Upload,
+  Image as ImageIcon,
+  X
 } from 'lucide-react'
 
 import { Button } from "@/components/ui/button"
@@ -67,6 +70,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { useToast } from "@/hooks/use-toast"
+import { uploadToImgBed } from '@/lib/imgbed-utils'
 
 // 定义表单验证 Schema
 const formSchema = z.object({
@@ -88,6 +92,7 @@ const formSchema = z.object({
   storage: z.string().optional(),
   processor: z.string().optional(),
   otherRequirements: z.string().optional(),
+  logoUrl: z.string().optional().or(z.literal("")),
 })
 
 type FormValues = z.infer<typeof formSchema>
@@ -116,7 +121,8 @@ export default function SoftwareNew() {
       memory: "",
       storage: "",
       processor: "",
-      otherRequirements: ""
+      otherRequirements: "",
+      logoUrl: ""
     },
   })
 
@@ -146,6 +152,7 @@ export default function SoftwareNew() {
           processor: values.processor,
           other: values.otherRequirements
         },
+        logoUrl: values.logoUrl,
         metadata: {}
       }
 
@@ -230,11 +237,12 @@ export default function SoftwareNew() {
         </AlertDescription>
       </Alert>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* 左侧表单区域 */}
-        <div className="lg:col-span-2 space-y-6">
-             <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)}>
+          <div className="grid gap-6 lg:grid-cols-3">
+            {/* 左侧表单区域 */}
+            <div className="lg:col-span-2 space-y-6">
+              <div className="space-y-8">
                     
                     {/* 基本信息 */}
                     <Card>
@@ -627,13 +635,114 @@ export default function SoftwareNew() {
                             取消
                         </Button>
                     </div>
-
-                </form>
-             </Form>
-        </div>
+                </div>
+            </div>
 
         {/* 右侧帮助区域 */}
         <div className="space-y-6">
+            {/* Logo 上传卡片 */}
+            <Card>
+                <CardHeader className="pb-2">
+                    <CardTitle className="text-base flex items-center gap-2">
+                        <ImageIcon className="h-4 w-4" />
+                        软件 Logo
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <FormField
+                        control={form.control}
+                        name="logoUrl"
+                        render={({ field }) => (
+                            <FormItem className="space-y-4">
+                                <FormControl>
+                                    <div className="flex flex-col items-center gap-4">
+                                        {field.value ? (
+                                            <div className="relative group">
+                                                <div className="w-32 h-32 rounded-lg border-2 border-primary/20 overflow-hidden bg-muted">
+                                                    <img 
+                                                        src={field.value} 
+                                                        alt="Logo Preview" 
+                                                        className="w-full h-full object-contain"
+                                                    />
+                                                </div>
+                                                <Button
+                                                    type="button"
+                                                    variant="destructive"
+                                                    size="icon"
+                                                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    onClick={() => field.onChange("")}
+                                                >
+                                                    <X className="h-3 w-3" />
+                                                </Button>
+                                            </div>
+                                        ) : (
+                                            <div className="w-32 h-32 rounded-lg border-2 border-dashed border-muted-foreground/25 flex flex-col items-center justify-center bg-muted/30">
+                                                <ImageIcon className="h-8 w-8 text-muted-foreground/40 mb-2" />
+                                                <span className="text-xs text-muted-foreground">暂无 Logo</span>
+                                            </div>
+                                        )}
+                                        
+                                        <div className="w-full space-y-2">
+                                            <div className="flex items-center gap-2">
+                                                <Input
+                                                    type="file"
+                                                    accept="image/*"
+                                                    className="hidden"
+                                                    id="logo-upload"
+                                                    onChange={async (e) => {
+                                                        const file = e.target.files?.[0]
+                                                        if (file) {
+                                                            try {
+                                                                toast({ title: "正在上传..." })
+                                                                const url = await uploadToImgBed(file, 'appfun/icons')
+                                                                field.onChange(url)
+                                                                toast({ title: "上传成功" })
+                                                            } catch (error) {
+                                                                toast({ 
+                                                                    variant: "destructive", 
+                                                                    title: "上传失败", 
+                                                                    description: "请检查网络或稍后重试" 
+                                                                })
+                                                            }
+                                                        }
+                                                    }}
+                                                />
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    className="w-full"
+                                                    size="sm"
+                                                    onClick={() => document.getElementById('logo-upload')?.click()}
+                                                >
+                                                    <Upload className="mr-2 h-4 w-4" />
+                                                    上传图片
+                                                </Button>
+                                            </div>
+                                            
+                                            <div className="relative">
+                                                <Separator className="my-2" />
+                                                <span className="absolute inset-0 flex items-center justify-center">
+                                                    <span className="bg-card px-2 text-[10px] text-muted-foreground uppercase">
+                                                        或输入 URL
+                                                    </span>
+                                                </span>
+                                            </div>
+                                            
+                                            <Input
+                                                placeholder="输入图标链接地址"
+                                                className="h-8 text-xs"
+                                                {...field}
+                                            />
+                                        </div>
+                                    </div>
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                </CardContent>
+            </Card>
+
             <Card>
                 <CardHeader>
                     <CardTitle className="text-base">填写说明</CardTitle>
@@ -660,8 +769,10 @@ export default function SoftwareNew() {
                     </div>
                 </CardContent>
             </Card>
-        </div>
-      </div>
+            </div>
+          </div>
+        </form>
+      </Form>
     </div>
   )
 }

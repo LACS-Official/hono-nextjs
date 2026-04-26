@@ -16,6 +16,7 @@ export const websites = pgTable('websites', {
 
   // 网站状态
   isActive: boolean('is_active').default(true).notNull(), // 是否启用
+  isShowInAboutUs: boolean('is_show_about_us').default(false).notNull(), // 是否在关于我们中展示
 
   // 时间戳
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),

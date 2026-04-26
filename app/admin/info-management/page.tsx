@@ -11,7 +11,8 @@ import {
   Trash2,
   RefreshCw,
   ExternalLink,
-  Loader2
+  Loader2,
+  AppWindow
 } from 'lucide-react'
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -43,6 +44,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Switch } from "@/components/ui/switch"
 import { useToast } from "@/hooks/use-toast"
 import {
   AlertDialog,
@@ -122,9 +124,20 @@ interface Project {
   updateDate: string
   link: string
   icon: string
+  background?: string
   pLanguage: string[]
   createdAt: string
   updatedAt: string
+}
+
+interface SubSite {
+  id: number
+  name: string
+  domain: string
+  description: string
+  logo: string
+  isShowInAboutUs: boolean
+  isActive: boolean
 }
 
 // Zod Schemas
@@ -166,6 +179,7 @@ const projectSchema = z.object({
   updateDate: z.string().min(1, "请选择更新日期"),
   link: z.string().url("请输入有效的 URL").or(z.string().min(1, "请输入链接")),
   icon: z.string().optional(),
+  background: z.string().optional(),
   pLanguage: z.string().min(1, "请输入编程语言 (以逗号分隔)"),
 })
 
@@ -178,12 +192,14 @@ export default function InfoManagementPage() {
   const [groupChatData, setGroupChatData] = useState<GroupChat[]>([])
   const [mediaPlatformData, setMediaPlatformData] = useState<MediaPlatform[]>([])
   const [projectData, setProjectData] = useState<Project[]>([])
+  const [subsiteData, setSubsiteData] = useState<SubSite[]>([])
   
   const [loading, setLoading] = useState({
     contact: false,
     group: false,
     media: false,
-    project: false
+    project: false,
+    subsite: false
   })
 
   // 弹窗状态
@@ -209,7 +225,7 @@ export default function InfoManagementPage() {
   })
   const projectForm = useForm<z.infer<typeof projectSchema>>({
     resolver: zodResolver(projectSchema) as any,
-    defaultValues: { category: '', categoryName: '', title: '', description: '', platform: '', updateDate: '', link: '', icon: '', pLanguage: '' }
+    defaultValues: { category: '', categoryName: '', title: '', description: '', platform: '', updateDate: '', link: '', icon: '', background: '', pLanguage: '' }
   })
 
   // ==================== 数据获取 ====================
@@ -265,15 +281,48 @@ export default function InfoManagementPage() {
     }
   }
 
+  const fetchSubsiteData = async () => {
+    setLoading(prev => ({ ...prev, subsite: true }))
+    try {
+      const response = await fetch('/api/info-management/sub-sites')
+      const result = await response.json()
+      if (result.success) setSubsiteData(result.data)
+    } catch (error) {
+      console.error('获取分站列表失败:', error)
+    } finally {
+      setLoading(prev => ({ ...prev, subsite: false }))
+    }
+  }
+
   // 初始化加载
   useEffect(() => {
     if (activeTab === 'contact') fetchContactData()
     else if (activeTab === 'group') fetchGroupChatData()
     else if (activeTab === 'media') fetchMediaPlatformData()
     else if (activeTab === 'project') fetchProjectData()
+    else if (activeTab === 'subsite') fetchSubsiteData()
   }, [activeTab])
 
   // ==================== 操作处理 ====================
+  const handleToggleSubsite = async (id: number, currentStat: boolean) => {
+    try {
+      const response = await fetch(`/api/info-management/sub-sites/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isShowInAboutUs: !currentStat })
+      })
+      const result = await response.json()
+      if (result.success) {
+        toast({ title: "状态修改成功" })
+        fetchSubsiteData()
+      } else {
+        toast({ variant: "destructive", title: "状态修改失败", description: result.error })
+      }
+    } catch (error) {
+      toast({ variant: "destructive", title: "请求失败", description: "服务端异常" })
+    }
+  }
+
   const handleEdit = (type: string, data: any) => {
     setEditingItem({ type, data })
     if (type === 'contact') {
@@ -296,7 +345,7 @@ export default function InfoManagementPage() {
     if (type === 'contact') contactForm.reset({ title: '', description: '', info: '', action: '', analyticsEvent: '' })
     else if (type === 'group') groupForm.reset({ name: '', limit: '', groupNumber: '', qrcode: '', joinLink: '', analyticsEvent: '' })
     else if (type === 'media') mediaForm.reset({ name: '', logo: '', account: '', accountId: '', qrcode: '', qrcodeTitle: '', qrcodeDesc: '', link: '', analyticsEvent: '' })
-    else if (type === 'project') projectForm.reset({ category: '', categoryName: '', title: '', description: '', platform: '', updateDate: '', link: '', icon: '', pLanguage: '' })
+    else if (type === 'project') projectForm.reset({ category: '', categoryName: '', title: '', description: '', platform: '', updateDate: '', link: '', icon: '', background: '', pLanguage: '' })
     setEditModalOpen(true)
   }
 
@@ -388,20 +437,21 @@ export default function InfoManagementPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="contact"><Contact className="h-4 w-4 mr-2" />联系方式</TabsTrigger>
           <TabsTrigger value="group"><Users className="h-4 w-4 mr-2" />群聊信息</TabsTrigger>
           <TabsTrigger value="media"><Globe className="h-4 w-4 mr-2" />媒体平台</TabsTrigger>
           <TabsTrigger value="project"><FolderKanban className="h-4 w-4 mr-2" />项目信息</TabsTrigger>
+          <TabsTrigger value="subsite"><AppWindow className="h-4 w-4 mr-2" />分站展示</TabsTrigger>
         </TabsList>
 
         {/* 渲染内容 */}
-        {['contact', 'group', 'media', 'project'].map(tab => (
+        {['contact', 'group', 'media', 'project', 'subsite'].map(tab => (
           <TabsContent key={tab} value={tab} className="space-y-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
-                  <CardTitle>{tab === 'contact' ? '联系方式' : tab === 'group' ? '群聊' : tab === 'media' ? '媒体' : '项目'}管理</CardTitle>
+                  <CardTitle>{tab === 'contact' ? '联系方式' : tab === 'group' ? '群聊' : tab === 'media' ? '媒体' : tab === 'project' ? '项目' : '分站'}管理</CardTitle>
                 </div>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={() => {
@@ -409,10 +459,11 @@ export default function InfoManagementPage() {
                     else if (tab === 'group') fetchGroupChatData()
                     else if (tab === 'media') fetchMediaPlatformData()
                     else if (tab === 'project') fetchProjectData()
+                    else if (tab === 'subsite') fetchSubsiteData()
                   }}>
                     <RefreshCw className={`h-4 w-4 ${loading[tab as keyof typeof loading] ? 'animate-spin' : ''}`} />
                   </Button>
-                  <Button size="sm" onClick={() => handleAddNew(tab)}><Plus className="h-4 w-4 mr-1" />新增</Button>
+                  {tab !== 'subsite' && <Button size="sm" onClick={() => handleAddNew(tab)}><Plus className="h-4 w-4 mr-1" />新增</Button>}
                 </div>
               </CardHeader>
               <CardContent>
@@ -421,28 +472,30 @@ export default function InfoManagementPage() {
                     <TableRow>
                       <TableHead>ID</TableHead>
                       <TableHead>{tab === 'project' ? '项目标题' : tab === 'contact' ? '标题' : '名称'}</TableHead>
-                      <TableHead>{tab === 'project' ? '分类' : '描述/信息'}</TableHead>
-                      <TableHead>更多信息</TableHead>
-                      <TableHead>操作</TableHead>
+                      <TableHead>{tab === 'project' ? '分类' : tab === 'subsite' ? '网址域名' : '描述/信息'}</TableHead>
+                      <TableHead>{tab === 'subsite' ? '是否展示' : '更多信息'}</TableHead>
+                      <TableHead>{tab === 'subsite' ? '' : '操作'}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {loading[tab as keyof typeof loading] ? (
                       <TableRow><TableCell colSpan={5} className="text-center py-10"><Loader2 className="h-8 w-8 animate-spin mx-auto text-muted-foreground" /></TableCell></TableRow>
-                    ) : (tab === 'contact' ? contactData : tab === 'group' ? groupChatData : tab === 'media' ? mediaPlatformData : projectData).length === 0 ? (
+                    ) : (tab === 'contact' ? contactData : tab === 'group' ? groupChatData : tab === 'media' ? mediaPlatformData : tab === 'project' ? projectData : subsiteData).length === 0 ? (
                       <TableRow><TableCell colSpan={5} className="text-center py-10 text-muted-foreground">暂无数据</TableCell></TableRow>
-                    ) : (tab === 'contact' ? contactData : tab === 'group' ? groupChatData : tab === 'media' ? mediaPlatformData : projectData).map((item: any) => (
+                    ) : (tab === 'contact' ? contactData : tab === 'group' ? groupChatData : tab === 'media' ? mediaPlatformData : tab === 'project' ? projectData : subsiteData).map((item: any) => (
                       <TableRow key={item.id}>
                         <TableCell>{item.id}</TableCell>
                         <TableCell className="font-medium">{item.title || item.name}</TableCell>
-                        <TableCell className="max-w-[300px] truncate">{item.description || item.account || item.limit}</TableCell>
+                        <TableCell className="max-w-[300px] truncate">{item.description || item.account || item.limit || item.domain}</TableCell>
                         <TableCell>
                           {tab === 'contact' && <span>{item.info}</span>}
                           {tab === 'group' && <span>{item.groupNumber}</span>}
                           {tab === 'media' && <span>{item.accountId}</span>}
                           {tab === 'project' && <div className="flex flex-wrap gap-1">{item.pLanguage?.map((l: string, i: number) => <Badge key={i} variant="outline">{l}</Badge>)}</div>}
+                          {tab === 'subsite' && <div onClick={(e) => e.stopPropagation()}><Switch checked={item.isShowInAboutUs} onCheckedChange={() => handleToggleSubsite(item.id, item.isShowInAboutUs)} /></div>}
                         </TableCell>
                         <TableCell>
+                          {tab !== 'subsite' && (
                           <div className="flex gap-2">
                             <Button variant="ghost" size="sm" onClick={() => handleEdit(tab, item)}><Edit className="h-4 w-4" /></Button>
                             <Button variant="ghost" size="sm" onClick={() => {
@@ -450,6 +503,7 @@ export default function InfoManagementPage() {
                               setDeleteDialogOpen(true)
                             }}><Trash2 className="h-4 w-4 text-red-500" /></Button>
                           </div>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -565,6 +619,14 @@ export default function InfoManagementPage() {
                   )} />
                   <FormField control={projectForm.control} name="updateDate" render={({ field }) => (
                     <FormItem><FormLabel>更新日期</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
+                  )} />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField control={projectForm.control} name="icon" render={({ field }) => (
+                    <FormItem><FormLabel>软件图标 URL</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                  )} />
+                  <FormField control={projectForm.control} name="background" render={({ field }) => (
+                    <FormItem><FormLabel>主背景图 URL</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                   )} />
                 </div>
                 <Button type="submit" disabled={submitting} className="w-full">{submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}保存</Button>

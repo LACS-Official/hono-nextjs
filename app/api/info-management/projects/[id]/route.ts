@@ -93,6 +93,7 @@ export async function PUT(
       updateDate, 
       link, 
       icon, 
+      background,
       pLanguage 
     } = body;
 
@@ -131,6 +132,7 @@ export async function PUT(
         updateDate,
         link,
         icon,
+        background: background || '',
         pLanguage,
         updatedAt: new Date()
       }).returning();
@@ -149,6 +151,7 @@ export async function PUT(
           updateDate,
           link,
           icon,
+          background: background || '',
           pLanguage,
           updatedAt: new Date()
         })

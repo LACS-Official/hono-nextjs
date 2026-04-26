@@ -56,6 +56,7 @@ export async function POST(request: NextRequest) {
       updateDate, 
       link, 
       icon, 
+      background,
       pLanguage 
     } = body;
 
@@ -79,6 +80,7 @@ export async function POST(request: NextRequest) {
       updateDate,
       link,
       icon,
+      background: background || '',
       pLanguage,
       updatedAt: new Date()
     }).returning();

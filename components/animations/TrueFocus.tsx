@@ -40,16 +40,16 @@ export default function TrueFocus({
   const [focusRect, setFocusRect] = useState<FocusRect>({ x: 0, y: 0, width: 0, height: 0 });
 
   useEffect(() => {
-    if (!manualMode) {
-      const interval = setInterval(
-        () => {
-          setCurrentIndex(prev => (prev + 1) % words.length);
-        },
-        (animationDuration + pauseBetweenAnimations) * 1000
-      );
+    if (manualMode) return;
 
-      return () => clearInterval(interval);
-    }
+    const interval = setInterval(
+      () => {
+        setCurrentIndex(prev => (prev + 1) % words.length);
+      },
+      (animationDuration + pauseBetweenAnimations) * 1000
+    );
+
+    return () => clearInterval(interval);
   }, [manualMode, animationDuration, pauseBetweenAnimations, words.length]);
 
   useEffect(() => {

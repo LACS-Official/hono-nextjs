@@ -9,7 +9,8 @@ import {
   User,
   Calendar,
   RefreshCw,
-  Plus
+  Plus,
+  Upload
 } from 'lucide-react'
 import dayjs from 'dayjs'
 
@@ -55,6 +56,7 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useToast } from "@/hooks/use-toast"
 
@@ -80,6 +82,9 @@ export default function DonorsManager() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [isModalVisible, setIsModalVisible] = useState(false)
+  const [isImportModalVisible, setIsImportModalVisible] = useState(false)
+  const [importJsonString, setImportJsonString] = useState('')
+  const [importing, setImporting] = useState(false)
 
   const form = useForm<DonorFormValues>({
     resolver: zodResolver(donorFormSchema),
@@ -162,6 +167,47 @@ export default function DonorsManager() {
     }
   }
 
+  // 批量导入 JSON 人员
+  const handleImportJson = async () => {
+    if (!importJsonString.trim()) {
+      toast({ variant: "destructive", title: "错误", description: "输入的内容不能为空" })
+      return
+    }
+
+    let parsedData
+    try {
+      parsedData = JSON.parse(importJsonString)
+      if (!Array.isArray(parsedData)) throw new Error("JSON最外层必须是数组格式")
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "JSON 格式错误", description: e.message || "无法解析JSON数据" })
+      return
+    }
+
+    try {
+      setImporting(true)
+      const response = await fetch('/api/donors/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ donors: parsedData })
+      })
+
+      const data = await response.json()
+      if (data.success) {
+        toast({ title: "导入成功", description: data.message })
+        setIsImportModalVisible(false)
+        setImportJsonString('')
+        fetchDonors()
+      } else {
+        toast({ variant: "destructive", title: "请求未通过验证", description: data.error })
+      }
+    } catch (error) {
+      console.error('导入失败:', error)
+      toast({ variant: "destructive", title: "请求失败", description: "网络异常或服务错误" })
+    } finally {
+      setImporting(false)
+    }
+  }
+
   // 组件挂载时获取数据
   useEffect(() => {
     fetchDonors()
@@ -197,6 +243,10 @@ export default function DonorsManager() {
           <Button variant="outline" onClick={fetchDonors} disabled={loading}>
             <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             刷新
+          </Button>
+          <Button variant="secondary" onClick={() => setIsImportModalVisible(true)}>
+            <Upload className="mr-2 h-4 w-4" />
+            导入 JSON
           </Button>
           <Button onClick={() => setIsModalVisible(true)}>
             <Plus className="mr-2 h-4 w-4" />
@@ -357,6 +407,54 @@ export default function DonorsManager() {
               </DialogFooter>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* JSON 批量导入对话框 */}
+      <Dialog open={isImportModalVisible} onOpenChange={setIsImportModalVisible}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Upload className="h-5 w-5" />
+              批量导入 JSON
+            </DialogTitle>
+            <DialogDescription>
+              请粘贴按以下格式存放的 JSON 数组。格式参考：
+              <pre className="mt-2 bg-muted p-2 rounded text-xs select-all overflow-x-auto text-left whitespace-pre">
+{`[
+  { "name": "张三", "donationDate": "2023-10-01" },
+  { "name": "李四", "donationDate": "2023-11-20" }
+]`}
+              </pre>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-2">
+            <Textarea
+              className="font-mono text-sm min-h-[250px]"
+              placeholder="在此粘贴..."
+              value={importJsonString}
+              onChange={e => setImportJsonString(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setIsImportModalVisible(false)
+                setImportJsonString('')
+              }}
+            >
+              取消
+            </Button>
+            <Button onClick={handleImportJson} disabled={importing}>
+              {importing ? (
+                <><RefreshCw className="mr-2 h-4 w-4 animate-spin" />导入中...</>
+              ) : (
+                <><Upload className="mr-2 h-4 w-4" />确认导入</>
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

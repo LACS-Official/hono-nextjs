@@ -17,7 +17,8 @@ import {
   Heart,
   Globe,
   BarChart,
-  Info
+  Info,
+  BookOpen
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { ThemeToggle } from '@/components/ThemeToggle'
@@ -105,6 +106,11 @@ export default function Navigation({ className, collapsed, setCollapsed, isMobil
       href: '/admin/system-settings',
       icon: Settings,
       label: '系统设置',
+    },
+    {
+      href: '/admin/api-docs',
+      icon: BookOpen,
+      label: 'API 文档',
     },
   ]
 

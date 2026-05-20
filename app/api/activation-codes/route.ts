@@ -6,6 +6,17 @@ import { v4 as uuidv4 } from 'uuid'
 import { corsResponse, handleOptions, validateApiKeyWithExpiration, checkRateLimit } from '@/lib/cors'
 import { TimeUtils } from '@/lib/time-utils'
 import { authenticateRequest, isAuthorizedAdmin } from '@/lib/auth'
+import { z } from 'zod'
+
+const requestSchema = z.object({
+  expirationDays: z.number().optional().default(365),
+  metadata: z.any().optional().default({}),
+  productInfo: z.object({
+    name: z.string().optional().default('Default Product'),
+    version: z.string().optional().default('1.0.0'),
+    features: z.array(z.string()).optional().default(['basic'])
+  }).optional().default({ name: 'Default Product', version: '1.0.0', features: ['basic'] })
+})
 
 // 标记为动态路由，避免静态生成
 export const dynamic = 'force-dynamic'
@@ -119,15 +130,21 @@ export async function POST(request: NextRequest) {
       }, { status: 429 }, origin, userAgent)
     }
     const body = await request.json()
+    const parseResult = requestSchema.safeParse(body)
+    
+    if (!parseResult.success) {
+      return corsResponse({
+        success: false,
+        error: '请求数据格式错误',
+        details: parseResult.error.issues
+      }, { status: 400 }, origin, userAgent)
+    }
+
     const { 
-      expirationDays = 365, 
-      metadata = {}, 
-      productInfo = {
-        name: 'Default Product',
-        version: '1.0.0',
-        features: ['basic']
-      }
-    } = body
+      expirationDays, 
+      metadata, 
+      productInfo
+    } = parseResult.data
 
     const code = generateActivationCode()
     // const now = TimeUtils.nowInChina() // 暂时不使用

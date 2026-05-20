@@ -4,6 +4,11 @@ import { activationCodesDb as db, activationCodes } from '@/lib/activation-codes
 import { eq, and, lt } from 'drizzle-orm'
 import { corsResponse, handleOptions } from '@/lib/cors'
 import { TimeUtils } from '@/lib/time-utils'
+import { z } from 'zod'
+
+const requestSchema = z.object({
+  code: z.string().min(1, '激活码不能为空')
+})
 
 // 验证激活码格式（支持新旧两种格式）
 function isValidActivationCodeFormat(code: string): boolean {
@@ -61,14 +66,19 @@ export async function POST(request: NextRequest) {
     // 注意：激活码验证是公开接口，不需要API Key验证
     // 这样客户端软件可以直接验证激活码而无需API Key
     const body = await request.json()
-    const { code } = body
-
-    if (!code) {
+    const parseResult = requestSchema.safeParse(body)
+    
+    if (!parseResult.success) {
       return corsResponse({
         success: false,
-        error: '激活码参数缺失'
+        error: '请求数据格式错误',
+        details: parseResult.error.issues
       }, { status: 400 }, origin, userAgent)
     }
+
+    const { code } = parseResult.data
+
+
 
     // 验证激活码格式（支持新旧两种格式）
     if (!isValidActivationCodeFormat(code)) {

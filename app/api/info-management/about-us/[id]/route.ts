@@ -4,6 +4,16 @@ import { aboutUsInfo } from '@/lib/info-management-schema';
 import { eq } from 'drizzle-orm';
 import { authenticateRequest, isAuthorizedAdmin } from '@/lib/auth';
 import { corsResponse, handleOptions } from '@/lib/cors';
+import { z } from 'zod';
+
+const requestSchema = z.object({
+  title: z.string().optional(),
+  content: z.string().optional(),
+  category: z.string().optional(),
+  displayOrder: z.number().optional(),
+  isPublished: z.number().optional(),
+  metadata: z.any().optional()
+});
 
 // OPTIONS 方法处理 CORS 预检请求
 export async function OPTIONS(request: NextRequest) {
@@ -83,7 +93,18 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { title, content, category, displayOrder, isPublished, metadata } = body;
+    const parseResult = requestSchema.safeParse(body);
+
+    if (!parseResult.success) {
+      return corsResponse(
+        { success: false, error: '请求数据格式错误', details: parseResult.error.issues },
+        { status: 400 },
+        origin,
+        userAgent
+      );
+    }
+
+    const { title, content, category, displayOrder, isPublished, metadata } = parseResult.data;
 
     const updateData: any = {
       updatedAt: new Date()

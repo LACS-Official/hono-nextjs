@@ -4,6 +4,14 @@ import { blockedItems } from '@/lib/system-settings-schema'
 import { eq, and, desc } from 'drizzle-orm'
 import { v4 as uuidv4 } from 'uuid'
 import { authenticateRequest, isAuthorizedAdmin } from '@/lib/auth'
+import { z } from 'zod'
+
+const requestSchema = z.object({
+  type: z.enum(['ip', 'fingerprint', 'userId', 'softwareId', 'keyword']),
+  value: z.string().min(1, '值不能为空'),
+  reason: z.string().optional(),
+  expiresAt: z.string().optional() // ISO date string
+})
 
 // GET - 获取黑名单列表
 export async function GET(request: NextRequest) {
@@ -39,11 +47,17 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { type, value, reason, expiresAt } = body
-
-    if (!type || !value) {
-      return NextResponse.json({ success: false, error: '类型和值是必需的' }, { status: 400 })
+    const parseResult = requestSchema.safeParse(body)
+    
+    if (!parseResult.success) {
+      return NextResponse.json({ 
+        success: false, 
+        error: '请求数据格式错误',
+        details: parseResult.error.issues
+      }, { status: 400 })
     }
+
+    const { type, value, reason, expiresAt } = parseResult.data
 
     // 检查是否已存在
     const existing = await systemSettingsDb

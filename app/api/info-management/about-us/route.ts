@@ -4,6 +4,16 @@ import { aboutUsInfo } from '@/lib/info-management-schema';
 import { desc } from 'drizzle-orm';
 import { authenticateRequest, isAuthorizedAdmin } from '@/lib/auth';
 import { corsResponse, handleOptions } from '@/lib/cors';
+import { z } from 'zod';
+
+const requestSchema = z.object({
+  title: z.string().min(1, '标题不能为空'),
+  content: z.string().min(1, '内容不能为空'),
+  category: z.string().min(1, '分类不能为空'),
+  displayOrder: z.number().optional(),
+  isPublished: z.number().optional(), // Or boolean depending on schema, but let's use number matching the DB fallback
+  metadata: z.any().optional()
+});
 
 // OPTIONS 方法处理 CORS 预检请求
 export async function OPTIONS(request: NextRequest) {
@@ -47,16 +57,18 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { title, content, category, displayOrder, isPublished, metadata } = body;
+    const parseResult = requestSchema.safeParse(body);
 
-    if (!title || !content || !category) {
+    if (!parseResult.success) {
       return corsResponse(
-        { success: false, error: '缺少必要字段（标题、内容、分类）' },
+        { success: false, error: '请求数据格式错误', details: parseResult.error.issues },
         { status: 400 },
         origin,
         userAgent
       );
     }
+
+    const { title, content, category, displayOrder, isPublished, metadata } = parseResult.data;
 
     const newAboutUs = await db.insert(aboutUsInfo).values({
       title,

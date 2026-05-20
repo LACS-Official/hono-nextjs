@@ -4,6 +4,15 @@ import { contactInfo } from '@/lib/info-management-schema';
 import { eq } from 'drizzle-orm';
 import { authenticateRequest, isAuthorizedAdmin } from '@/lib/auth';
 import { corsResponse, handleOptions } from '@/lib/cors';
+import { z } from 'zod';
+
+const requestSchema = z.object({
+  title: z.string().min(1, '标题不能为空'),
+  description: z.string().min(1, '描述不能为空'),
+  info: z.string().min(1, '联系信息不能为空'),
+  action: z.string().min(1, '操作名不能为空'),
+  analyticsEvent: z.string().min(1, '分析事件名不能为空')
+});
 
 // OPTIONS 方法处理 CORS 预检请求
 export async function OPTIONS(request: NextRequest) {
@@ -47,16 +56,18 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { title, description, info, action, analyticsEvent } = body;
+    const parseResult = requestSchema.safeParse(body);
 
-    if (!title || !description || !info || !action || !analyticsEvent) {
+    if (!parseResult.success) {
       return corsResponse(
-        { success: false, error: '缺少必要字段' },
+        { success: false, error: '请求数据格式错误', details: parseResult.error.issues },
         { status: 400 },
         origin,
         userAgent
       );
     }
+
+    const { title, description, info, action, analyticsEvent } = parseResult.data;
 
     const newContact = await db.insert(contactInfo).values({
       title,

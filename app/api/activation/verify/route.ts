@@ -1,6 +1,11 @@
 // 激活码验证接口 - 前端兼容性包装
 import { NextRequest } from 'next/server'
 import { corsResponse, handleOptions } from '@/lib/cors'
+import { z } from 'zod'
+
+const requestSchema = z.object({
+  code: z.string().min(1, '激活码不能为空')
+})
 
 // 标记为动态路由，避免静态生成
 export const dynamic = 'force-dynamic'
@@ -20,6 +25,15 @@ export async function POST(request: NextRequest) {
   try {
     // 获取请求体
     const body = await request.json()
+    const parseResult = requestSchema.safeParse(body)
+    
+    if (!parseResult.success) {
+      return corsResponse({
+        success: false,
+        error: '请求数据格式错误',
+        details: parseResult.error.issues
+      }, { status: 400 }, origin, userAgent)
+    }
     
     // 转发到实际的激活码验证API
     const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:29351'

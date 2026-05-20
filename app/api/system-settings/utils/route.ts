@@ -13,6 +13,12 @@ import { eq, and, ilike, inArray } from 'drizzle-orm'
 import { authenticateRequest } from '@/lib/auth'
 import { headers } from 'next/headers'
 import { v4 as uuidv4 } from 'uuid'
+import { z } from 'zod'
+
+const requestSchema = z.object({
+  action: z.enum(['import', 'batchDelete']),
+  data: z.any() // Can be array of import items or array of strings (IDs)
+})
 
 // 获取系统设置分类
 export async function GET(request: NextRequest) {
@@ -154,7 +160,17 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { action, data } = body
+    const parseResult = requestSchema.safeParse(body)
+    
+    if (!parseResult.success) {
+      return NextResponse.json({ 
+        success: false, 
+        error: '请求数据格式错误',
+        details: parseResult.error.issues
+      }, { status: 400 })
+    }
+
+    const { action, data } = parseResult.data
 
     switch (action) {
       case 'import':

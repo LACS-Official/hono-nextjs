@@ -3,6 +3,7 @@ import { unifiedDb as db } from '@/lib/unified-db-connection';
 import { projectsList } from '@/lib/info-management-schema';
 import { authenticateRequest, isAuthorizedAdmin } from '@/lib/auth';
 import { corsResponse, handleOptions } from '@/lib/cors';
+import { sql } from 'drizzle-orm';
 
 // OPTIONS 方法处理 CORS 预检请求
 export async function OPTIONS(request: NextRequest) {
@@ -60,8 +61,9 @@ export async function POST(request: NextRequest) {
       pLanguage 
     } = body;
 
-    if (!id || !category || !categoryName || !title || !description || 
-        !platform || !updateDate || !link || !icon || !pLanguage) {
+    // id 和 icon 在前端是可选或自动生成的，这里不需要强校验
+    if (!category || !categoryName || !title || !description || 
+        !platform || !updateDate || !link || !pLanguage) {
       return corsResponse(
         { success: false, error: '缺少必要字段' },
         { status: 400 },
@@ -70,8 +72,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 自动为新项目生成 ID (查询当前最大 ID 并递增 1)
+    let projectId = id;
+    if (!projectId) {
+      const maxIdResult = await db.select({
+        maxId: sql<number>`max(${projectsList.id})`
+      }).from(projectsList);
+      const currentMaxId = maxIdResult[0]?.maxId || 0;
+      projectId = currentMaxId + 1;
+    }
+
     const newProject = await db.insert(projectsList).values({
-      id,
+      id: projectId,
       category,
       categoryName,
       title,
@@ -79,7 +91,7 @@ export async function POST(request: NextRequest) {
       platform,
       updateDate,
       link,
-      icon,
+      icon: icon || '',
       background: background || '',
       pLanguage,
       updatedAt: new Date()

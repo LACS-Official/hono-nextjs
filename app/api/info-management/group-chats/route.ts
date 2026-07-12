@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { name, limit, groupNumber, qrcode, joinLink, analyticsEvent } = body;
 
-    if (!name || !limit || !groupNumber || !qrcode || !joinLink || !analyticsEvent) {
+    if (!name || !limit || !groupNumber || !joinLink) {
       return corsResponse(
         { success: false, error: '缺少必要字段' },
         { status: 400 },
@@ -61,9 +61,9 @@ export async function POST(request: NextRequest) {
       name,
       limit,
       groupNumber,
-      qrcode,
+      qrcode: qrcode || '',
       joinLink,
-      analyticsEvent,
+      analyticsEvent: analyticsEvent || '',
       updatedAt: new Date()
     }).returning();
 

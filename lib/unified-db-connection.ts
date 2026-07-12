@@ -3,6 +3,7 @@
  * 整合所有数据库模式到单一连接
  */
 
+import '@/lib/dev-proxy'
 import { drizzle } from 'drizzle-orm/neon-http'
 import { neon } from '@neondatabase/serverless'
 import { sql } from 'drizzle-orm'

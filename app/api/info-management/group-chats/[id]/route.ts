@@ -91,9 +91,9 @@ export async function PUT(
         name,
         limit,
         groupNumber,
-        qrcode,
+        qrcode: qrcode || '',
         joinLink,
-        analyticsEvent,
+        analyticsEvent: analyticsEvent || '',
         updatedAt: new Date()
       })
       .where(eq(groupChats.id, id))

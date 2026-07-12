@@ -413,7 +413,7 @@ export default function UserBehaviorPage() {
             <SelectContent>
               <SelectItem value="all">全部软件</SelectItem>
               <SelectItem value="1">玩机管家</SelectItem>
-              <SelectItem value="2">玩机管家安卓版</SelectItem>
+              <SelectItem value="19">玩机管家安卓版</SelectItem>
             </SelectContent>
           </Select>
           <Button variant="outline" onClick={handleRefresh} disabled={loading}>

@@ -618,7 +618,29 @@ export default function InfoManagementPage() {
                     <FormItem><FormLabel>项目链接</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                   )} />
                   <FormField control={projectForm.control} name="updateDate" render={({ field }) => (
-                    <FormItem><FormLabel>更新日期</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem>
+                      <div className="flex items-center justify-between">
+                        <FormLabel>更新日期</FormLabel>
+                        <Button 
+                          type="button" 
+                          variant="link" 
+                          className="h-auto p-0 text-xs text-primary hover:underline"
+                          onClick={() => {
+                            const d = new Date()
+                            const year = d.getFullYear()
+                            const month = String(d.getMonth() + 1).padStart(2, '0')
+                            const day = String(d.getDate()).padStart(2, '0')
+                            projectForm.setValue('updateDate', `${year}-${month}-${day}`)
+                          }}
+                        >
+                          使用今天
+                        </Button>
+                      </div>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
                   )} />
                 </div>
                 <div className="grid grid-cols-2 gap-4">

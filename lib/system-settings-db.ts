@@ -15,6 +15,8 @@ if (!systemSettingsConnectionString) {
   throw new Error('SYSTEM_SETTINGS_DATABASE_URL environment variable is required')
 }
 
+import { createProxiedStream } from './dev-proxy'
+
 // 创建独立的数据库连接池
 const pool = new Pool({
   connectionString: systemSettingsConnectionString,
@@ -22,7 +24,9 @@ const pool = new Pool({
   ssl: systemSettingsConnectionString.includes('sslmode=require') || 
        systemSettingsConnectionString.includes('supabase.co') || 
        systemSettingsConnectionString.includes('neon.tech') 
-       ? { rejectUnauthorized: false } : false
+       ? { rejectUnauthorized: false } : false,
+  // 仅在本地开发环境且显式配有 DEV_PROXY 时使用 Clash 隧道代理 TCP 连接
+  stream: (process.env.NODE_ENV === 'development' && process.env.DEV_PROXY) ? createProxiedStream : undefined
 })
 
 // 创建 Drizzle 实例

@@ -131,7 +131,7 @@ export async function PUT(
         platform,
         updateDate,
         link,
-        icon,
+        icon: icon || '',
         background: background || '',
         pLanguage,
         updatedAt: new Date()
@@ -150,7 +150,7 @@ export async function PUT(
           platform,
           updateDate,
           link,
-          icon,
+          icon: icon || '',
           background: background || '',
           pLanguage,
           updatedAt: new Date()

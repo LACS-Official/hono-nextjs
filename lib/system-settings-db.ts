@@ -26,7 +26,7 @@ const pool = new Pool({
        systemSettingsConnectionString.includes('neon.tech') 
        ? { rejectUnauthorized: false } : false,
   // 仅在本地开发环境且显式配有 DEV_PROXY 时使用 Clash 隧道代理 TCP 连接
-  stream: (process.env.NODE_ENV === 'development' && process.env.DEV_PROXY) ? createProxiedStream : undefined
+  stream: (process.env.NODE_ENV === 'development' && process.env.DEV_PROXY) ? (createProxiedStream as any) : undefined
 })
 
 // 创建 Drizzle 实例

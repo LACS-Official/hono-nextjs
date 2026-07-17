@@ -7,8 +7,8 @@ import * as systemSettingsSchema from './system-settings-schema'
  * 用于将系统配置、审计日志、登录日志等从主数据库中分离
  */
 
-const systemSettingsConnectionString = 
-  process.env.SYSTEM_SETTINGS_DATABASE_URL || 
+const systemSettingsConnectionString =
+  process.env.SYSTEM_SETTINGS_DATABASE_URL ||
   process.env.DATABASE_URL
 
 if (!systemSettingsConnectionString) {
@@ -21,26 +21,26 @@ import { createProxiedStream } from './dev-proxy'
 const pool = new Pool({
   connectionString: systemSettingsConnectionString,
   // 增加 SSL 配置支持（特别是 Supabase/Neon 等云数据库）
-  ssl: systemSettingsConnectionString.includes('sslmode=require') || 
-       systemSettingsConnectionString.includes('supabase.co') || 
-       systemSettingsConnectionString.includes('neon.tech') 
-       ? { rejectUnauthorized: false } : false,
+  ssl: systemSettingsConnectionString.includes('sslmode=require') ||
+    systemSettingsConnectionString.includes('supabase.co') ||
+    systemSettingsConnectionString.includes('neon.tech')
+    ? { rejectUnauthorized: false } : false,
   // 仅在本地开发环境且显式配有 DEV_PROXY 时使用 Clash 隧道代理 TCP 连接
-  stream: (process.env.NODE_ENV === 'development' && process.env.DEV_PROXY) ? (createProxiedStream as any) : undefined
+  stream: ((process.env.NODE_ENV === 'development' && process.env.DEV_PROXY) ? createProxiedStream : undefined) as any
 })
 
 // 创建 Drizzle 实例
-export const systemSettingsDb = drizzle(pool, { 
-  schema: systemSettingsSchema 
+export const systemSettingsDb = drizzle(pool, {
+  schema: systemSettingsSchema
 })
 
 // 导出所有的表引用，方便在 API 中直接导入
-export const { 
-  systemSettings, 
-  systemSettingsAuditLog, 
-  apiAccessControl, 
-  systemLogConfig, 
-  systemBackupConfig, 
+export const {
+  systemSettings,
+  systemSettingsAuditLog,
+  apiAccessControl,
+  systemLogConfig,
+  systemBackupConfig,
   systemNotificationConfig,
   loginLogs,
   blockedItems

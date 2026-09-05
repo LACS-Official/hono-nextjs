@@ -67,7 +67,7 @@ export function isTransientDBError(err: unknown): boolean {
 }
 
 // 瞬态断连安全重试包装函数
-export async function safeQuery<T>(queryFn: () => Promise<T>, maxRetries = 2, delayMs = 300): Promise<T> {
+export async function safeQuery<T = any>(queryFn: () => Promise<T>, maxRetries = 2, delayMs = 300): Promise<T> {
   let lastError: any = null
   for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
     try {

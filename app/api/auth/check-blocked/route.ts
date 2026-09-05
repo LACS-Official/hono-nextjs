@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     } catch (supabaseErr: any) {
       console.warn('[Supabase REST] check-blocked 回退至 SQL 执行:', supabaseErr.message)
       // 检查 IP 或 设备是否在黑名单中且处于激活状态
-      const blocked = await safeQuery(() =>
+      const blocked = await safeQuery<any[]>(() =>
         systemSettingsDb
           .select()
           .from(blockedItems)
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
           .limit(1)
       )
 
-      if (blocked.length > 0) {
+      if (Array.isArray(blocked) && blocked.length > 0) {
         return NextResponse.json({
           success: true,
           blocked: true,

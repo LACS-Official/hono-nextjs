@@ -111,7 +111,7 @@ export const loginLogs = pgTable('login_logs', {
   deviceInfo: jsonb('device_info').notNull(), // 设备信息（JSON格式）
   networkInfo: jsonb('network_info').notNull(), // 网络信息（JSON格式）
   loginTime: timestamp('login_time').notNull().defaultNow(), // 登录时间
-  sessionId: varchar('session_id', { length: 255 }).notNull(), // 会话ID
+  sessionId: text('session_id').notNull(), // 会话ID (支持长 JWT 字符串)
   isActive: boolean('is_active').notNull().default(true), // 会话是否活跃
   createdAt: timestamp('created_at').notNull().defaultNow(), // 创建时间
 }, (table) => ({

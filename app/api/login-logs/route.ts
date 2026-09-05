@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { systemSettingsDb } from '@/lib/system-settings-db'
+import { systemSettingsDb, ensureSystemSettingsTables, safeQuery } from '@/lib/system-settings-db'
 import { loginLogs } from '@/lib/system-settings-schema'
+import { SupabaseSystemSettingsService } from '@/lib/supabase-system-settings'
 import { eq, and, desc, gte, lte, like } from 'drizzle-orm'
 import { sql } from 'drizzle-orm'
 import { authenticateRequest, isAuthorizedAdmin } from '@/lib/auth'
@@ -59,7 +60,8 @@ export async function POST(request: NextRequest) {
       createdAt: new Date()
     }
     
-    // 插入数据库
+    // 插入数据库前确保表结构存在且列类型兼容
+    await ensureSystemSettingsTables()
     await systemSettingsDb.insert(loginLogs).values(newLog)
     
     console.log('登录日志记录成功:', { userId, email, sessionId })
@@ -216,44 +218,64 @@ export async function GET(request: NextRequest) {
       conditions.push(eq(loginLogs.isActive, isActiveParam === 'true'))
     }
 
-    // 计算偏移量
-    const offset = (page_num - 1) * limit_num
+    try {
+      const result = await SupabaseSystemSettingsService.getLoginLogs({
+        userId: searchParams.get('userId'),
+        email: searchParams.get('email'),
+        ipAddress: searchParams.get('ipAddress'),
+        startDate: searchParams.get('startDate') ? new Date(searchParams.get('startDate')!) : null,
+        endDate: searchParams.get('endDate') ? new Date(searchParams.get('endDate')!) : null,
+        isActive: isActiveParam === 'true' ? true : isActiveParam === 'false' ? false : null,
+        page: page_num,
+        limit: limit_num,
+      })
 
-    // 执行查询
-    const logs = await systemSettingsDb
-      .select()
-      .from(loginLogs)
-      .where(conditions.length > 0 ? and(...conditions) : undefined)
-      .orderBy(desc(loginLogs.loginTime))
-      .limit(limit_num)
-      .offset(offset)
+      return NextResponse.json({
+        success: true,
+        data: result,
+      })
+    } catch (supabaseErr: any) {
+      console.warn('[Supabase REST] login-logs GET 回退至 SQL 执行:', supabaseErr.message)
+      await ensureSystemSettingsTables()
+      // 计算偏移量
+      const offset = (page_num - 1) * limit_num
 
-    // 获取总数
-    const totalCountResult = await systemSettingsDb
-      .select({ count: sql<number>`count(*)` })
-      .from(loginLogs)
-      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      // 执行查询
+      const [logs, totalCountResult] = await safeQuery(() =>
+        Promise.all([
+          systemSettingsDb
+            .select()
+            .from(loginLogs)
+            .where(conditions.length > 0 ? and(...conditions) : undefined)
+            .orderBy(desc(loginLogs.loginTime))
+            .limit(limit_num)
+            .offset(offset),
+          systemSettingsDb
+            .select({ count: sql<number>`count(*)` })
+            .from(loginLogs)
+            .where(conditions.length > 0 ? and(...conditions) : undefined)
+        ])
+      )
 
-    const totalCount = totalCountResult[0]?.count || 0
+      const totalCount = Number(totalCountResult[0]?.count || 0)
 
-    console.log('查询结果:', { logsCount: logs.length, totalCount })
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        logs: logs,
-        pagination: {
-          page: page_num,
-          limit: limit_num,
-          total: totalCount,
-          totalPages: Math.ceil(totalCount / limit_num)
+      return NextResponse.json({
+        success: true,
+        data: {
+          logs: logs,
+          pagination: {
+            page: page_num,
+            limit: limit_num,
+            total: totalCount,
+            totalPages: Math.ceil(totalCount / limit_num) || 1
+          }
         }
-      }
-    })
-  } catch (error) {
+      })
+    }
+  } catch (error: any) {
     console.error('获取登录日志失败:', error)
     return NextResponse.json(
-      { success: false, error: '获取登录日志失败' },
+      { success: false, error: '获取登录日志失败: ' + (error?.message || '未知错误') },
       { status: 500 }
     )
   }

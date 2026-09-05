@@ -9,6 +9,7 @@ import {
   softwareUsage,
   deviceConnections,
 } from "@/lib/unified-db-connection";
+import { systemSettingsDb } from "@/lib/system-settings-db";
 import { blockedItems } from "@/lib/system-settings-schema";
 import { eq, and, sql } from "drizzle-orm";
 import { corsResponse, handleOptions, getClientIp } from "@/lib/cors";
@@ -66,8 +67,8 @@ export async function POST(request: NextRequest) {
     const validatedData = admtApkRequestSchema.parse(body);
     const actualDeviceSerial = validatedData.deviceSerial || validatedData.deviceFingerprint;
 
-    // 检查黑名单 (检查 fingerprint 或 serial)
-    const blocked = await userBehaviorDb
+    // 检查设备是否在黑名单中
+    const blocked = await systemSettingsDb
       .select()
       .from(blockedItems)
       .where(

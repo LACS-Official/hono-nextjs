@@ -1,15 +1,12 @@
-/**
- * 单个系统设置API路由
- * 处理系统设置的更新和删除操作
- */
-
 import { NextRequest, NextResponse } from 'next/server'
 import {
   systemSettingsDb,
   systemSettings,
   systemSettingsAuditLog,
-  NewSystemSettingsAuditLog
+  NewSystemSettingsAuditLog,
+  safeQuery
 } from '@/lib/system-settings-db'
+import { SupabaseSystemSettingsService } from '@/lib/supabase-system-settings'
 import { eq } from 'drizzle-orm'
 import { z } from 'zod'
 import { v4 as uuidv4 } from 'uuid'
@@ -34,24 +31,41 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    // 获取设置详情
-    const setting = await systemSettingsDb
-      .select()
-      .from(systemSettings)
-      .where(eq(systemSettings.id, params.id))
-      .limit(1)
-
-    if (setting.length === 0) {
-      return NextResponse.json(
-        { success: false, error: '设置不存在' },
-        { status: 404 }
+    try {
+      const setting = await SupabaseSystemSettingsService.getSettingById(params.id)
+      if (!setting) {
+        return NextResponse.json(
+          { success: false, error: '设置不存在' },
+          { status: 404 }
+        )
+      }
+      return NextResponse.json({
+        success: true,
+        data: setting,
+      })
+    } catch (supabaseErr: any) {
+      console.warn('[Supabase REST] GET [id] 回退至 SQL 查询:', supabaseErr.message)
+      // 获取设置详情
+      const setting = await safeQuery(() =>
+        systemSettingsDb
+          .select()
+          .from(systemSettings)
+          .where(eq(systemSettings.id, params.id))
+          .limit(1)
       )
-    }
 
-    return NextResponse.json({
-      success: true,
-      data: setting[0],
-    })
+      if (setting.length === 0) {
+        return NextResponse.json(
+          { success: false, error: '设置不存在' },
+          { status: 404 }
+        )
+      }
+
+      return NextResponse.json({
+        success: true,
+        data: setting[0],
+      })
+    }
   } catch (error) {
     console.error('获取系统设置失败:', error)
     return NextResponse.json(
@@ -77,74 +91,112 @@ export async function PUT(
       )
     }
 
-    // 检查设置是否存在
-    const existingSetting = await systemSettingsDb
-      .select()
-      .from(systemSettings)
-      .where(eq(systemSettings.id, params.id))
-      .limit(1)
-
-    if (existingSetting.length === 0) {
-      return NextResponse.json(
-        { success: false, error: '设置不存在' },
-        { status: 404 }
-      )
-    }
-
     // 解析请求体
     const body = await request.json()
     const validatedData = updateSystemSettingSchema.parse(body)
 
-    // 验证设置值
-    if (validatedData.validationRules && validatedData.value !== undefined) {
-      const validationRules = validatedData.validationRules
-      // 使用验证工具进行验证
-      const validationResult = SettingValidator.validate(
-        validatedData.value,
-        existingSetting[0].type,
-        validationRules
+    let updatedResult: any = null
+    let oldValue: any = null
+
+    try {
+      const existing = await SupabaseSystemSettingsService.getSettingById(params.id)
+      if (!existing) {
+        return NextResponse.json({ success: false, error: '设置不存在' }, { status: 404 })
+      }
+      oldValue = existing.value
+
+      // 验证设置值
+      if (validatedData.validationRules && validatedData.value !== undefined) {
+        const validationResult = SettingValidator.validate(
+          validatedData.value,
+          existing.type,
+          validatedData.validationRules
+        )
+
+        if (!validationResult.valid) {
+          return NextResponse.json(
+            { success: false, error: validationResult.errors?.join(', ') || '验证失败' },
+            { status: 400 }
+          )
+        }
+      }
+
+      updatedResult = await SupabaseSystemSettingsService.updateSetting(params.id, {
+        ...validatedData,
+        updatedBy: authResult.user.id,
+      })
+    } catch (supabaseErr: any) {
+      console.warn('[Supabase REST] PUT [id] 回退至 SQL 执行:', supabaseErr.message)
+      const existingSetting = await safeQuery(() =>
+        systemSettingsDb
+          .select()
+          .from(systemSettings)
+          .where(eq(systemSettings.id, params.id))
+          .limit(1)
       )
 
-      if (!validationResult.valid) {
+      if (existingSetting.length === 0) {
         return NextResponse.json(
-          { success: false, error: validationResult.errors?.join(', ') || '验证失败' },
-          { status: 400 }
+          { success: false, error: '设置不存在' },
+          { status: 404 }
         )
       }
-    }
+      oldValue = existingSetting[0].value
 
-    // 更新设置
-    const updateData = {
-      ...validatedData,
-      updatedAt: new Date(),
-      updatedBy: authResult.user.id,
-    }
+      // 验证设置值
+      if (validatedData.validationRules && validatedData.value !== undefined) {
+        const validationResult = SettingValidator.validate(
+          validatedData.value,
+          existingSetting[0].type,
+          validatedData.validationRules
+        )
 
-    // 执行更新
-    const result = await systemSettingsDb
-      .update(systemSettings)
-      .set(updateData)
-      .where(eq(systemSettings.id, params.id))
-      .returning()
+        if (!validationResult.valid) {
+          return NextResponse.json(
+            { success: false, error: validationResult.errors?.join(', ') || '验证失败' },
+            { status: 400 }
+          )
+        }
+      }
+
+      const updateData = {
+        ...validatedData,
+        updatedAt: new Date(),
+        updatedBy: authResult.user.id,
+      }
+
+      const result = await safeQuery(() =>
+        systemSettingsDb
+          .update(systemSettings)
+          .set(updateData)
+          .where(eq(systemSettings.id, params.id))
+          .returning()
+      )
+      updatedResult = result[0]
+    }
 
     // 记录审计日志
-    await AuditLogService.log({
-      resourceType: 'system_setting',
-      resourceId: params.id,
-      action: AuditAction.UPDATE,
-      userId: authResult.user.id,
-      details: {
-        oldValue: existingSetting[0].value,
-        newValue: validatedData.value !== undefined ? validatedData.value : existingSetting[0].value,
-      },
-      request,
-    })
+    try {
+      await AuditLogService.log({
+        resourceType: 'system_setting',
+        resourceId: params.id,
+        action: AuditAction.UPDATE,
+        userId: authResult.user.id,
+        details: {
+          oldValue,
+          newValue: validatedData.value !== undefined ? validatedData.value : oldValue,
+        },
+        request,
+      })
+    } catch (auditErr) {
+      console.warn('记录审计日志失败:', auditErr)
+    }
 
     return NextResponse.json({
       success: true,
-      data: result[0],
+      data: updatedResult,
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error('更新系统设置失败:', error)
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -153,7 +205,7 @@ export async function PUT(
       )
     }
     return NextResponse.json(
-      { success: false, error: '更新系统设置失败' },
+      { success: false, error: '更新系统设置失败: ' + (error?.message || '未知错误') },
       { status: 500 }
     )
   }
@@ -175,54 +227,79 @@ export async function DELETE(
       )
     }
 
-    // 检查设置是否存在
-    const existingSetting = await systemSettingsDb
-      .select()
-      .from(systemSettings)
-      .where(eq(systemSettings.id, params.id))
-      .limit(1)
+    let oldValue: any = null
 
-    if (existingSetting.length === 0) {
-      return NextResponse.json(
-        { success: false, error: '设置不存在' },
-        { status: 404 }
+    try {
+      const existing = await SupabaseSystemSettingsService.getSettingById(params.id)
+      if (!existing) {
+        return NextResponse.json({ success: false, error: '设置不存在' }, { status: 404 })
+      }
+      if (existing.isRequired) {
+        return NextResponse.json({ success: false, error: '不能删除必需设置' }, { status: 400 })
+      }
+      oldValue = existing.value
+
+      await SupabaseSystemSettingsService.deleteSetting(params.id)
+    } catch (supabaseErr: any) {
+      if (supabaseErr.message.includes('不能删除必需设置')) {
+        return NextResponse.json({ success: false, error: supabaseErr.message }, { status: 400 })
+      }
+      console.warn('[Supabase REST] DELETE [id] 回退至 SQL 执行:', supabaseErr.message)
+      const existingSetting = await safeQuery(() =>
+        systemSettingsDb
+          .select()
+          .from(systemSettings)
+          .where(eq(systemSettings.id, params.id))
+          .limit(1)
+      )
+
+      if (existingSetting.length === 0) {
+        return NextResponse.json(
+          { success: false, error: '设置不存在' },
+          { status: 404 }
+        )
+      }
+
+      if (existingSetting[0].isRequired) {
+        return NextResponse.json(
+          { success: false, error: '不能删除必需设置' },
+          { status: 400 }
+        )
+      }
+
+      oldValue = existingSetting[0].value
+      await safeQuery(() =>
+        systemSettingsDb
+          .delete(systemSettings)
+          .where(eq(systemSettings.id, params.id))
       )
     }
-
-    // 检查是否为必需设置
-    if (existingSetting[0].isRequired) {
-      return NextResponse.json(
-        { success: false, error: '不能删除必需设置' },
-        { status: 400 }
-      )
-    }
-
-    // 删除设置
-    await systemSettingsDb
-      .delete(systemSettings)
-      .where(eq(systemSettings.id, params.id))
 
     // 记录审计日志
-    await AuditLogService.log({
-      resourceType: 'system_setting',
-      resourceId: params.id,
-      action: AuditAction.DELETE,
-      userId: authResult.user.id,
-      details: {
-        oldValue: existingSetting[0].value,
-        newValue: null,
-      },
-      request,
-    })
+    try {
+      await AuditLogService.log({
+        resourceType: 'system_setting',
+        resourceId: params.id,
+        action: AuditAction.DELETE,
+        userId: authResult.user.id,
+        details: {
+          oldValue,
+          newValue: null,
+        },
+        request,
+      })
+    } catch (auditErr) {
+      console.warn('记录审计日志失败:', auditErr)
+    }
 
     return NextResponse.json({
       success: true,
       message: '设置删除成功',
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error('删除系统设置失败:', error)
     return NextResponse.json(
-      { success: false, error: '删除系统设置失败' },
+      { success: false, error: '删除系统设置失败: ' + (error?.message || '未知错误') },
       { status: 500 }
     )
   }

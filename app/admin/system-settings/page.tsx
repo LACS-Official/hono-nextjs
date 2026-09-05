@@ -554,15 +554,15 @@ export default function SystemSettingsPage() {
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2 text-xs">
-                            {getDeviceIcon(log.deviceInfo.device.type)}
-                            <span>{log.deviceInfo.device.model === 'Unknown' ? '未知设备' : log.deviceInfo.device.model}</span>
+                            {getDeviceIcon(log.deviceInfo?.device?.type || 'unknown')}
+                            <span>{log.deviceInfo?.device?.model && log.deviceInfo?.device?.model !== 'Unknown' ? log.deviceInfo.device.model : '未知设备'}</span>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <span className="text-xs">{log.deviceInfo.os.name} {log.deviceInfo.os.version}</span>
+                          <span className="text-xs">{log.deviceInfo?.os?.name || '未知系统'} {log.deviceInfo?.os?.version || ''}</span>
                         </TableCell>
                         <TableCell>
-                          <span className="text-xs">{log.deviceInfo.browser.name} ({log.deviceInfo.browser.version.split('.')[0]})</span>
+                          <span className="text-xs">{log.deviceInfo?.browser?.name || '未知浏览器'} {log.deviceInfo?.browser?.version ? `(${log.deviceInfo.browser.version.split('.')[0]})` : ''}</span>
                         </TableCell>
                         <TableCell>
                           <span className="text-xs text-muted-foreground">{dayjs(log.loginTime).format('MM-DD HH:mm')}</span>
@@ -587,9 +587,10 @@ export default function SystemSettingsPage() {
                               </DropdownMenuItem>
                               <DropdownMenuItem 
                                 onClick={() => {
-                                  // 这里简单用 OS+Browser 作为设备标识，实际项目中应使用更精细的指纹
-                                  const deviceLabel = `${log.deviceInfo.os.name} / ${log.deviceInfo.browser.name}`
-                                  setBlockTarget({ type: 'device', value: log.userAgent, label: deviceLabel })
+                                  const osName = log.deviceInfo?.os?.name || '未知系统'
+                                  const browserName = log.deviceInfo?.browser?.name || '未知浏览器'
+                                  const deviceLabel = `${osName} / ${browserName}`
+                                  setBlockTarget({ type: 'device', value: log.userAgent || 'unknown', label: deviceLabel })
                                   setBlockDialogOpen(true)
                                 }}
                                 className="text-red-600 focus:text-red-600"

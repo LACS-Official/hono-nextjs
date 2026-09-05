@@ -6,6 +6,7 @@
 
 import { NextRequest } from 'next/server'
 import { unifiedDb as userBehaviorDb, deviceConnections } from '@/lib/unified-db-connection'
+import { systemSettingsDb } from '@/lib/system-settings-db'
 import { blockedItems } from '@/lib/system-settings-schema'
 import { eq, count, desc, and, gte, lte, sql, or, ilike } from 'drizzle-orm'
 import { corsResponse, handleOptions, getClientIp } from '@/lib/cors'
@@ -63,7 +64,7 @@ export async function POST(request: NextRequest) {
     const validatedData = deviceConnectionRequestSchema.parse(body)
 
     // 检查是否在黑名单中
-    const blocked = await userBehaviorDb
+    const blocked = await systemSettingsDb
       .select()
       .from(blockedItems)
       .where(

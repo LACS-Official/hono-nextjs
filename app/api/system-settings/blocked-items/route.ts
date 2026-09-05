@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { systemSettingsDb } from '@/lib/system-settings-db'
+import { systemSettingsDb, safeQuery } from '@/lib/system-settings-db'
 import { blockedItems } from '@/lib/system-settings-schema'
+import { SupabaseSystemSettingsService } from '@/lib/supabase-system-settings'
 import { eq, and, desc } from 'drizzle-orm'
 import { v4 as uuidv4 } from 'uuid'
 import { authenticateRequest, isAuthorizedAdmin } from '@/lib/auth'
@@ -16,21 +17,26 @@ const requestSchema = z.object({
 // GET - 获取黑名单列表
 export async function GET(request: NextRequest) {
   try {
-    // 权限检查
-    const authRecord = await authenticateRequest(request)
-    if (!authRecord.success || !authRecord.user || !isAuthorizedAdmin(authRecord.user)) {
-      // return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+    try {
+      const items = await SupabaseSystemSettingsService.getBlockedItems()
+      return NextResponse.json({
+        success: true,
+        data: { blockedItems: items }
+      })
+    } catch (supabaseErr: any) {
+      console.warn('[Supabase REST] blocked-items GET 回退至 SQL 执行:', supabaseErr.message)
+      const items = await safeQuery(() =>
+        systemSettingsDb
+          .select()
+          .from(blockedItems)
+          .orderBy(desc(blockedItems.createdAt))
+      )
+
+      return NextResponse.json({
+        success: true,
+        data: { blockedItems: items }
+      })
     }
-
-    const items = await systemSettingsDb
-      .select()
-      .from(blockedItems)
-      .orderBy(desc(blockedItems.createdAt))
-
-    return NextResponse.json({
-      success: true,
-      data: { blockedItems: items }
-    })
   } catch (error: any) {
     console.error('获取黑名单失败:', error)
     return NextResponse.json({ success: false, error: error.message }, { status: 500 })
@@ -40,11 +46,7 @@ export async function GET(request: NextRequest) {
 // POST - 添加到黑名单
 export async function POST(request: NextRequest) {
   try {
-    // 权限检查
     const authRecord = await authenticateRequest(request)
-    if (!authRecord.success || !authRecord.user || !isAuthorizedAdmin(authRecord.user)) {
-      // 临时为了方便
-    }
 
     const body = await request.json()
     const parseResult = requestSchema.safeParse(body)
@@ -58,30 +60,43 @@ export async function POST(request: NextRequest) {
     }
 
     const { type, value, reason, expiresAt } = parseResult.data
+    let newItem: any = null
 
-    // 检查是否已存在
-    const existing = await systemSettingsDb
-      .select()
-      .from(blockedItems)
-      .where(and(eq(blockedItems.type, type), eq(blockedItems.value, value)))
-      .limit(1)
+    try {
+      newItem = await SupabaseSystemSettingsService.addBlockedItem({
+        type,
+        value,
+        reason,
+        expiresAt,
+        createdBy: authRecord.user?.id || 'system'
+      })
+    } catch (supabaseErr: any) {
+      console.warn('[Supabase REST] blocked-items POST 回退至 SQL 执行:', supabaseErr.message)
+      const existing = await safeQuery(() =>
+        systemSettingsDb
+          .select()
+          .from(blockedItems)
+          .where(and(eq(blockedItems.type, type), eq(blockedItems.value, value)))
+          .limit(1)
+      )
 
-    if (existing.length > 0) {
-      return NextResponse.json({ success: false, error: '该项已在黑名单中' }, { status: 400 })
+      if (existing.length > 0) {
+        return NextResponse.json({ success: false, error: '该项已在黑名单中' }, { status: 400 })
+      }
+
+      newItem = {
+        id: uuidv4(),
+        type,
+        value,
+        reason,
+        isActive: true,
+        createdAt: new Date(),
+        expiresAt: expiresAt ? new Date(expiresAt) : null,
+        createdBy: authRecord.user?.id || 'system'
+      }
+
+      await safeQuery(() => systemSettingsDb.insert(blockedItems).values(newItem))
     }
-
-    const newItem = {
-      id: uuidv4(),
-      type,
-      value,
-      reason,
-      isActive: true,
-      createdAt: new Date(),
-      expiresAt: expiresAt ? new Date(expiresAt) : null,
-      createdBy: authRecord.user?.id || 'system'
-    }
-
-    await systemSettingsDb.insert(blockedItems).values(newItem)
 
     return NextResponse.json({
       success: true,
@@ -104,9 +119,16 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ success: false, error: '缺少ID参数' }, { status: 400 })
     }
 
-    await systemSettingsDb
-      .delete(blockedItems)
-      .where(eq(blockedItems.id, id))
+    try {
+      await SupabaseSystemSettingsService.deleteBlockedItem(id)
+    } catch (supabaseErr: any) {
+      console.warn('[Supabase REST] blocked-items DELETE 回退至 SQL 执行:', supabaseErr.message)
+      await safeQuery(() =>
+        systemSettingsDb
+          .delete(blockedItems)
+          .where(eq(blockedItems.id, id))
+      )
+    }
 
     return NextResponse.json({
       success: true,

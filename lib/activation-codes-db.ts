@@ -1,5 +1,6 @@
-import { drizzle } from 'drizzle-orm/node-postgres'
-import { Pool } from 'pg'
+import '@/lib/dev-proxy'
+import { drizzle } from 'drizzle-orm/neon-http'
+import { neon } from '@neondatabase/serverless'
 import { sql } from 'drizzle-orm'
 import * as activationCodesSchema from './activation-codes-schema'
 
@@ -12,13 +13,10 @@ if (!activationCodesConnectionString) {
   throw new Error('ACTIVATION_CODES_DATABASE_URL environment variable is required')
 }
 
-// 创建独立的激活码数据库连接池
-// 使用 Pool 而不是 Client，可以实现惰性连接并更好地处理并发
-const pool = new Pool({
-  connectionString: activationCodesConnectionString,
-})
+// 创建统一的 Neon HTTP 连接
+const neonSql = neon(activationCodesConnectionString)
 
-export const activationCodesDb = drizzle(pool, { 
+export const activationCodesDb = drizzle(neonSql, { 
   schema: activationCodesSchema 
 })
 
@@ -28,7 +26,7 @@ export const { activationCodes } = activationCodesSchema
 // 数据库健康检查函数
 export async function checkActivationCodesDbHealth(): Promise<boolean> {
   try {
-    await pool.query('SELECT 1')
+    await neonSql`SELECT 1`
     return true
   } catch (error) {
     console.error('Activation codes database health check failed:', error)
@@ -65,15 +63,14 @@ export async function batchInsertActivationCodes<T extends Record<string, any>>(
 export async function checkActivationCodesMigrationStatus() {
   try {
     // 检查激活码表是否存在
-    const result = await pool.query(`
+    const tables = await neonSql`
       SELECT table_name
       FROM information_schema.tables
       WHERE table_schema = 'public'
       AND table_name = 'activation_codes'
       ORDER BY table_name
-    `)
+    `
     
-    const tables = result.rows
     const expectedTables = ['activation_codes']
     const existingTables = tables.map(t => t.table_name)
     const missingTables = expectedTables.filter(t => !existingTables.includes(t))

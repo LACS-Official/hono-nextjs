@@ -9,6 +9,7 @@ import {
   unifiedDb as userBehaviorDb,
   softwareUsage,
 } from "@/lib/unified-db-connection";
+import { systemSettingsDb } from "@/lib/system-settings-db";
 import { blockedItems } from "@/lib/system-settings-schema";
 import { eq, count, desc, and, gte, lte, sql, ilike } from "drizzle-orm";
 import { corsResponse, handleOptions, getClientIp } from "@/lib/cors";
@@ -85,7 +86,7 @@ export async function POST(request: NextRequest) {
     const validatedData = usageRequestSchema.parse(body);
 
     // 检查是否在黑名单中
-    const blocked = await userBehaviorDb
+    const blocked = await systemSettingsDb
       .select()
       .from(blockedItems)
       .where(

@@ -1,0 +1,40 @@
+name: Supabase Keep Alive
+
+on:
+  schedule:
+    # 每天 UTC 03:00 (北京时间 11:00) 自动执行一次
+    - cron: '0 3 * * *'
+  workflow_dispatch: # 支持在 GitHub 控制台手动一键点击触发
+
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase Database
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL || 'https://jdflsqznlssafriuxfub.supabase.co' }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkZmxzcXpubHNzYWZyaXV4ZnViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5MDgxMzAsImV4cCI6MjA4MDQ4NDEzMH0.ohoTvU8Fkfn2ZvNVbxA1bnVtCIfvasWJ-MpPuPklRBA' }}
+        run: |
+          echo "Sending keep-alive request to Supabase PostgREST API..."
+          
+          # 确保 URL 末尾无多余斜杠
+          CLEAN_URL="${SUPABASE_URL%/}"
+          
+          # 发送真实查询请求到 system_settings 表产生数据库读操作
+          HTTP_STATUS=$(curl -s -o response.json -w "%{http_code}" \
+            -H "apikey: ${SUPABASE_ANON_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
+            "${CLEAN_URL}/rest/v1/system_settings?select=id&limit=1")
+          
+          echo "Response HTTP Status: $HTTP_STATUS"
+          echo "Response Body:"
+          cat response.json
+          echo ""
+
+          if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 300 ]; then
+            echo "✅ Supabase database keep-alive success! Activity recorded."
+            exit 0
+          else
+            echo "❌ Supabase keep-alive failed with status $HTTP_STATUS. Please check if the project is paused or URL/keys are expired."
+            exit 1
+          fi

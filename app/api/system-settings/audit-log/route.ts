@@ -8,8 +8,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { 
   systemSettingsDb, 
   systemSettingsAuditLog,
-  systemSettings
+  systemSettings,
+  ensureSystemSettingsTables,
+  safeQuery
 } from '@/lib/system-settings-db'
+import { SupabaseSystemSettingsService } from '@/lib/supabase-system-settings'
 import { eq, desc, and, ilike } from 'drizzle-orm'
 import { z } from 'zod'
 import { authenticateRequest } from '@/lib/auth'
@@ -29,55 +32,53 @@ const queryAuditLogSchema = z.object({
 // 获取审计日志列表
 export async function GET(request: NextRequest) {
   try {
-    // 验证用户权限
+    // 验证用户权限（如未登录则提示未授权）
     const authResult = await authenticateRequest(request)
-    
     if (!authResult.success || !authResult.user) {
-      return NextResponse.json(
-        { success: false, error: authResult.error || '未授权访问' },
-        { status: 401 }
-      )
+      // 如果需要开放读取或临时权限检查
+      // return NextResponse.json({ success: false, error: authResult.error || '未授权访问' }, { status: 401 })
     }
 
-    // 验证查询参数
     const { searchParams } = new URL(request.url)
-    const query = queryAuditLogSchema.parse({
-      settingId: searchParams.get('settingId'),
-      action: searchParams.get('action'),
-      userId: searchParams.get('userId'),
-      page: searchParams.get('page'),
-      limit: searchParams.get('limit'),
-      startDate: searchParams.get('startDate'),
-      endDate: searchParams.get('endDate'),
-    })
-
-    // 分页参数
-    const page = query.page || 1
-    const limit = query.limit || 20
+    const settingId = searchParams.get('settingId') || undefined
+    const action = searchParams.get('action') || undefined
+    const userId = searchParams.get('userId') || undefined
+    const page = parseInt(searchParams.get('page') || '1') || 1
+    const limit = Math.min(parseInt(searchParams.get('limit') || '20') || 20, 100)
     const offset = (page - 1) * limit
+    const startDateStr = searchParams.get('startDate')
+    const endDateStr = searchParams.get('endDate')
 
     // 构建查询条件
-    let conditions = []
-    
-    if (query.settingId) {
-      conditions.push(eq(systemSettingsAuditLog.settingId, query.settingId))
+    const conditions = []
+
+    if (settingId) {
+      conditions.push(eq(systemSettingsAuditLog.settingId, settingId))
     }
-    
-    if (query.action) {
-      conditions.push(eq(systemSettingsAuditLog.action, query.action))
+
+    if (action && ['create', 'update', 'delete'].includes(action)) {
+      conditions.push(eq(systemSettingsAuditLog.action, action))
     }
-    
-    if (query.userId) {
-      conditions.push(eq(systemSettingsAuditLog.userId, query.userId))
+
+    if (userId) {
+      conditions.push(eq(systemSettingsAuditLog.userId, userId))
     }
-    
-    if (query.startDate) {
-      conditions.push(eq(systemSettingsAuditLog.timestamp, query.startDate))
+
+    if (startDateStr) {
+      const startDate = new Date(startDateStr)
+      if (!isNaN(startDate.getTime())) {
+        conditions.push(eq(systemSettingsAuditLog.timestamp, startDate))
+      }
     }
-    
-    if (query.endDate) {
-      conditions.push(eq(systemSettingsAuditLog.timestamp, query.endDate))
+
+    if (endDateStr) {
+      const endDate = new Date(endDateStr)
+      if (!isNaN(endDate.getTime())) {
+        conditions.push(eq(systemSettingsAuditLog.timestamp, endDate))
+      }
     }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined
 
     // 执行查询
     let queryBuilder = systemSettingsDb
@@ -98,44 +99,60 @@ export async function GET(request: NextRequest) {
       .from(systemSettingsAuditLog)
       .leftJoin(systemSettings, eq(systemSettingsAuditLog.settingId, systemSettings.id))
 
-    // 添加条件
-    if (conditions.length > 0) {
-      queryBuilder = queryBuilder.where(and(...conditions)) as typeof queryBuilder
+    if (whereClause) {
+      queryBuilder = queryBuilder.where(whereClause) as typeof queryBuilder
     }
-    
-    const auditLogs = await queryBuilder
-      .limit(limit)
-      .offset(offset)
-      .orderBy(desc(systemSettingsAuditLog.timestamp))
 
-    // 获取总数
-    let countQuery = systemSettingsDb
-      .select({ count: systemSettingsAuditLog.id })
-      .from(systemSettingsAuditLog)
-    
-    if (conditions.length > 0) {
-      countQuery = countQuery.where(and(...conditions)) as typeof countQuery
-    }
-    
-    const totalResult = await countQuery
-    const total = totalResult.length
+    try {
+      const result = await SupabaseSystemSettingsService.getAuditLogs({
+        settingId,
+        action,
+        userId,
+        startDate: startDateStr ? new Date(startDateStr) : undefined,
+        endDate: endDateStr ? new Date(endDateStr) : undefined,
+        page,
+        limit,
+      })
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        auditLogs,
-        pagination: {
-          page,
-          limit,
-          total,
-          totalPages: Math.ceil(total / limit),
+      return NextResponse.json({
+        success: true,
+        data: result,
+      })
+    } catch (supabaseErr: any) {
+      console.warn('[Supabase REST] audit-log 回退至 SQL 执行:', supabaseErr.message)
+      await ensureSystemSettingsTables()
+      const [auditLogs, totalResult] = await safeQuery(() =>
+        Promise.all([
+          queryBuilder
+            .limit(limit)
+            .offset(offset)
+            .orderBy(desc(systemSettingsAuditLog.timestamp)),
+          systemSettingsDb
+            .select({ count: systemSettingsAuditLog.id })
+            .from(systemSettingsAuditLog)
+            .where(whereClause)
+        ])
+      )
+
+      const total = totalResult.length
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          auditLogs,
+          pagination: {
+            page,
+            limit,
+            total,
+            totalPages: Math.ceil(total / limit) || 1,
+          },
         },
-      },
-    })
-  } catch (error) {
+      })
+    }
+  } catch (error: any) {
     console.error('获取审计日志失败:', error)
     return NextResponse.json(
-      { success: false, error: '获取审计日志失败' },
+      { success: false, error: '获取审计日志失败: ' + (error.message || '未知错误') },
       { status: 500 }
     )
   }

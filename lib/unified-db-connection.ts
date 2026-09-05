@@ -9,16 +9,16 @@ import { neon } from '@neondatabase/serverless'
 import { sql } from 'drizzle-orm'
 import { lt } from 'drizzle-orm'
 
-// 导入所有数据库模式
+// 导入主业务数据库模式 (系统设置已独立拆分至 lib/system-settings-db.ts -> Supabase)
 import * as activationCodesSchema from './activation-codes-schema'
 import * as softwareSchema from './software-schema'
 import * as userBehaviorSchema from './user-behavior-schema'
 import * as donorsSchema from './donors-schema'
 import * as websiteManagementSchema from './website-management-schema'
 import * as infoManagementSchema from './info-management-schema'
-import * as systemSettingsSchema from './system-settings-schema'
+import * as appUsersSchema from './app-users-schema'
 
-// 合并所有模式
+// 合并主业务模式
 const unifiedSchema = {
   ...activationCodesSchema,
   ...softwareSchema,
@@ -26,10 +26,10 @@ const unifiedSchema = {
   ...donorsSchema,
   ...websiteManagementSchema,
   ...infoManagementSchema,
-  ...systemSettingsSchema,
+  ...appUsersSchema,
 }
 
-// 统一数据库连接字符串
+// 统一主业务数据库连接字符串 (Neon)
 const connectionString = 
   process.env.DATABASE_URL || 
   process.env.SOFTWARE_DATABASE_URL || 
@@ -39,7 +39,7 @@ if (!connectionString) {
   throw new Error('DATABASE_URL environment variable is required')
 }
 
-// 创建统一数据库连接
+// 创建统一主业务数据库连接
 const neonSql = neon(connectionString)
 export const unifiedDb = drizzle(neonSql, { schema: unifiedSchema })
 
@@ -47,6 +47,9 @@ export const unifiedDb = drizzle(neonSql, { schema: unifiedSchema })
 export const {
   // 激活码相关表
   activationCodes,
+
+  // App 用户表
+  appUsers,
 
   // 软件管理相关表
   software,
@@ -73,14 +76,6 @@ export const {
   groupChats,
   mediaPlatforms,
   projectsList,
-
-  // 系统设置相关表
-  systemSettings,
-  systemSettingsAuditLog,
-  apiAccessControl,
-  systemLogConfig,
-  systemBackupConfig,
-  systemNotificationConfig,
 } = unifiedSchema
 
 // 数据库健康检查函数

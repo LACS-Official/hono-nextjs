@@ -25,13 +25,27 @@ import {
   Hash,
   Upload,
   Image as ImageIcon,
-  X
+  X,
+  Sparkles,
+  Zap,
+  Download,
+  GitBranch,
+  RefreshCw,
+  Copy,
+  Check,
+  ExternalLink,
+  Link2
 } from 'lucide-react'
+
+import GithubSyncModal from '@/components/GithubSyncModal'
+import { ACCELERATION_SOURCES } from '@/lib/github-constants'
+import { createClient } from '@/utils/supabase/client'
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
+import { Badge } from "@/components/ui/badge"
 import {
   Form,
   FormControl,
@@ -95,6 +109,11 @@ const formSchema = z.object({
   processor: z.string().optional(),
   otherRequirements: z.string().optional(),
   logoUrl: z.string().optional().or(z.literal("")),
+  githubRepo: z.string().optional(),
+  githubProxy: z.string().optional(),
+  githubUseProxyOfficial: z.boolean().default(true),
+  githubAssetFilter: z.string().optional(),
+  githubAutoRedirect: z.boolean().default(true),
 })
 
 type FormValues = z.infer<typeof formSchema>
@@ -122,6 +141,18 @@ interface Software {
   isActive: boolean
   sortOrder: number
   logoUrl?: string
+  metadata?: {
+    github?: {
+      repo?: string
+      proxyPrefix?: string
+      sourceId?: string
+      useProxyAsOfficial?: boolean
+      assetFilter?: string
+      lastSyncAt?: string
+      autoRedirectDownload?: boolean
+    }
+    [key: string]: any
+  }
   createdAt: string
   updatedAt: string
 }
@@ -133,6 +164,9 @@ export default function SoftwareEdit() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [software, setSoftware] = useState<Software | null>(null)
+  const [githubModalOpen, setGithubModalOpen] = useState(false)
+  const [copiedDownloadUrl, setCopiedDownloadUrl] = useState(false)
+  const [fetchingRepoInfo, setFetchingRepoInfo] = useState(false)
 
   const softwareId = params.id as string
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL
@@ -157,7 +191,11 @@ export default function SoftwareEdit() {
       storage: "",
       processor: "",
       otherRequirements: "",
-      logoUrl: ""
+      logoUrl: "",
+      githubRepo: "",
+      githubProxy: "https://ghproxy.net/",
+      githubUseProxyOfficial: true,
+      githubAssetFilter: ""
     },
   })
 
@@ -192,7 +230,12 @@ export default function SoftwareEdit() {
             storage: softwareData.systemRequirements?.storage || "",
             processor: softwareData.systemRequirements?.processor || "",
             otherRequirements: softwareData.systemRequirements?.other || "",
-            logoUrl: softwareData.logoUrl || ""
+            logoUrl: softwareData.logoUrl || "",
+            githubRepo: softwareData.metadata?.github?.repo || "",
+            githubProxy: softwareData.metadata?.github?.proxyPrefix || "https://ghproxy.net/",
+            githubUseProxyOfficial: softwareData.metadata?.github?.useProxyAsOfficial ?? true,
+            githubAssetFilter: softwareData.metadata?.github?.assetFilter || "",
+            githubAutoRedirect: softwareData.metadata?.github?.autoRedirectDownload ?? true
           })
         } else {
           toast({
@@ -224,7 +267,6 @@ export default function SoftwareEdit() {
 
     try {
       // 获取Supabase会话信息
-      const { createClient } = await import('@/utils/supabase/client')
       const supabase = createClient()
       const { data: { session }, error } = await supabase.auth.getSession()
       
@@ -259,7 +301,17 @@ export default function SoftwareEdit() {
           other: values.otherRequirements
         },
         logoUrl: values.logoUrl,
-        metadata: {}
+        metadata: {
+          ...(software?.metadata || {}),
+          github: {
+            repo: values.githubRepo?.trim() || undefined,
+            proxyPrefix: values.githubProxy || 'https://ghproxy.net/',
+            useProxyAsOfficial: values.githubUseProxyOfficial ?? true,
+            assetFilter: values.githubAssetFilter?.trim() || undefined,
+            autoRedirectDownload: values.githubAutoRedirect ?? true,
+            lastSyncAt: software?.metadata?.github?.lastSyncAt,
+          }
+        }
       }
 
       const response = await fetch(`${API_BASE_URL}/software/id/${softwareId}`, {
@@ -298,6 +350,60 @@ export default function SoftwareEdit() {
       })
     } finally {
       setSaving(false)
+    }
+  }
+
+  // 从 GitHub 获取仓库信息并填入表单
+  const handleAutoFillFromGithub = async () => {
+    const repo = form.getValues('githubRepo')
+    if (!repo?.trim()) {
+      toast({
+        variant: 'destructive',
+        title: '请先输入 GitHub 仓库',
+        description: '例如: owner/repo 或完整 GitHub URL',
+      })
+      return
+    }
+
+    setFetchingRepoInfo(true)
+    try {
+      const res = await fetch(`${API_BASE_URL}/software/github?repo=${encodeURIComponent(repo.trim())}&action=details`)
+      const json = await res.json()
+
+      if (json.success && json.data?.repoDetails) {
+        const details = json.data.repoDetails
+        if (details.description && !form.getValues('description')) {
+          form.setValue('description', details.description)
+        }
+        if (details.description && !form.getValues('descriptionEn')) {
+          form.setValue('descriptionEn', details.description)
+        }
+        if ((details.homepage || details.htmlUrl) && !form.getValues('officialWebsite')) {
+          form.setValue('officialWebsite', details.homepage || details.htmlUrl)
+        }
+        if (details.topics && details.topics.length > 0 && !form.getValues('tags')) {
+          form.setValue('tags', details.topics.join(', '))
+        }
+        toast({
+          title: '信息获取成功',
+          description: '已将 GitHub 描述、官网及标签自动填入表单',
+        })
+      } else {
+        toast({
+          variant: 'destructive',
+          title: '获取失败',
+          description: json.error || '未能获取该仓库的信息',
+        })
+      }
+    } catch (error: any) {
+      console.error('Auto fill error:', error)
+      toast({
+        variant: 'destructive',
+        title: '请求失败',
+        description: error.message || '网络异常',
+      })
+    } finally {
+      setFetchingRepoInfo(false)
     }
   }
 
@@ -716,6 +822,239 @@ export default function SoftwareEdit() {
                   </CardContent>
                 </Card>
 
+                {/* GitHub 关联与同步设置 */}
+                <Card className="rounded-2xl border-black/[0.06] dark:border-white/[0.08] shadow-[0_4px_24px_-2px_rgba(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)]">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="flex items-center gap-2">
+                        <Download className="h-5 w-5 text-[#0071e3]" />
+                        GitHub 同步与仓库设置
+                      </CardTitle>
+                      {software?.metadata?.github?.lastSyncAt && (
+                        <span className="text-xs text-muted-foreground">
+                          上次同步: {new Date(software.metadata.github.lastSyncAt).toLocaleString('zh-CN')}
+                        </span>
+                      )}
+                    </div>
+                    <CardDescription>
+                      配置对应的 GitHub 仓库地址与镜像加速源，支持一键拉取仓库资料及自动同步版本和下载链接
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <FormField
+                        control={form.control}
+                        name="githubRepo"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="flex items-center gap-1">
+                              GitHub 仓库地址
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>支持 owner/repo 或完整 GitHub 链接 (例如: localsend/localsend)</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </FormLabel>
+                            <FormControl>
+                              <Input placeholder="例如: owner/repo 或 https://github.com/owner/repo" {...field} />
+                            </FormControl>
+                            <FormDescription>
+                              关联后可自动识别 Releases、Tag 及附件安装包
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="githubProxy"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="flex items-center gap-1.5">
+                              <Zap className="h-4 w-4 text-amber-500" />
+                              默认下载镜像加速源
+                            </FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value || 'https://ghproxy.net/'}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="选择加速源" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {ACCELERATION_SOURCES.map(source => (
+                                  <SelectItem key={source.id} value={source.prefix || 'direct'}>
+                                    {source.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormDescription>
+                              国内用户下载 GitHub 资产时的加速反代前缀
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <FormField
+                        control={form.control}
+                        name="githubUseProxyOfficial"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center justify-between rounded-xl border p-4">
+                            <div className="space-y-0.5">
+                              <FormLabel className="text-sm font-medium">主下载源使用加速链接</FormLabel>
+                              <FormDescription className="text-xs">
+                                开启后将加速链接保存为主下载地址，直连链接作为备用
+                              </FormDescription>
+                            </div>
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="githubAssetFilter"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>资产文件筛选规则 (可选)</FormLabel>
+                            <FormControl>
+                              <Input placeholder="例如: .exe, win, x64 (留空按平台扩展名优选)" {...field} />
+                            </FormControl>
+                            <FormDescription className="text-xs">
+                              Release 存在多个安装包时优先选中的文件名关键字
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <FormField
+                      control={form.control}
+                      name="githubAutoRedirect"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-xl border border-sky-100 dark:border-sky-950/40 bg-sky-50/40 dark:bg-sky-950/20 p-4">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <FormLabel className="text-sm font-semibold text-sky-900 dark:text-sky-300">
+                                方案 4：开启动态最新下载直链 (自动重定向)
+                              </FormLabel>
+                              <Badge variant="outline" className="bg-sky-100/80 text-sky-700 dark:bg-sky-900/60 dark:text-sky-300 text-[10px] border-sky-200">
+                                Vercel 推荐
+                              </Badge>
+                            </div>
+                            <FormDescription className="text-xs text-muted-foreground leading-relaxed">
+                              开启后下载端点将自动通过 10 分钟 SWR 边缘缓存重定向到 GitHub 最新 Release 镜像直链。无需每次手动同步，即使部署到 Vercel 也能永久保持最新！
+                            </FormDescription>
+                          </div>
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* 专属永久动态下载链接展示卡片 */}
+                    {softwareId && form.watch('githubRepo') && (
+                      <div className="rounded-xl border bg-card/60 p-4 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                            <Link2 className="h-3.5 w-3.5 text-primary" />
+                            该软件专属永久动态下载地址 (直达最新 Release):
+                          </span>
+                          <span className="text-[11px] text-muted-foreground">302 自动重定向</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <code className="flex-1 px-3 py-1.5 text-xs bg-muted/60 rounded-lg border font-mono truncate select-all">
+                            {typeof window !== 'undefined' ? `${window.location.origin}/app/software/id/${softwareId}/download` : `/app/software/id/${softwareId}/download`}
+                          </code>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="h-8 px-2.5 rounded-lg text-xs"
+                            onClick={() => {
+                              const url = `${window.location.origin}/app/software/id/${softwareId}/download`
+                              navigator.clipboard.writeText(url)
+                              setCopiedDownloadUrl(true)
+                              toast({ title: '已复制动态下载链接', description: url })
+                              setTimeout(() => setCopiedDownloadUrl(false), 2000)
+                            }}
+                          >
+                            {copiedDownloadUrl ? (
+                              <Check className="h-3.5 w-3.5 text-emerald-500 mr-1" />
+                            ) : (
+                              <Copy className="h-3.5 w-3.5 mr-1" />
+                            )}
+                            {copiedDownloadUrl ? '已复制' : '复制链接'}
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 px-2 rounded-lg text-xs text-muted-foreground hover:text-foreground"
+                            asChild
+                          >
+                            <a
+                              href={`/app/software/id/${softwareId}/download?json=true`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title="在新标签页测试解析结果"
+                            >
+                              <ExternalLink className="h-3.5 w-3.5 mr-1" />
+                              测试解析
+                            </a>
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 操作按钮组 */}
+                    <div className="flex flex-wrap items-center gap-3 pt-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleAutoFillFromGithub}
+                        disabled={fetchingRepoInfo}
+                        className="rounded-full text-xs font-medium"
+                      >
+                        {fetchingRepoInfo ? (
+                          <RefreshCw className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Sparkles className="mr-1.5 h-3.5 w-3.5 text-[#0071e3]" />
+                        )}
+                        获取仓库资料并填入表单
+                      </Button>
+
+                      <Button
+                        type="button"
+                        onClick={() => setGithubModalOpen(true)}
+                        className="rounded-full text-xs font-medium bg-[#0071e3] hover:bg-[#0077ed] text-white shadow-sm"
+                      >
+                        <Download className="mr-1.5 h-3.5 w-3.5" />
+                        打开 GitHub 版本同步面板
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+
                 {/* 设置 */}
                 <Card>
                   <CardHeader>
@@ -977,6 +1316,49 @@ export default function SoftwareEdit() {
       </div>
         </form>
       </Form>
+
+      {/* GitHub 版本同步弹窗 */}
+      <GithubSyncModal
+        open={githubModalOpen}
+        onOpenChange={setGithubModalOpen}
+        softwareId={software.id}
+        softwareName={software.name}
+        initialRepo={form.getValues('githubRepo') || software.metadata?.github?.repo}
+        initialProxyPrefix={form.getValues('githubProxy') || software.metadata?.github?.proxyPrefix}
+        initialSourceId={software.metadata?.github?.sourceId}
+        onSyncComplete={() => {
+          // 重新拉取详情，使更新后的版本号立即呈现在表单中
+          const fetchDetail = async () => {
+            try {
+              const res = await fetch(`${API_BASE_URL}/software/id/${softwareId}`)
+              const json = await res.json()
+              if (json.success && json.data) {
+                setSoftware(json.data)
+                if (json.data.currentVersion) {
+                  form.setValue('currentVersion', json.data.currentVersion)
+                }
+              }
+            } catch (e) {
+              console.error(e)
+            }
+          }
+          fetchDetail()
+        }}
+        onApplyRepoInfo={(info) => {
+          if (info.description && !form.getValues('description')) {
+            form.setValue('description', info.description)
+          }
+          if (info.officialWebsite && !form.getValues('officialWebsite')) {
+            form.setValue('officialWebsite', info.officialWebsite)
+          }
+          if (info.tags && info.tags.length > 0 && !form.getValues('tags')) {
+            form.setValue('tags', info.tags.join(', '))
+          }
+          if (info.filetype && !form.getValues('filetype')) {
+            form.setValue('filetype', info.filetype)
+          }
+        }}
+      />
     </div>
   )
 }

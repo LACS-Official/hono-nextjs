@@ -21,6 +21,8 @@ import {
   ExternalLink
 } from 'lucide-react'
 
+import GithubSyncModal from '@/components/GithubSyncModal'
+
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -172,6 +174,7 @@ export default function EnhancedVersionManager({
   const [autoUpdateLoading, setAutoUpdateLoading] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<number | null>(null)
+  const [githubModalOpen, setGithubModalOpen] = useState(false)
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL
 
@@ -625,6 +628,14 @@ export default function EnhancedVersionManager({
               }}>
                 <Plus className="mr-2 h-4 w-4" />
                 添加新版本
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => setGithubModalOpen(true)}
+                className="hover:bg-[#0071e3]/10 hover:text-[#0071e3]"
+              >
+                <Download className="mr-2 h-4 w-4 text-[#0071e3]" />
+                从 GitHub 导入
               </Button>
               <Button variant="outline" onClick={handleAutoUpdate} disabled={autoUpdateLoading}>
                 <RefreshCcw className={`mr-2 h-4 w-4 ${autoUpdateLoading ? 'animate-spin' : ''}`} />
@@ -1125,6 +1136,19 @@ export default function EnhancedVersionManager({
           )}
         </DialogContent>
       </Dialog>
+
+      {/* GitHub 同步与导入弹窗 */}
+      <GithubSyncModal
+        open={githubModalOpen}
+        onOpenChange={setGithubModalOpen}
+        softwareId={softwareId}
+        softwareName={softwareName}
+        onSyncComplete={() => {
+          fetchVersions()
+          fetchStats()
+          onVersionAdded?.()
+        }}
+      />
     </div>
   )
 }

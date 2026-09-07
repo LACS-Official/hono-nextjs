@@ -23,10 +23,15 @@ import {
   Tags,
   Upload,
   Image as ImageIcon,
-  X
+  X,
+  Sparkles,
+  Download,
+  RefreshCw,
+  Zap
 } from 'lucide-react'
 
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
@@ -101,6 +106,8 @@ export default function SoftwareNew() {
   const router = useRouter()
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
+  const [githubInput, setGithubInput] = useState('')
+  const [fetchingGithub, setFetchingGithub] = useState(false)
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema) as any, // 临时规避类型不匹配
@@ -125,6 +132,77 @@ export default function SoftwareNew() {
       logoUrl: ""
     },
   })
+
+  // 从 GitHub 快速导入资料
+  const handleImportFromGithub = async () => {
+    const repo = githubInput.trim()
+    if (!repo) {
+      toast({
+        variant: 'destructive',
+        title: '请输入 GitHub 仓库',
+        description: '例如: owner/repo 或 https://github.com/owner/repo',
+      })
+      return
+    }
+
+    setFetchingGithub(true)
+    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL
+    try {
+      const res = await fetch(`${API_BASE_URL}/software/github?repo=${encodeURIComponent(repo)}`)
+      const json = await res.json()
+
+      if (json.success && json.data) {
+        const d = json.data.repoDetails
+        const latestRelease = json.data.releases?.[0]
+
+        if (d.name && !form.getValues('name')) {
+          form.setValue('name', d.name)
+        }
+        if (d.name && !form.getValues('nameEn')) {
+          form.setValue('nameEn', d.name)
+        }
+        if (d.description && !form.getValues('description')) {
+          form.setValue('description', d.description)
+        }
+        if (d.description && !form.getValues('descriptionEn')) {
+          form.setValue('descriptionEn', d.description)
+        }
+        if ((d.homepage || d.htmlUrl) && !form.getValues('officialWebsite')) {
+          form.setValue('officialWebsite', d.homepage || d.htmlUrl)
+        }
+        if (d.topics && d.topics.length > 0 && !form.getValues('tags')) {
+          form.setValue('tags', d.topics.join(', '))
+        }
+        if (latestRelease?.normalizedVersion) {
+          form.setValue('currentVersion', latestRelease.normalizedVersion)
+        }
+        if (latestRelease?.primaryAsset) {
+          const extMatch = latestRelease.primaryAsset.name.match(/\.([a-zA-Z0-9]+)$/)
+          if (extMatch && !form.getValues('filetype')) {
+            form.setValue('filetype', extMatch[1].toLowerCase())
+          }
+        }
+        toast({
+          title: '导入成功',
+          description: `已自动填入 ${d.fullName} 仓库信息及最新版本 ${latestRelease?.tagName || ''}`,
+        })
+      } else {
+        toast({
+          variant: 'destructive',
+          title: '获取失败',
+          description: json.error || '无法获取仓库信息',
+        })
+      }
+    } catch (e: any) {
+      toast({
+        variant: 'destructive',
+        title: '请求失败',
+        description: e.message || '网络异常',
+      })
+    } finally {
+      setFetchingGithub(false)
+    }
+  }
 
   const onSubmit = async (values: FormValues) => {
     setLoading(true)
@@ -153,7 +231,13 @@ export default function SoftwareNew() {
           other: values.otherRequirements
         },
         logoUrl: values.logoUrl,
-        metadata: {}
+        metadata: {
+          github: githubInput.trim() ? {
+            repo: githubInput.trim(),
+            proxyPrefix: 'https://ghproxy.net/',
+            useProxyAsOfficial: true,
+          } : undefined
+        }
       }
 
       const response = await fetch(`${API_BASE_URL}/software`, {
@@ -243,7 +327,47 @@ export default function SoftwareNew() {
             {/* 左侧表单区域 */}
             <div className="lg:col-span-2 space-y-6">
               <div className="space-y-8">
-                    
+                    {/* GitHub 快速导入 */}
+                    <Card className="rounded-2xl border-black/[0.06] dark:border-white/[0.08] shadow-[0_4px_24px_-2px_rgba(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)] bg-gradient-to-r from-blue-50/50 via-white to-transparent dark:from-blue-950/20 dark:via-[#161617] dark:to-transparent">
+                        <CardHeader className="pb-3">
+                            <CardTitle className="text-base flex items-center justify-between">
+                                <span className="flex items-center gap-2">
+                                    <Download className="h-4 w-4 text-[#0071e3]" />
+                                    从 GitHub 快速导入
+                                </span>
+                                <Badge variant="secondary" className="text-[11px] font-normal">可选快速创建</Badge>
+                            </CardTitle>
+                            <CardDescription className="text-xs">
+                                输入 GitHub 仓库地址，一键自动获取软件名称、英文名、描述、官网、标签与最新版本号
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="flex gap-2">
+                                <Input
+                                    placeholder="输入 GitHub 仓库，例如: localsend/localsend"
+                                    value={githubInput}
+                                    onChange={(e) => setGithubInput(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleImportFromGithub())}
+                                    className="h-9 rounded-xl bg-white dark:bg-[#161617] text-sm"
+                                />
+                                <Button
+                                    type="button"
+                                    onClick={handleImportFromGithub}
+                                    disabled={fetchingGithub}
+                                    size="sm"
+                                    className="h-9 rounded-xl px-4 bg-[#0071e3] hover:bg-[#0077ed] text-white shadow-sm shrink-0"
+                                >
+                                    {fetchingGithub ? (
+                                        <RefreshCw className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                                    ) : (
+                                        <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+                                    )}
+                                    自动填入
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+
                     {/* 基本信息 */}
                     <Card>
                         <CardHeader>

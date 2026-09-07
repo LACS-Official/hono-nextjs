@@ -79,12 +79,22 @@ export async function GET(
       console.warn(`获取软件 ${softwareInfo.id} 最新版本信息失败:`, error)
     }
 
+    // 方案 4：动态永久下载端点与自动重定向
+    const dynamicDownloadUrl = `${request.nextUrl.origin}/app/software/id/${softwareInfo.id}/download`
+    const ghMeta = (softwareInfo.metadata as any)?.github
+
+    // 若配置了 GitHub 且开启动态最新重定向 (或本地尚无已入库下载链接)，使用永久动态下载端点
+    if (ghMeta?.repo && (ghMeta?.autoRedirectDownload !== false || !latestDownloadUrl)) {
+      latestDownloadUrl = dynamicDownloadUrl
+    }
+
     return corsResponse({
       success: true,
       data: {
         ...softwareInfo,
         currentVersionId,
         latestDownloadUrl,
+        dynamicDownloadUrl,
         latestAnnouncements
       }
     }, undefined, origin, userAgent)

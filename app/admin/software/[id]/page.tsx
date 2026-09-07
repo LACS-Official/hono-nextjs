@@ -16,8 +16,11 @@ import {
   Hash,
   Package,
   FileCode,
-  Globe
+  Globe,
+  Download
 } from 'lucide-react'
+
+import GithubSyncModal from '@/components/GithubSyncModal'
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -77,6 +80,17 @@ interface Software {
   filetype?: string
   isActive: boolean
   sortOrder: number
+  metadata?: {
+    github?: {
+      repo?: string
+      proxyPrefix?: string
+      sourceId?: string
+      useProxyAsOfficial?: boolean
+      assetFilter?: string
+      lastSyncAt?: string
+    }
+    [key: string]: any
+  }
   createdAt: string
   updatedAt: string
 }
@@ -89,6 +103,7 @@ export default function SoftwareDetail() {
   const [loading, setLoading] = useState(true)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [githubModalOpen, setGithubModalOpen] = useState(false)
 
   const softwareId = params.id as string
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL
@@ -244,6 +259,14 @@ export default function SoftwareDetail() {
           <Button variant="outline" onClick={() => router.push('/admin/software')}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             返回
+          </Button>
+          <Button 
+            variant="outline"
+            className="hover:bg-[#0071e3]/10 hover:text-[#0071e3] border-black/[0.08] dark:border-white/[0.1]"
+            onClick={() => setGithubModalOpen(true)}
+          >
+            <Download className="mr-2 h-4 w-4 text-[#0071e3]" />
+            从 GitHub 同步
           </Button>
           <Link href={`/admin/software/${software.id}/edit`}>
             <Button>
@@ -460,6 +483,33 @@ export default function SoftwareDetail() {
                       </div>
                     </>
                   )}
+                  {software.metadata?.github?.repo && (
+                    <>
+                      <Separator />
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                          <Download className="h-4 w-4 text-[#0071e3]" />
+                          关联 GitHub 仓库
+                        </p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <a 
+                            href={`https://github.com/${software.metadata.github.repo}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-sm text-primary hover:underline flex items-center gap-1 font-mono"
+                          >
+                            {software.metadata.github.repo}
+                            <ExternalLink className="h-3 w-3" />
+                          </a>
+                          {software.metadata.github.proxyPrefix && (
+                            <Badge variant="outline" className="text-xs">
+                              加速源: {software.metadata.github.proxyPrefix}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -471,6 +521,14 @@ export default function SoftwareDetail() {
                   <CardTitle className="text-base">快速操作</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start text-[#0071e3] hover:text-[#0071e3] hover:bg-[#0071e3]/10"
+                    onClick={() => setGithubModalOpen(true)}
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    从 GitHub 同步版本
+                  </Button>
                   <Link href={`/admin/software/${software.id}/edit`} className="block">
                     <Button variant="outline" className="w-full justify-start">
                       <Edit className="mr-2 h-4 w-4" />
@@ -534,6 +592,20 @@ export default function SoftwareDetail() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* GitHub 同步弹窗 */}
+      <GithubSyncModal
+        open={githubModalOpen}
+        onOpenChange={setGithubModalOpen}
+        softwareId={software.id}
+        softwareName={software.name}
+        initialRepo={software.metadata?.github?.repo}
+        initialProxyPrefix={software.metadata?.github?.proxyPrefix}
+        initialSourceId={software.metadata?.github?.sourceId}
+        onSyncComplete={() => {
+          fetchSoftwareDetail()
+        }}
+      />
     </div>
   )
 }

@@ -26,6 +26,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { createClient } from '@/utils/supabase/client'
 
 // 统计数据接口
 interface DashboardStats {
@@ -100,7 +101,6 @@ export default function AdminDashboard() {
       setError(null)
 
       // 获取Supabase会话
-      const { createClient } = await import('@/utils/supabase/client')
       const supabase = createClient()
       const { data: { session } } = await supabase.auth.getSession()
       

@@ -61,6 +61,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { createClient } from '@/utils/supabase/client'
 
 interface UsageRecord {
   id: string
@@ -149,7 +150,6 @@ export default function UserBehaviorPage() {
       }
 
       // 获取Supabase会话
-      const { createClient } = await import('@/utils/supabase/client')
       const supabase = createClient()
       const { data: { session } } = await supabase.auth.getSession()
       
@@ -209,7 +209,6 @@ export default function UserBehaviorPage() {
       }
 
       // 获取Supabase会话
-      const { createClient } = await import('@/utils/supabase/client')
       const supabase = createClient()
       const { data: { session } } = await supabase.auth.getSession()
       
@@ -254,7 +253,6 @@ export default function UserBehaviorPage() {
   // 删除使用记录
   const handleDeleteUsage = async (id: string) => {
     try {
-      const { createClient } = await import('@/utils/supabase/client')
       const supabase = createClient()
       const { data: { session } } = await supabase.auth.getSession()
       
@@ -282,7 +280,6 @@ export default function UserBehaviorPage() {
   // 删除设备连接记录
   const handleDeleteDevice = async (id: string) => {
     try {
-      const { createClient } = await import('@/utils/supabase/client')
       const supabase = createClient()
       const { data: { session } } = await supabase.auth.getSession()
       
@@ -312,7 +309,6 @@ export default function UserBehaviorPage() {
     if (!blockTarget) return
     
     try {
-      const { createClient } = await import('@/utils/supabase/client')
       const supabase = createClient()
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return

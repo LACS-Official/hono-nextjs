@@ -117,12 +117,22 @@ export async function GET(
       console.warn(`获取软件 ${softwareId} 最新版本信息失败:`, error)
     }
 
+    // 方案 4：动态永久下载端点与自动重定向
+    const dynamicDownloadUrl = `${request.nextUrl.origin}/app/software/id/${softwareId}/download`
+    const ghMeta = (updatedSoftwareInfo.metadata as any)?.github
+
+    // 若配置了 GitHub 且开启动态最新重定向 (或本地尚无已入库下载链接)，使用永久动态下载端点
+    if (ghMeta?.repo && (ghMeta?.autoRedirectDownload !== false || !latestDownloadUrl)) {
+      latestDownloadUrl = dynamicDownloadUrl
+    }
+
     return corsResponse({
       success: true,
       data: {
         ...updatedSoftwareInfo,
         currentVersionId,
-        latestDownloadUrl
+        latestDownloadUrl,
+        dynamicDownloadUrl,
       }
     }, undefined, origin, userAgent)
     
@@ -209,9 +219,14 @@ export async function PUT(
       isActive,
       sortOrder,
       logoUrl,
-      metadata = {}
+      metadata
     } = body
     
+    // 合并元数据，避免直接覆盖清空
+    const mergedMetadata = metadata !== undefined
+      ? { ...((existingSoftware.metadata as Record<string, any>) || {}), ...metadata }
+      : existingSoftware.metadata
+
     const [updatedSoftware] = await db
       .update(software)
       .set({
@@ -233,7 +248,7 @@ export async function PUT(
         ...(typeof isActive === 'boolean' && { isActive }),
         ...(typeof sortOrder === 'number' && { sortOrder }),
         ...(logoUrl !== undefined && { logoUrl }),
-        metadata,
+        metadata: mergedMetadata,
         updatedAt: new Date()
       })
       .where(eq(software.id, softwareId))

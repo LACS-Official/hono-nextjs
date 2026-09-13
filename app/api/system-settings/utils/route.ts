@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({
           success: true,
-          data: categories.map(c => c.category),
+          data: categories.map((c: any) => c.category),
         })
 
       case 'export':
@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
         const settingsToExport = await exportQuery.orderBy(systemSettings.category, systemSettings.key)
         
         // 过滤敏感信息
-        const sanitizedSettings = settingsToExport.map(setting => ({
+        const sanitizedSettings = settingsToExport.map((setting: any) => ({
           category: setting.category,
           key: setting.key,
           value: setting.isSecret ? '***' : setting.value,
@@ -262,7 +262,7 @@ export async function POST(request: NextRequest) {
             { 
               success: false, 
               error: '不能删除必需设置',
-              data: requiredSettings.map(s => ({ id: s.id, key: s.key, category: s.category }))
+              data: requiredSettings.map((s: any) => ({ id: s.id, key: s.key, category: s.category }))
             },
             { status: 400 }
           )

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { systemSettingsDb, ensureSystemSettingsTables, safeQuery } from '@/lib/system-settings-db'
 import { loginLogs } from '@/lib/system-settings-schema'
 import { SupabaseSystemSettingsService } from '@/lib/supabase-system-settings'
-import { eq, and, desc, gte, lte, like } from 'drizzle-orm'
+import { eq, and, desc, gte, lte, like, type SQL } from 'drizzle-orm'
 import { sql } from 'drizzle-orm'
 import { authenticateRequest, isAuthorizedAdmin } from '@/lib/auth'
 import { parseUserAgent, getClientIp, getNetworkInfo, getIpLocation } from '@/lib/login-log-utils'
@@ -192,7 +192,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 构建查询条件
-    const conditions = []
+    const conditions: SQL[] = []
 
     if (searchParams.get('userId')) {
       conditions.push(eq(loginLogs.userId, searchParams.get('userId')!))

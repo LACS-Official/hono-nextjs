@@ -269,7 +269,7 @@ export const getUserLoginHistory = async (userId: string, limit: number = 20, of
         .select({ count: sql<number>`count(*)`.as('count') })
         .from(loginLogs)
         .where(eq(loginLogs.userId, userId))
-        .then(result => result[0]?.count || 0)
+        .then((result: any) => result[0]?.count || 0)
     ])
 
     return { logs, totalCount }

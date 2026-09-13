@@ -14,6 +14,7 @@ import { authenticateRequest } from '@/lib/auth'
 import { headers } from 'next/headers'
 import { SettingValidator } from '@/lib/setting-validator'
 import { AuditLogService, AuditAction } from '@/lib/audit-log-service'
+import { syncSettingToProcessEnv } from '@/lib/system-config-sync'
 
 // 验证模式
 const updateSystemSettingSchema = z.object({
@@ -173,6 +174,11 @@ export async function PUT(
           .returning()
       )
       updatedResult = result[0]
+    }
+
+    // 立即同步到运行时 process.env 使全局接口生效
+    if (updatedResult?.key && validatedData.value !== undefined) {
+      syncSettingToProcessEnv(updatedResult.key, validatedData.value)
     }
 
     // 记录审计日志

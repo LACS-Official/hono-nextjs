@@ -126,6 +126,7 @@ export default function SoftwareManagement() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [batchDeleteDialogOpen, setBatchDeleteDialogOpen] = useState(false)
   const [softwareToDelete, setSoftwareToDelete] = useState<number | null>(null)
+  const [syncingAllGithub, setSyncingAllGithub] = useState(false)
 
   // 根据屏幕尺寸自动切换视图模式
   useEffect(() => {
@@ -312,6 +313,37 @@ export default function SoftwareManagement() {
     toast({ title: '导出功能开发中...', description: "敬请期待" })
   }
 
+  // 一键全量同步所有关联 GitHub 的软件
+  const handleSyncAllGithub = async () => {
+    setSyncingAllGithub(true)
+    try {
+      const res = await fetch('/api/cron/github-sync', { method: 'POST' })
+      const data = await res.json()
+      if (data.success) {
+        toast({
+          title: 'GitHub 软件全量同步完成',
+          description: `共扫描 ${data.total} 款软件，成功同步 ${data.successCount} 款，新增 ${data.newVersionsCount} 个版本。`,
+        })
+        fetchSoftware(pagination.current, pagination.pageSize)
+        fetchStats()
+      } else {
+        toast({
+          variant: 'destructive',
+          title: '同步失败',
+          description: data.error || '未能完成同步，请检查网络连接',
+        })
+      }
+    } catch (err: any) {
+      toast({
+        variant: 'destructive',
+        title: '同步异常',
+        description: err.message || '网络请求超时或异常',
+      })
+    } finally {
+      setSyncingAllGithub(false)
+    }
+  }
+
   const handleSoftwareAction = {
     view: (software: Software) => router.push(`/admin/software/${software.id}`),
     edit: (software: Software) => router.push(`/admin/software/${software.id}/edit`),
@@ -355,12 +387,21 @@ export default function SoftwareManagement() {
               </p>
             </div>
             <div className="flex items-center gap-2">
-                 <Link href="/admin/software/new">
-                     <Button>
-                         <Plus className="mr-2 h-4 w-4" />
-                         新增软件
-                     </Button>
-                 </Link>
+              <Button
+                variant="outline"
+                onClick={handleSyncAllGithub}
+                disabled={syncingAllGithub}
+                className="rounded-lg text-xs h-9 px-3"
+              >
+                <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${syncingAllGithub ? 'animate-spin' : ''}`} />
+                {syncingAllGithub ? '正在全量同步...' : '一键同步 GitHub'}
+              </Button>
+              <Link href="/admin/software/new">
+                <Button className="rounded-lg text-xs h-9 px-3">
+                  <Plus className="mr-1.5 h-3.5 w-3.5" />
+                  新增软件
+                </Button>
+              </Link>
             </div>
           </div>
 

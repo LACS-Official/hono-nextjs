@@ -12,6 +12,7 @@ import { eq, and, ilike, or, desc, sql } from 'drizzle-orm'
 import { v4 as uuidv4 } from 'uuid'
 import { authenticateRequest } from '@/lib/auth'
 import { AuditLogService, AuditAction } from '@/lib/audit-log-service'
+import { syncSettingToProcessEnv, batchSyncSettingsToProcessEnv } from '@/lib/system-config-sync'
 
 // GET /api/system-settings - 获取系统设置列表
 export async function GET(request: NextRequest) {
@@ -30,6 +31,10 @@ export async function GET(request: NextRequest) {
         page,
         limit,
       })
+
+      if (result?.settings) {
+        batchSyncSettingsToProcessEnv(result.settings)
+      }
 
       return NextResponse.json({
         success: true,
@@ -144,29 +149,47 @@ export async function POST(request: NextRequest) {
       )
 
       if (existing.length > 0) {
-        return NextResponse.json(
-          { success: false, error: `分类 ${category} 下已存在键名为 ${key} 的配置` },
-          { status: 400 }
+        await safeQuery(() =>
+          systemSettingsDb
+            .update(systemSettings)
+            .set({
+              value: value !== undefined ? String(value) : '',
+              description: description || existing[0].description,
+              type: type || existing[0].type,
+              updatedAt: new Date(),
+              updatedBy: userId
+            })
+            .where(eq(systemSettings.id, existing[0].id))
         )
-      }
+        newSetting = {
+          ...existing[0],
+          value: value !== undefined ? String(value) : '',
+          description: description || existing[0].description,
+          updatedAt: new Date(),
+          updatedBy: userId
+        }
+      } else {
+        newSetting = {
+          id: uuidv4(),
+          category,
+          key,
+          value: value !== undefined ? String(value) : '',
+          description: description || '',
+          type: type || 'string',
+          isSecret: Boolean(isSecret),
+          isRequired: Boolean(isRequired),
+          validationRules: validationRules || null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          updatedBy: userId
+        }
 
-      newSetting = {
-        id: uuidv4(),
-        category,
-        key,
-        value: value !== undefined ? String(value) : '',
-        description: description || '',
-        type: type || 'string',
-        isSecret: Boolean(isSecret),
-        isRequired: Boolean(isRequired),
-        validationRules: validationRules || null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        updatedBy: userId
+        await safeQuery(() => systemSettingsDb.insert(systemSettings).values(newSetting))
       }
-
-      await safeQuery(() => systemSettingsDb.insert(systemSettings).values(newSetting))
     }
+
+    // 立即同步到运行时 process.env 使全局接口生效
+    syncSettingToProcessEnv(key, value)
 
     // 记录审计日志
     try {

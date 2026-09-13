@@ -304,6 +304,57 @@ app.post('/auth/login', async (c) => {
     const now = new Date()
     const isVip = user.vipExpireAt !== null && new Date(user.vipExpireAt) > now
 
+    // 异步记录登录日志并检测新设备/异地登录触发告警邮件
+    const userAgent = c.req.header('user-agent') || 'Unknown'
+    const forwarded = c.req.header('x-forwarded-for')
+    const clientIp = forwarded ? forwarded.split(',')[0].trim() : (c.req.header('x-real-ip') || '127.0.0.1')
+
+    import('@/lib/login-log-utils').then(async ({ parseUserAgent, getIpLocation, inspectAndNotifyLogin }) => {
+      try {
+        const { systemSettingsDb, ensureSystemSettingsTables } = await import('@/lib/system-settings-db')
+        const { loginLogs } = await import('@/lib/system-settings-schema')
+        const { v4: uuidv4 } = await import('uuid')
+
+        const deviceInfo = parseUserAgent(userAgent)
+        const ipLocation = await getIpLocation(clientIp)
+        const networkInfo = {
+          country: ipLocation.country,
+          region: ipLocation.region,
+          city: ipLocation.city,
+          isp: ipLocation.isp,
+          timezone: ipLocation.timezone,
+        }
+
+        const logId = uuidv4()
+        await ensureSystemSettingsTables()
+        await systemSettingsDb.insert(loginLogs).values({
+          id: logId,
+          userId: user.id,
+          email: user.email,
+          ipAddress: clientIp,
+          userAgent,
+          deviceInfo,
+          networkInfo,
+          loginTime: new Date(),
+          sessionId: token.slice(0, 255),
+          isActive: true,
+          createdAt: new Date(),
+        })
+
+        await inspectAndNotifyLogin({
+          userId: user.id,
+          email: user.email,
+          ipAddress: clientIp,
+          userAgent,
+          deviceInfo,
+          networkInfo,
+          currentLogId: logId,
+        })
+      } catch (logErr) {
+        console.warn('[App User Login] 记录登录日志与安全检测被跳过:', logErr)
+      }
+    })
+
     return c.json({
       success: true,
       message: '登录成功',

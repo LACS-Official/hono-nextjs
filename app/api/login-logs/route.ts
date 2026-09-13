@@ -4,8 +4,7 @@ import { loginLogs } from '@/lib/system-settings-schema'
 import { SupabaseSystemSettingsService } from '@/lib/supabase-system-settings'
 import { eq, and, desc, gte, lte, like, type SQL } from 'drizzle-orm'
 import { sql } from 'drizzle-orm'
-import { authenticateRequest, isAuthorizedAdmin } from '@/lib/auth'
-import { parseUserAgent, getClientIp, getNetworkInfo, getIpLocation } from '@/lib/login-log-utils'
+import { parseUserAgent, getClientIp, getNetworkInfo, getIpLocation, inspectAndNotifyLogin } from '@/lib/login-log-utils'
 import { v4 as uuidv4 } from 'uuid'
 
 // POST方法 - 记录登录日志
@@ -65,6 +64,17 @@ export async function POST(request: NextRequest) {
     await systemSettingsDb.insert(loginLogs).values(newLog)
     
     console.log('登录日志记录成功:', { userId, email, sessionId })
+
+    // 异步触发新设备 / 异地登录检测与邮件告警通知
+    inspectAndNotifyLogin({
+      userId,
+      email,
+      ipAddress,
+      userAgent,
+      deviceInfo,
+      networkInfo,
+      currentLogId: newLog.id,
+    }).catch(err => console.error('[Login Alert] 后台登录告警检测异常:', err))
     
     return NextResponse.json({
       success: true,

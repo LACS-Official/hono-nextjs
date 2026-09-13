@@ -8,6 +8,7 @@ import {
   syncGithubReleasesToSoftware,
   ACCELERATION_SOURCES,
 } from '@/lib/github-sync'
+import { initSystemConfigFromDb } from '@/lib/system-config-sync'
 
 // OPTIONS 处理
 export async function OPTIONS(request: NextRequest) {
@@ -18,6 +19,7 @@ export async function OPTIONS(request: NextRequest) {
 
 // GET /app/software/github - 拉取 GitHub 仓库信息与 Release 列表
 export async function GET(request: NextRequest) {
+  await initSystemConfigFromDb()
   const origin = request.headers.get('origin')
   const userAgent = request.headers.get('user-agent')
 

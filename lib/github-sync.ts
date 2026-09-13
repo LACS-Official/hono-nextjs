@@ -6,6 +6,7 @@
 import { unifiedDb as db, software, softwareVersionHistory } from '@/lib/unified-db-connection'
 import { eq, and, desc } from 'drizzle-orm'
 import { compareVersions, updateLatestVersion, isValidVersion } from '@/lib/version-manager'
+import { initSystemConfigFromDb } from '@/lib/system-config-sync'
 
 export * from './github-constants'
 import {
@@ -68,6 +69,9 @@ export async function fetchGithubRepoDetails(
   repo: string,
   token?: string
 ): Promise<GithubRepoDetails> {
+  if (!token && !process.env.GITHUB_TOKEN) {
+    await initSystemConfigFromDb()
+  }
   const url = `https://api.github.com/repos/${owner}/${repo}`
   const response = await fetch(url, {
     headers: getGithubHeaders(token),
@@ -124,6 +128,10 @@ export async function fetchGithubReleases(
   const proxyPrefix = options?.proxyPrefix || 'https://ghproxy.net/'
   const sourceId = options?.sourceId || 'ghproxy_net'
   const assetFilter = options?.assetFilter
+
+  if (!token && !process.env.GITHUB_TOKEN) {
+    await initSystemConfigFromDb()
+  }
 
   const url = `https://api.github.com/repos/${owner}/${repo}/releases?page=${page}&per_page=${perPage}`
   const response = await fetch(url, {
@@ -572,5 +580,115 @@ export async function getLatestGithubReleaseDownloadUrl(options: {
   } catch (err) {
     console.error(`[getLatestGithubReleaseDownloadUrl] 获取 ${owner}/${repo} 失败:`, err)
     return null
+  }
+}
+
+export interface BatchSyncResult {
+  total: number
+  successCount: number
+  failedCount: number
+  newVersionsCount: number
+  durationMs: number
+  results: Array<{
+    id: number
+    name: string
+    repo: string
+    success: boolean
+    newVersions: number
+    updatedVersions: number
+    currentVersion: string
+    message: string
+    error?: string
+  }>
+}
+
+/**
+ * 全量/定时扫描并同步所有关联了 GitHub 的软件版本
+ */
+export async function syncAllGithubSoftware(options?: {
+  customToken?: string
+  overwriteExisting?: boolean
+}): Promise<BatchSyncResult> {
+  const startTime = Date.now()
+  await initSystemConfigFromDb()
+  const allSoftware = await db.select().from(software)
+
+  // 过滤出关联了 GitHub Repo 的软件 (支持 metadata.github.repo 或从官网提取 GitHub 仓库)
+  const githubList = allSoftware.map(item => {
+    const meta = (item.metadata as Record<string, any>) || {}
+    let repo = meta?.github?.repo && typeof meta.github.repo === 'string' ? meta.github.repo.trim() : ''
+
+    if (!repo && item.officialWebsite && item.officialWebsite.includes('github.com')) {
+      const parsed = parseGithubRepo(item.officialWebsite)
+      if (parsed) {
+        repo = `${parsed.owner}/${parsed.repo}`
+      }
+    }
+
+    return {
+      item,
+      repo,
+      ghMeta: meta.github || {},
+    }
+  }).filter(entry => Boolean(entry.repo))
+
+  const results: BatchSyncResult['results'] = []
+  let successCount = 0
+  let failedCount = 0
+  let newVersionsCount = 0
+
+  for (const entry of githubList) {
+    const { item, repo, ghMeta } = entry
+    try {
+      const syncRes = await syncGithubReleasesToSoftware({
+        softwareId: item.id,
+        repo,
+        proxyPrefix: ghMeta.proxyPrefix,
+        sourceId: ghMeta.sourceId,
+        useProxyAsOfficial: ghMeta.useProxyAsOfficial,
+        assetFilter: ghMeta.assetFilter,
+        syncLatestOnly: true, // 定时同步拉取最新，低频低负载
+        overwriteExisting: options?.overwriteExisting || false,
+        customToken: options?.customToken,
+      })
+
+      successCount++
+      newVersionsCount += syncRes.syncedCount
+      results.push({
+        id: item.id,
+        name: item.name,
+        repo,
+        success: true,
+        newVersions: syncRes.syncedCount,
+        updatedVersions: syncRes.updatedCount || 0,
+        currentVersion: item.currentVersion || '',
+        message: syncRes.message,
+      })
+    } catch (err: any) {
+      failedCount++
+      results.push({
+        id: item.id,
+        name: item.name,
+        repo: ghMeta.repo,
+        success: false,
+        newVersions: 0,
+        updatedVersions: 0,
+        currentVersion: item.currentVersion || '',
+        message: '同步失败',
+        error: err.message || String(err),
+      })
+    }
+
+    // 每次间隔 300ms，规避 GitHub API 频率限制
+    await new Promise(resolve => setTimeout(resolve, 300))
+  }
+
+  return {
+    total: githubList.length,
+    successCount,
+    failedCount,
+    newVersionsCount,
+    durationMs: Date.now() - startTime,
+    results,
   }
 }

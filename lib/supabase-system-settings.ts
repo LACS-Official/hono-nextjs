@@ -155,7 +155,15 @@ export const SupabaseSystemSettingsService = {
       .maybeSingle()
 
     if (existing) {
-      throw new Error(`分类 ${setting.category} 下已存在键名为 ${setting.key} 的配置`)
+      return await this.updateSetting(existing.id, {
+        value: setting.value,
+        description: setting.description,
+        type: setting.type,
+        isSecret: setting.isSecret,
+        isRequired: setting.isRequired,
+        validationRules: setting.validationRules,
+        updatedBy: setting.userId || 'admin',
+      })
     }
 
     const id = uuidv4()

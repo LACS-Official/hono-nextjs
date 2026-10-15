@@ -11,10 +11,15 @@ const getAllowedOrigins = (): string[] => {
   // 默认允许的域名列表
   return [
     'https://admin.lacs.cc',
+    'https://admt.lacs.cc',
+    'https://admtapk.lacs.cc',
+    'https://www.lacs.cc',
+    'https://lacs.cc',
     'http://localhost:29351', // 开发环境
     'http://localhost:1420', // 开发环境
     'http://localhost:3000', // 开发环境备用端口
     'http://localhost:3001', // 开发环境备用端口
+    'http://localhost:4321', // Astro 默认开发端口
     'tauri://localhost', // Tauri 桌面应用
   
     // API 测试工具支持
@@ -56,9 +61,10 @@ export function getCorsHeaders(origin?: string | null, userAgent?: string | null
   // 默认允许来源，优先严格回显实际 Origin
   let allowedOrigin = 'null'
 
-  // 如果存在 Origin，按白名单或常见测试工具策略放行并回显 Origin
+  // 如果存在 Origin，按白名单、*.lacs.cc 官方域名或常见测试工具策略放行并回显 Origin
   if (origin) {
-    const isAllowed = allowedOrigins.includes(origin) || isApiTestingTool(origin, userAgent) || isDevelopment
+    const isLacsDomain = /^https:\/\/([a-zA-Z0-9-]+\.)?lacs\.cc$/.test(origin)
+    const isAllowed = allowedOrigins.includes(origin) || isLacsDomain || isApiTestingTool(origin, userAgent) || isDevelopment
     allowedOrigin = isAllowed ? origin : 'null'
   } else {
     // 无 Origin 的场景（如原生应用、某些环境），在开发模式下允许 tauri://localhost

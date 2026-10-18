@@ -18,7 +18,8 @@ import {
   Globe,
   BarChart,
   Info,
-  BookOpen
+  BookOpen,
+  Bug
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { ThemeToggle } from '@/components/ThemeToggle'
@@ -91,6 +92,11 @@ export default function Navigation({ className, collapsed, setCollapsed, isMobil
       href: '/admin/user-behavior',
       icon: BarChart,
       label: '用户行为统计',
+    },
+    {
+      href: '/admin/crash-reports',
+      icon: Bug,
+      label: '崩溃日志监控',
     },
     {
       href: '/admin/donors',

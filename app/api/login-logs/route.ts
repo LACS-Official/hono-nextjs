@@ -6,6 +6,16 @@ import { eq, and, desc, gte, lte, like, type SQL } from 'drizzle-orm'
 import { sql } from 'drizzle-orm'
 import { parseUserAgent, getClientIp, getNetworkInfo, getIpLocation, inspectAndNotifyLogin } from '@/lib/login-log-utils'
 import { v4 as uuidv4 } from 'uuid'
+import { corsResponse, handleOptions, validateApiKeyWithExpiration } from '@/lib/cors'
+import { authenticateRequest, isAuthorizedAdmin } from '@/lib/auth'
+
+// OPTIONS 方法处理 CORS 预检请求
+export async function OPTIONS(request: NextRequest) {
+  const origin = request.headers.get('Origin')
+  const userAgent = request.headers.get('User-Agent')
+  return handleOptions(origin, userAgent)
+}
+
 
 // POST方法 - 记录登录日志
 export async function POST(request: NextRequest) {
@@ -92,6 +102,18 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    // 验证管理员权限
+    const authResult = await authenticateRequest(request)
+    const apiKeyResult = validateApiKeyWithExpiration(request)
+    const isAuthorized = (authResult.success && authResult.user && isAuthorizedAdmin(authResult.user)) || apiKeyResult.isValid
+
+    if (!isAuthorized) {
+      return NextResponse.json(
+        { success: false, error: '未授权访问：需要管理员权限' },
+        { status: 401 }
+      )
+    }
+
     console.log('开始处理登录日志DELETE请求')
     
     const body = await request.json()
@@ -163,8 +185,17 @@ export async function GET(request: NextRequest) {
   try {
     console.log('开始处理登录日志GET请求')
     
-    // 临时绕过认证 - 仅用于测试
-    console.log('临时绕过认证，直接处理请求')
+    // 验证管理员权限
+    const authResult = await authenticateRequest(request)
+    const apiKeyResult = validateApiKeyWithExpiration(request)
+    const isAuthorized = (authResult.success && authResult.user && isAuthorizedAdmin(authResult.user)) || apiKeyResult.isValid
+
+    if (!isAuthorized) {
+      return NextResponse.json(
+        { success: false, error: '未授权访问：需要管理员权限' },
+        { status: 401 }
+      )
+    }
     
     // 解析查询参数
     const searchParams = request.nextUrl.searchParams

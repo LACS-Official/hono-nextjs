@@ -7,7 +7,7 @@
 
 import { NextRequest } from 'next/server'
 import { unifiedDb as db, websites, banners, announcements } from '@/lib/unified-db-connection'
-import { eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { corsResponse, handleOptions } from '@/lib/cors'
 import { authenticateRequest, isAuthorizedAdmin } from '@/lib/auth'
 import { z } from 'zod'
@@ -75,14 +75,14 @@ export async function GET(
       }, { status: 404 }, origin, userAgent)
     }
 
-    // 获取相关统计信息
-    const [bannersCount] = await db
-      .select({ count: banners.id })
+    // 获取相关统计信息（真实 SQL 聚合统计）
+    const [bannersResult] = await db
+      .select({ count: sql<number>`count(*)` })
       .from(banners)
       .where(eq(banners.websiteId, websiteId))
 
-    const [announcementsCount] = await db
-      .select({ count: announcements.id })
+    const [announcementsResult] = await db
+      .select({ count: sql<number>`count(*)` })
       .from(announcements)
       .where(eq(announcements.websiteId, websiteId))
 
@@ -91,8 +91,8 @@ export async function GET(
       data: {
         website,
         stats: {
-          bannersCount: bannersCount?.count || 0,
-          announcementsCount: announcementsCount?.count || 0,
+          bannersCount: Number(bannersResult?.count || 0),
+          announcementsCount: Number(announcementsResult?.count || 0),
         }
       }
     }, undefined, origin, userAgent)

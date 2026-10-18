@@ -3,7 +3,7 @@ import { unifiedDb as db, software } from '@/lib/unified-db-connection'
 import { eq, like, and, desc, asc, sql } from 'drizzle-orm'
 import { corsResponse, handleOptions } from '@/lib/cors'
 import { authenticateRequest, isAuthorizedAdmin } from '@/lib/auth'
-import { getLatestVersion, getLatestVersionWithId } from '@/lib/version-manager'
+import { getLatestVersion, getLatestVersionWithId, getLatestVersionsForSoftwareIds } from '@/lib/version-manager'
 
 // OPTIONS 处理
 export async function OPTIONS(request: NextRequest) {
@@ -108,41 +108,33 @@ export async function GET(request: NextRequest) {
       .limit(limit)
       .offset(offset)
 
-    // 为每个软件添加最新版本信息和版本ID
-    const enhancedSoftwareList = await Promise.all(
-      softwareList.map(async (sw) => {
-        // 确保日期字段是有效的Date对象
-        const processedSoftware = {
-          ...sw,
-          createdAt: sw.createdAt instanceof Date ? sw.createdAt : new Date(sw.createdAt),
-          updatedAt: sw.updatedAt instanceof Date ? sw.updatedAt : new Date(sw.updatedAt)
-        };
-        
-        try {
-          const latestVersionInfo = await getLatestVersionWithId(processedSoftware.id)
-          return {
-            ...processedSoftware,
-            currentVersionId: latestVersionInfo?.id || null,
-            latestVersion: latestVersionInfo?.version || processedSoftware.currentVersion
-          }
-        } catch (error) {
-          console.warn(`获取软件 ${processedSoftware.id} 最新版本失败:`, error)
-          return {
-            ...processedSoftware,
-            currentVersionId: null,
-            latestVersion: processedSoftware.currentVersion
-          }
-        }
-      })
-    )
+    // 批量查询版本信息，解决 N+1 瓶颈
+    const softwareIds = softwareList.map(sw => sw.id)
+    const versionsMap = await getLatestVersionsForSoftwareIds(softwareIds)
+
+    const enhancedSoftwareList = softwareList.map((sw) => {
+      // 确保日期字段是有效的Date对象
+      const processedSoftware = {
+        ...sw,
+        createdAt: sw.createdAt instanceof Date ? sw.createdAt : new Date(sw.createdAt),
+        updatedAt: sw.updatedAt instanceof Date ? sw.updatedAt : new Date(sw.updatedAt)
+      }
+
+      const latestVersionInfo = versionsMap.get(processedSoftware.id)
+      return {
+        ...processedSoftware,
+        currentVersionId: latestVersionInfo?.id || null,
+        latestVersion: latestVersionInfo?.version || processedSoftware.currentVersion
+      }
+    })
 
     // 查询总数
-    const totalCountResult = await db
-      .select({ count: software.id })
+    const [countResult] = await db
+      .select({ count: sql<number>`count(*)` })
       .from(software)
       .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
 
-    const totalCount = totalCountResult.length
+    const totalCount = Number(countResult?.count || 0)
     const totalPages = Math.ceil(totalCount / limit)
 
     return corsResponse({
@@ -175,9 +167,9 @@ export async function POST(request: NextRequest) {
   const userAgent = request.headers.get('user-agent')
 
    try {
-    // Supabase认证检查（仅需登录权限）
+    // Supabase认证检查（需要管理员权限）
     const authResult = await authenticateRequest(request)
-    if (!authResult.success || !authResult.user) {
+    if (!authResult.success || !authResult.user || !isAuthorizedAdmin(authResult.user)) {
       return corsResponse({
         success: false,
         error: authResult.error || 'Authentication required for software management operations'

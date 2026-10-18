@@ -125,7 +125,7 @@ export async function POST(
 
   try {
     // 验证管理员权限
-    const authResult = validateUnifiedAuth(request)
+    const authResult = await validateUnifiedAuth(request)
     if (!authResult.isValid) {
       return corsResponse({
         success: false,

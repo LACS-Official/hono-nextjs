@@ -21,33 +21,6 @@ function isValidActivationCodeFormat(code: string): boolean {
   return newFormatRegex.test(code) || oldFormatRegex.test(code)
 }
 
-// 自动清理5分钟内未使用的激活码
-async function cleanupUnusedCodes() {
-  try {
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000) // 5分钟前
-
-    // 删除5分钟前创建且未使用的激活码
-    const deletedCodes = await db
-      .delete(activationCodes)
-      .where(
-        and(
-          eq(activationCodes.isUsed, false),
-          lt(activationCodes.createdAt, fiveMinutesAgo)
-        )
-      )
-      .returning()
-
-    if (deletedCodes.length > 0) {
-      console.log(`🧹 自动清理了 ${deletedCodes.length} 个5分钟内未使用的激活码`)
-    }
-
-    return deletedCodes.length
-  } catch (error) {
-    console.error('自动清理激活码失败:', error)
-    return 0
-  }
-}
-
 // OPTIONS 方法处理 CORS 预检请求
 export async function OPTIONS(request: NextRequest) {
   const origin = request.headers.get('Origin')
@@ -60,9 +33,6 @@ export async function POST(request: NextRequest) {
   const userAgent = request.headers.get('User-Agent')
 
   try {
-    // 在验证激活码前，先清理5分钟内未使用的激活码
-    await cleanupUnusedCodes()
-
     // 注意：激活码验证是公开接口，不需要API Key验证
     // 这样客户端软件可以直接验证激活码而无需API Key
     const body = await request.json()
@@ -141,18 +111,23 @@ export async function POST(request: NextRequest) {
       }, { status: 400 }, origin, userAgent)
     }
 
-    // 标记为已使用
+    // 标记为已使用（带并发条件防重复兑换）
     const [updatedCode] = await db
       .update(activationCodes)
       .set({
         isUsed: true,
         usedAt: now
       })
-      .where(eq(activationCodes.id, activationCode.id))
+      .where(and(eq(activationCodes.id, activationCode.id), eq(activationCodes.isUsed, false)))
       .returning()
 
     if (!updatedCode) {
-      throw new Error('Failed to update activation code')
+      return corsResponse({
+        success: false,
+        error: '激活码已被使用',
+        code: 'CODE_ALREADY_USED',
+        message: '该激活码已被使用，无法重复激活'
+      }, { status: 400 }, origin, userAgent)
     }
 
     // 检查激活码是否已过期（基于真实过期时间）
@@ -185,6 +160,22 @@ export async function POST(request: NextRequest) {
         ? `激活码原本将在 ${remainingDays} 天 ${remainingHours} 小时 ${remainingMinutes} 分钟后过期（现已激活）`
         : '激活码已过期（但已成功激活）'
     }
+
+    // 异步触发 Webhook 卡密核销激活通知
+    import('@/lib/webhook-service').then(({ sendWebhookNotification }) => {
+      sendWebhookNotification({
+        event: 'vip_activation',
+        title: 'VIP 卡密兑换激活提醒',
+        content: `卡密 [${updatedCode.code}] 已成功核销激活。`,
+        fields: {
+          '卡密编码': updatedCode.code,
+          '产品名称': (updatedCode.productInfo as any)?.name || '默认产品',
+          '核销时间': now.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }),
+          '请求来源': origin || 'API Direct',
+          '客户端环境': userAgent || '未知'
+        }
+      }).catch(err => console.error('[Webhook Alert] 卡密激活通知失败:', err))
+    }).catch(() => {})
 
     return corsResponse({
       success: true,

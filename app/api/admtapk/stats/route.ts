@@ -35,8 +35,8 @@ export async function GET(request: NextRequest) {
       .where(eq(softwareUsage.softwareId, ADMT_APK_SOFTWARE_ID))
 
     // 2. 活跃设备: 唯一设备数 (基于设备指纹，WHERE softwareId = 19)
-    const uniqueDevicesResult = await userBehaviorDb
-      .selectDistinct({ deviceFingerprint: softwareUsage.deviceFingerprint })
+    const [uniqueDevicesResult] = await userBehaviorDb
+      .select({ count: sql<number>`count(DISTINCT ${softwareUsage.deviceFingerprint})` })
       .from(softwareUsage)
       .where(eq(softwareUsage.softwareId, ADMT_APK_SOFTWARE_ID))
 
@@ -47,15 +47,15 @@ export async function GET(request: NextRequest) {
       .where(eq(deviceConnections.softwareId, ADMT_APK_SOFTWARE_ID))
 
     // 4. 在线设备 / 连接设备数: 唯一连接设备数 (基于设备序列号，WHERE softwareId = 19)
-    const uniqueConnectionDevicesResult = await userBehaviorDb
-      .selectDistinct({ deviceSerial: deviceConnections.deviceSerial })
+    const [uniqueConnectionDevicesResult] = await userBehaviorDb
+      .select({ count: sql<number>`count(DISTINCT ${deviceConnections.deviceSerial})` })
       .from(deviceConnections)
       .where(eq(deviceConnections.softwareId, ADMT_APK_SOFTWARE_ID))
 
     const totalUsage = Number(totalUsageResult?.totalUsed) || 0
-    const uniqueDevices = uniqueDevicesResult.length
+    const uniqueDevices = Number(uniqueDevicesResult?.count || 0)
     const totalConnections = Number(totalConnectionsResult?.totalConnections) || 0
-    const uniqueConnectionDevices = uniqueConnectionDevicesResult.length
+    const uniqueConnectionDevices = Number(uniqueConnectionDevicesResult?.count || 0)
 
     return corsResponse({
       success: true,

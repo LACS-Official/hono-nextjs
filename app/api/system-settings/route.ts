@@ -10,9 +10,18 @@ import {
 import { SupabaseSystemSettingsService } from '@/lib/supabase-system-settings'
 import { eq, and, ilike, or, desc, sql } from 'drizzle-orm'
 import { v4 as uuidv4 } from 'uuid'
-import { authenticateRequest } from '@/lib/auth'
+import { authenticateRequest, isAuthorizedAdmin } from '@/lib/auth'
+import { handleOptions, validateApiKeyWithExpiration } from '@/lib/cors'
 import { AuditLogService, AuditAction } from '@/lib/audit-log-service'
 import { syncSettingToProcessEnv, batchSyncSettingsToProcessEnv } from '@/lib/system-config-sync'
+
+// OPTIONS 方法处理 CORS 预检请求
+export async function OPTIONS(request: NextRequest) {
+  const origin = request.headers.get('Origin')
+  const userAgent = request.headers.get('User-Agent')
+  return handleOptions(origin, userAgent)
+}
+
 
 // GET /api/system-settings - 获取系统设置列表
 export async function GET(request: NextRequest) {
@@ -107,6 +116,16 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const authResult = await authenticateRequest(request)
+    const apiKeyResult = validateApiKeyWithExpiration(request)
+    const isAuthorized = (authResult.success && authResult.user && isAuthorizedAdmin(authResult.user)) || apiKeyResult.isValid
+
+    if (!isAuthorized) {
+      return NextResponse.json(
+        { success: false, error: '未授权访问：仅限管理员配置系统设置' },
+        { status: 401 }
+      )
+    }
+
     const userId = authResult.user?.id || 'admin'
 
     const body = await request.json()

@@ -8,6 +8,15 @@ import { systemSettingsDb, loginLogs } from '@/lib/system-settings-db'
 import { eq } from 'drizzle-orm'
 import { authenticateRequest, isAuthorizedAdmin } from '@/lib/auth'
 import { terminateSession } from '@/lib/login-log-utils'
+import { handleOptions } from '@/lib/cors'
+
+// OPTIONS 方法处理 CORS 预检请求
+export async function OPTIONS(request: NextRequest) {
+  const origin = request.headers.get('Origin')
+  const userAgent = request.headers.get('User-Agent')
+  return handleOptions(origin, userAgent)
+}
+
 
 // 强制登出
 export async function POST(

@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { activationCodesDb as db, activationCodes } from '@/lib/activation-codes-db'
 import { and, eq, lt } from 'drizzle-orm'
-import { corsResponse, handleOptions, validateApiKeyWithExpiration } from '@/lib/cors'
+import { corsResponse, handleOptions, validateUnifiedAuth } from '@/lib/cors'
 
 // OPTIONS 方法处理 CORS 预检请求
 export async function OPTIONS(request: NextRequest) {
@@ -48,15 +48,13 @@ export async function POST(request: NextRequest) {
   const userAgent = request.headers.get('User-Agent')
 
   try {
-    // API Key 验证（如果启用）
-    if (process.env.ENABLE_API_KEY_AUTH === 'true') {
-      const apiKeyValidation = validateApiKeyWithExpiration(request)
-      if (!apiKeyValidation.isValid) {
-        return corsResponse({
-          success: false,
-          error: apiKeyValidation.error || 'Invalid or missing API Key'
-        }, { status: 401 }, origin, userAgent)
-      }
+    // 统一认证验证（需要管理员权限或有效 API Key）
+    const auth = await validateUnifiedAuth(request)
+    if (!auth.isValid) {
+      return corsResponse({
+        success: false,
+        error: auth.error || '需要管理员权限'
+      }, { status: 401 }, origin, userAgent)
     }
 
     const body = await request.json().catch(() => ({}))
@@ -98,15 +96,13 @@ export async function GET(request: NextRequest) {
   const userAgent = request.headers.get('User-Agent')
 
   try {
-    // API Key 验证（如果启用）
-    if (process.env.ENABLE_API_KEY_AUTH === 'true') {
-      const apiKeyValidation = validateApiKeyWithExpiration(request)
-      if (!apiKeyValidation.isValid) {
-        return corsResponse({
-          success: false,
-          error: apiKeyValidation.error || 'Invalid or missing API Key'
-        }, { status: 401 }, origin, userAgent)
-      }
+    // 统一认证验证（需要管理员权限或有效 API Key）
+    const auth = await validateUnifiedAuth(request)
+    if (!auth.isValid) {
+      return corsResponse({
+        success: false,
+        error: auth.error || '需要管理员权限'
+      }, { status: 401 }, origin, userAgent)
     }
 
     const { searchParams } = new URL(request.url)

@@ -328,11 +328,30 @@ setInterval(() => {
 // 注意：Hono 相关功能已移除，因为项目已简化为纯 Next.js API
 // 如果需要 Hono 支持，请重新安装相关依赖
 
-// 统一认证验证函数（兼容 API Key 和 JWT）
-export function validateUnifiedAuth(request: Request): { isValid: boolean; error?: string } {
-  // 这里实现统一认证验证逻辑
-  // 暂时返回 true，允许所有请求通过
-  return { isValid: true };
+// 统一认证验证函数（兼容 API Key 和 Supabase 管理员会话）
+export async function validateUnifiedAuth(request: Request): Promise<{ isValid: boolean; error?: string; user?: any }> {
+  // 1. 优先尝试 API Key 验证
+  const apiKeyValidation = validateApiKeyWithExpiration(request)
+  if (apiKeyValidation.isValid) {
+    return { isValid: true }
+  }
+
+  // 2. 尝试 Supabase 管理员会话验证
+  try {
+    const { authenticateRequest, isAuthorizedAdmin } = await import('@/lib/auth')
+    const authResult = await authenticateRequest(request as any)
+    if (authResult.success && authResult.user && isAuthorizedAdmin(authResult.user)) {
+      return { isValid: true, user: authResult.user }
+    }
+  } catch (err) {
+    console.error('validateUnifiedAuth Supabase auth error:', err)
+  }
+
+  return {
+    isValid: false,
+    error: '未授权访问：需要有效的 API Key 或管理员登录凭证'
+  }
 }
+
 
 

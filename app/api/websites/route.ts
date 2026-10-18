@@ -6,7 +6,7 @@
 
 import { NextRequest } from 'next/server'
 import { unifiedDb as db, websites } from '@/lib/unified-db-connection'
-import { desc, eq, like, or } from 'drizzle-orm'
+import { desc, eq, like, or, and, sql } from 'drizzle-orm'
 import { corsResponse, handleOptions } from '@/lib/cors'
 import { authenticateRequest, isAuthorizedAdmin } from '@/lib/auth'
 import { z } from 'zod'
@@ -64,18 +64,18 @@ export async function GET(request: NextRequest) {
     const websiteList = await db
       .select()
       .from(websites)
-      .where(whereConditions.length > 0 ? whereConditions[0] : undefined)
+      .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
       .orderBy(desc(websites.createdAt))
       .limit(limit)
       .offset(offset)
 
     // 获取总数
     const totalResult = await db
-      .select({ count: websites.id })
+      .select({ count: sql<number>`count(*)` })
       .from(websites)
-      .where(whereConditions.length > 0 ? whereConditions[0] : undefined)
+      .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
 
-    const total = totalResult.length
+    const total = Number(totalResult[0]?.count || 0)
 
     return corsResponse({
       success: true,

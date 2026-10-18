@@ -4,7 +4,7 @@
  */
 
 import { unifiedDb as db, software, softwareVersionHistory } from '@/lib/unified-db-connection'
-import { eq, desc, and } from 'drizzle-orm'
+import { eq, desc, and, inArray } from 'drizzle-orm'
 
 /**
  * 版本比较函数
@@ -91,6 +91,56 @@ export async function getLatestVersionWithId(softwareId: number): Promise<{ id: 
     return null
   }
 }
+
+/**
+ * 批量获取多个软件的最新版本ID和版本号（单条 SQL 解决 N+1 瓶颈）
+ */
+export async function getLatestVersionsForSoftwareIds(
+  softwareIds: number[]
+): Promise<Map<number, { id: number; version: string }>> {
+  const result = new Map<number, { id: number; version: string }>()
+  if (!softwareIds || softwareIds.length === 0) return result
+
+  try {
+    const versions = await db
+      .select({
+        id: softwareVersionHistory.id,
+        softwareId: softwareVersionHistory.softwareId,
+        version: softwareVersionHistory.version,
+        releaseDate: softwareVersionHistory.releaseDate
+      })
+      .from(softwareVersionHistory)
+      .where(
+        and(
+          inArray(softwareVersionHistory.softwareId, softwareIds),
+          eq(softwareVersionHistory.isStable, true)
+        )
+      )
+      .orderBy(desc(softwareVersionHistory.releaseDate))
+
+    const grouped = new Map<number, typeof versions>()
+    for (const v of versions) {
+      if (!grouped.has(v.softwareId)) grouped.set(v.softwareId, [])
+      grouped.get(v.softwareId)!.push(v)
+    }
+
+    for (const [sId, sVersions] of grouped.entries()) {
+      const sorted = sVersions.sort((a, b) => compareVersions(b.version, a.version))
+      if (sorted.length > 0) {
+        result.set(sId, {
+          id: sorted[0].id,
+          version: sorted[0].version
+        })
+      }
+    }
+
+    return result
+  } catch (error) {
+    console.error('批量获取最新版本失败:', error)
+    return result
+  }
+}
+
 
 /**
  * 获取软件的最新版本完整信息（包括下载链接）

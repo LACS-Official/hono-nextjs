@@ -17,6 +17,8 @@ import { checkUserBehaviorRateLimit } from "@/lib/user-behavior-rate-limit";
 import { z } from "zod";
 import { UserBehaviorSecurity } from "@/lib/user-behavior-security";
 import { authenticateRequest, isAuthorizedAdmin } from "@/lib/auth";
+import { validateApiKeyWithExpiration } from "@/lib/cors";
+import { ensureSoftwareUsageIpColumn } from "@/lib/ip-geo-utils";
 
 // OPTIONS 方法处理 CORS 预检请求
 export async function OPTIONS(request: NextRequest) {
@@ -130,6 +132,8 @@ export async function POST(request: NextRequest) {
       )
       .limit(1);
 
+    await ensureSoftwareUsageIpColumn().catch(() => {});
+
     if (existingUsage.length > 0) {
       // 更新现有记录，增加使用次数
       const [updatedUsage] = await userBehaviorDb
@@ -138,6 +142,7 @@ export async function POST(request: NextRequest) {
           used: sql`${softwareUsage.used} + ${validatedData.used}`,
           usedAt: new Date(),
           updatedAt: new Date(),
+          clientIp: clientIp || existingUsage[0].clientIp,
           softwareVersion:
             validatedData.softwareVersion || existingUsage[0].softwareVersion,
         })
@@ -178,6 +183,7 @@ export async function POST(request: NextRequest) {
         deviceFingerprint: validatedData.deviceFingerprint,
         used: validatedData.used,
         usedAt: new Date(),
+        clientIp: clientIp,
         createdAt: new Date(),
         updatedAt: new Date(),
       })
@@ -231,13 +237,16 @@ export async function GET(request: NextRequest) {
   const userAgent = request.headers.get("User-Agent");
 
   try {
-    // Supabase认证检查
+    // Supabase认证或API Key验证
     const authResult = await authenticateRequest(request);
-    if (!authResult.success || !authResult.user) {
+    const apiKeyResult = validateApiKeyWithExpiration(request);
+    const isAuthorized = (authResult.success && authResult.user && isAuthorizedAdmin(authResult.user)) || apiKeyResult.isValid;
+
+    if (!isAuthorized) {
       return corsResponse(
         {
           success: false,
-          error: authResult.error || "Authentication required",
+          error: "未授权访问：需要管理员权限",
         },
         { status: 401 },
         origin,
@@ -245,22 +254,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 检查管理员权限
-    if (!isAuthorizedAdmin(authResult.user)) {
-      return corsResponse(
-        {
-          success: false,
-          error: "Insufficient permissions - admin access required",
-        },
-        { status: 403 },
-        origin,
-        userAgent,
-      );
-    }
-
     console.log(
-      "[DEBUG] GET端点使用Supabase认证，用户:",
-      authResult.user.email,
+      "[DEBUG] GET端点使用认证通过，用户:",
+      authResult.user?.email || "API_KEY",
     );
 
     const { searchParams } = new URL(request.url);

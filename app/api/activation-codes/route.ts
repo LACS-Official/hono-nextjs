@@ -1,7 +1,7 @@
 // 激活码 API - 主路由
 import { NextRequest } from 'next/server'
 import { activationCodesDb as db, activationCodes } from '@/lib/activation-codes-db'
-import { eq, desc, and, lt, gt } from 'drizzle-orm'
+import { eq, desc, and, lt, gt, like, sql } from 'drizzle-orm'
 import { v4 as uuidv4 } from 'uuid'
 import { corsResponse, handleOptions, validateApiKeyWithExpiration, checkRateLimit } from '@/lib/cors'
 import { TimeUtils } from '@/lib/time-utils'
@@ -20,33 +20,6 @@ const requestSchema = z.object({
 
 // 标记为动态路由，避免静态生成
 export const dynamic = 'force-dynamic'
-
-// 自动清理5分钟内未使用的激活码
-async function cleanupUnusedCodes() {
-  try {
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000) // 5分钟前
-
-    // 删除5分钟前创建且未使用的激活码
-    const deletedCodes = await db
-      .delete(activationCodes)
-      .where(
-        and(
-          eq(activationCodes.isUsed, false),
-          lt(activationCodes.createdAt, fiveMinutesAgo)
-        )
-      )
-      .returning()
-
-    if (deletedCodes.length > 0) {
-      console.log(`🧹 自动清理了 ${deletedCodes.length} 个5分钟内未使用的激活码`)
-    }
-
-    return deletedCodes.length
-  } catch (error) {
-    console.error('自动清理激活码失败:', error)
-    return 0
-  }
-}
 
 // OPTIONS 方法处理 CORS 预检请求
 export async function OPTIONS(request: NextRequest) {
@@ -85,9 +58,6 @@ export async function POST(request: NextRequest) {
   const userAgent = request.headers.get('User-Agent')
 
   try {
-    // 在生成新激活码前，先清理5分钟内未使用的激活码
-    await cleanupUnusedCodes()
-
     // 认证验证：支持API Key或Supabase认证
     let isAuthenticated = false
     let authError = ''
@@ -245,30 +215,37 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '10')
     const status = searchParams.get('status') || 'all'
+    const search = searchParams.get('search')?.trim() || ''
     const offset = (page - 1) * limit
 
-    let whereCondition
+    const conditions: any[] = []
     const now = new Date()
 
     switch (status) {
       case 'used':
-        whereCondition = eq(activationCodes.isUsed, true)
+        conditions.push(eq(activationCodes.isUsed, true))
         break
       case 'unused':
-        whereCondition = eq(activationCodes.isUsed, false)
+        conditions.push(eq(activationCodes.isUsed, false))
         break
       case 'expired':
-        whereCondition = lt(activationCodes.expiresAt, now)
+        conditions.push(lt(activationCodes.expiresAt, now))
         break
       case 'active':
-        whereCondition = and(
-          eq(activationCodes.isUsed, false),
-          gt(activationCodes.expiresAt, now)
+        conditions.push(
+          and(
+            eq(activationCodes.isUsed, false),
+            gt(activationCodes.expiresAt, now)
+          )
         )
         break
-      default:
-        whereCondition = undefined
     }
+
+    if (search) {
+      conditions.push(like(activationCodes.code, `%${search.toUpperCase()}%`))
+    }
+
+    const whereCondition = conditions.length > 0 ? and(...conditions) : undefined
 
     const codes = await db
       .select()
@@ -278,13 +255,13 @@ export async function GET(request: NextRequest) {
       .limit(limit)
       .offset(offset)
 
-    // 获取总数
-    const totalResult = await db
-      .select({ count: activationCodes.id })
+    // 获取总数（真实 SQL 计数）
+    const [totalResult] = await db
+      .select({ count: sql<number>`count(*)` })
       .from(activationCodes)
       .where(whereCondition)
 
-    const total = totalResult.length
+    const total = Number(totalResult?.count || 0)
 
     return corsResponse({
       success: true,

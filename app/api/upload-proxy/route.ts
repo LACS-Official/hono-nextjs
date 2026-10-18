@@ -1,7 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { authenticateRequest, isAuthorizedAdmin } from '@/lib/auth';
+import { handleOptions, validateApiKeyWithExpiration } from '@/lib/cors';
+
+// OPTIONS 方法处理 CORS 预检请求
+export async function OPTIONS(request: NextRequest) {
+  const origin = request.headers.get('Origin')
+  const userAgent = request.headers.get('User-Agent')
+  return handleOptions(origin, userAgent)
+}
 
 export async function POST(request: NextRequest) {
   try {
+    const authResult = await authenticateRequest(request)
+    const apiKeyResult = validateApiKeyWithExpiration(request)
+    const isAuthorized = (authResult.success && authResult.user && isAuthorizedAdmin(authResult.user)) || apiKeyResult.isValid
+
+    if (!isAuthorized) {
+      return NextResponse.json(
+        { success: false, error: '未授权访问：仅限管理员使用图床上传代理' },
+        { status: 401 }
+      )
+    }
     const { searchParams } = new URL(request.url);
     const formData = await request.formData();
     

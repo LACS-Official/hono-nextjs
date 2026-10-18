@@ -32,7 +32,8 @@ import {
   ExternalLink,
   Key,
   Terminal,
-  Zap
+  Zap,
+  Send
 } from 'lucide-react'
 
 import { Button } from "@/components/ui/button"
@@ -101,7 +102,7 @@ const categoryConfig: Record<string, { name: string; icon: React.ReactNode }> = 
   display: { name: '显示外观', icon: <Monitor className="h-4 w-4" /> },
   security: { name: '安全访问', icon: <Shield className="h-4 w-4" /> },
   api: { name: '网络API', icon: <Globe className="h-4 w-4" /> },
-  notification: { name: '邮件通知', icon: <Bell className="h-4 w-4" /> },
+  notification: { name: '通知与 Webhook', icon: <Bell className="h-4 w-4" /> },
   database: { name: '数据维护', icon: <Database className="h-4 w-4" /> },
   system: { name: '系统配置', icon: <Settings className="h-4 w-4" /> },
   logging: { name: '日志配置', icon: <FileText className="h-4 w-4" /> },
@@ -183,6 +184,15 @@ interface AppConfigState {
   notifySuspiciousLogin: boolean
   notifyDailyDigest: boolean
 
+  // Webhook 机器人与外部推送配置
+  webhookEnabled: boolean
+  webhookUrl: string
+  webhookSecret: string
+  webhookPlatform: string
+  webhookEventSuspiciousLogin: boolean
+  webhookEventVipActivation: boolean
+  webhookEventSystemError: boolean
+
   autoCleanupExpiredCodes: boolean
   logRetentionDays: string
 }
@@ -217,6 +227,14 @@ const defaultAppConfig: AppConfigState = {
   smtpFrom: '',
   notifySuspiciousLogin: true,
   notifyDailyDigest: false,
+
+  webhookEnabled: false,
+  webhookUrl: '',
+  webhookSecret: '',
+  webhookPlatform: 'generic',
+  webhookEventSuspiciousLogin: true,
+  webhookEventVipActivation: true,
+  webhookEventSystemError: true,
 
   autoCleanupExpiredCodes: true,
   logRetentionDays: '30'
@@ -368,6 +386,11 @@ export default function SystemSettingsPage() {
   const [testEmailSending, setTestEmailSending] = useState(false)
   const [savingEmailSettings, setSavingEmailSettings] = useState(false)
 
+  // Webhook 测试与保存状态
+  const [savingWebhookSettings, setSavingWebhookSettings] = useState(false)
+  const [testWebhookSending, setTestWebhookSending] = useState(false)
+  const [testWebhookResult, setTestWebhookResult] = useState<{ success: boolean; message: string; durationMs?: number } | null>(null)
+
   // 快捷预设填充
   const applySmtpPreset = (preset: 'qq' | '163' | 'gmail' | 'aliyun') => {
     switch (preset) {
@@ -499,6 +522,105 @@ export default function SystemSettingsPage() {
     }
   }
 
+  // 批量保存 Webhook 设置
+  const handleSaveWebhookSettings = async () => {
+    setSavingWebhookSettings(true)
+    try {
+      const activeEvents = [
+        appConfig.webhookEventSuspiciousLogin ? 'suspicious_login' : null,
+        appConfig.webhookEventVipActivation ? 'vip_activation' : null,
+        appConfig.webhookEventSystemError ? 'system_error' : null,
+      ].filter(Boolean).join(',')
+
+      const itemsToSave = [
+        { key: 'webhook_enabled', value: String(appConfig.webhookEnabled), desc: '启用 Webhook 外部推送', type: 'boolean' as const },
+        { key: 'webhook_url', value: appConfig.webhookUrl, desc: 'Webhook 回调目标地址', type: 'string' as const },
+        { key: 'webhook_secret', value: appConfig.webhookSecret, desc: 'Webhook 验签/加签密钥', type: 'string' as const },
+        { key: 'webhook_platform', value: appConfig.webhookPlatform, desc: 'Webhook 推送平台模式', type: 'string' as const },
+        { key: 'webhook_events', value: activeEvents, desc: 'Webhook 触发事件订阅列表', type: 'string' as const },
+      ]
+
+      for (const item of itemsToSave) {
+        await persistSettingItem(item.key, item.value, 'notification', item.desc, item.type)
+      }
+
+      toast({
+        title: "Webhook 通知配置已保存",
+        description: "机器人与推送通道设置已即时生效",
+      })
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "保存失败",
+        description: err.message || "未能完全保存 Webhook 设置，请重试",
+      })
+    } finally {
+      setSavingWebhookSettings(false)
+    }
+  }
+
+  // 发送 Webhook 连通性测试
+  const handleSendTestWebhook = async () => {
+    if (!appConfig.webhookUrl.trim() || !appConfig.webhookUrl.startsWith('http')) {
+      toast({
+        variant: "destructive",
+        title: "地址无效",
+        description: "请输入以 http:// 或 https:// 开头的有效 Webhook 目标地址",
+      })
+      return
+    }
+
+    setTestWebhookSending(true)
+    setTestWebhookResult(null)
+    try {
+      const res = await fetch('/api/system-settings/test-webhook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          webhookUrl: appConfig.webhookUrl.trim(),
+          webhookPlatform: appConfig.webhookPlatform,
+          webhookSecret: appConfig.webhookSecret.trim(),
+        }),
+      })
+      const result = await res.json()
+
+      if (result.success) {
+        setTestWebhookResult({
+          success: true,
+          message: result.message || `测试消息已成功投递 (耗时 ${result.durationMs || 0}ms)`,
+          durationMs: result.durationMs,
+        })
+        toast({
+          title: "Webhook 测试成功！",
+          description: result.message || "测试通知已成功推送到目标机器人/通道",
+        })
+      } else {
+        setTestWebhookResult({
+          success: false,
+          message: result.error || "Webhook 推送未通过",
+          durationMs: result.durationMs,
+        })
+        toast({
+          variant: "destructive",
+          title: "Webhook 测试失败",
+          description: result.error || "推送失败，请检查 Webhook 地址与加签密钥",
+        })
+      }
+    } catch (err: any) {
+      setTestWebhookResult({
+        success: false,
+        message: err.message || "网络请求异常",
+      })
+      toast({
+        variant: "destructive",
+        title: "测试请求异常",
+        description: err.message || "无法连通测试接口，请重试",
+      })
+    } finally {
+      setTestWebhookSending(false)
+    }
+  }
+
   // 从 localStorage 与数据库同步初始配置
   useEffect(() => {
     try {
@@ -609,6 +731,26 @@ export default function SystemSettingsPage() {
             break
           case 'cron_secret':
             next.cronSecret = s.value || ''
+            break
+          case 'webhook_enabled':
+            next.webhookEnabled = s.value === 'true'
+            break
+          case 'webhook_url':
+            next.webhookUrl = s.value || ''
+            break
+          case 'webhook_secret':
+            next.webhookSecret = s.value || ''
+            break
+          case 'webhook_platform':
+            next.webhookPlatform = s.value || 'generic'
+            break
+          case 'webhook_events':
+            if (s.value) {
+              const evts = s.value.split(',').map((e: string) => e.trim())
+              next.webhookEventSuspiciousLogin = evts.includes('suspicious_login')
+              next.webhookEventVipActivation = evts.includes('vip_activation')
+              next.webhookEventSystemError = evts.includes('system_error')
+            }
             break
         }
       })
@@ -1679,6 +1821,250 @@ export default function SystemSettingsPage() {
                       )}
                     </Button>
                   </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 卡片: Webhook 机器人通知与外部推送 */}
+            <Card className="rounded-2xl bg-white dark:bg-[#161618] border border-black/[0.06] dark:border-white/[0.08] shadow-sm">
+              <CardHeader className="pb-3 border-b border-black/[0.05] dark:border-white/[0.06]">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                      <Zap className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
+                        Webhook 机器人与实时推送
+                      </CardTitle>
+                      <CardDescription className="text-xs text-[#6e6e73] dark:text-[#a1a1a6]">
+                        支持企业微信、钉钉、飞书机器人、Discord、Slack 及自定义 HTTP POST
+                      </CardDescription>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={appConfig.webhookEnabled ? "default" : "outline"} className="text-[10px] font-mono">
+                      {appConfig.webhookEnabled ? '已启用推送' : '未启用'}
+                    </Badge>
+                    <Badge variant="outline" className="text-[10px] font-mono uppercase">
+                      {appConfig.webhookPlatform}
+                    </Badge>
+                    <Button
+                      size="sm"
+                      onClick={handleSaveWebhookSettings}
+                      disabled={savingWebhookSettings}
+                      className="h-7 rounded-lg text-xs px-2.5 bg-[#0071e3] hover:bg-[#0077ed] text-white"
+                    >
+                      {savingWebhookSettings ? (
+                        <>
+                          <RefreshCw className="mr-1 h-3 w-3 animate-spin" />
+                          保存中
+                        </>
+                      ) : (
+                        '保存配置'
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0 divide-y divide-black/[0.04] dark:divide-white/[0.05]">
+                {/* 启用开关 */}
+                <div className="flex items-center justify-between p-4">
+                  <div className="space-y-0.5 pr-4">
+                    <div className="text-xs font-medium text-[#1d1d1f] dark:text-[#f5f5f7]">启用 Webhook 外部推送</div>
+                    <div className="text-[11px] text-[#6e6e73] dark:text-[#a1a1a6]">开启后，系统在发生关键事件时将自动向配置的目标机器人发送通知</div>
+                  </div>
+                  <Switch
+                    checked={appConfig.webhookEnabled}
+                    onCheckedChange={(val) => {
+                      setAppConfig(prev => ({ ...prev, webhookEnabled: val }))
+                      persistSettingItem('webhook_enabled', String(val), 'notification', '启用 Webhook 外部推送', 'boolean')
+                    }}
+                  />
+                </div>
+
+                {/* 平台选择 */}
+                <div className="flex items-center justify-between p-4">
+                  <div className="space-y-0.5 pr-4">
+                    <div className="text-xs font-medium text-[#1d1d1f] dark:text-[#f5f5f7]">推送平台模式</div>
+                    <div className="text-[11px] text-[#6e6e73] dark:text-[#a1a1a6]">系统将自动格式化为对应平台的专属富文本或卡片样式</div>
+                  </div>
+                  <Select
+                    value={appConfig.webhookPlatform}
+                    onValueChange={(val) => {
+                      setAppConfig(prev => ({ ...prev, webhookPlatform: val }))
+                      persistSettingItem('webhook_platform', val, 'notification', 'Webhook 推送平台模式', 'string')
+                    }}
+                  >
+                    <SelectTrigger className="w-[155px] h-8 rounded-lg text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl">
+                      <SelectItem value="generic">通用 HTTP POST</SelectItem>
+                      <SelectItem value="wecom">企业微信群机器人</SelectItem>
+                      <SelectItem value="dingtalk">钉钉群自定义机器人</SelectItem>
+                      <SelectItem value="feishu">飞书自定义机器人</SelectItem>
+                      <SelectItem value="discord">Discord Webhook</SelectItem>
+                      <SelectItem value="slack">Slack Webhook</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Webhook 目标地址 */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 gap-2.5">
+                  <div className="space-y-0.5">
+                    <div className="text-xs font-medium text-[#1d1d1f] dark:text-[#f5f5f7]">Webhook 目标地址 (URL)</div>
+                    <div className="text-[11px] text-[#6e6e73] dark:text-[#a1a1a6]">
+                      {appConfig.webhookPlatform === 'wecom' && '企业微信群机器人 Webhook (https://qyapi.weixin.qq.com/...)'}
+                      {appConfig.webhookPlatform === 'dingtalk' && '钉钉机器人 Webhook (https://oapi.dingtalk.com/...)'}
+                      {appConfig.webhookPlatform === 'feishu' && '飞书机器人 Webhook (https://open.feishu.cn/...)'}
+                      {appConfig.webhookPlatform === 'discord' && 'Discord Webhook (https://discord.com/api/webhooks/...)'}
+                      {appConfig.webhookPlatform === 'slack' && 'Slack Incoming Webhook (https://hooks.slack.com/...)'}
+                      {appConfig.webhookPlatform === 'generic' && '接收 POST JSON 的自定义 Webhook 服务端接口'}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 flex-1 max-w-md justify-end">
+                    <Input
+                      value={appConfig.webhookUrl}
+                      onChange={(e) => setAppConfig(prev => ({ ...prev, webhookUrl: e.target.value }))}
+                      placeholder={
+                        appConfig.webhookPlatform === 'wecom' ? 'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=...' :
+                        appConfig.webhookPlatform === 'dingtalk' ? 'https://oapi.dingtalk.com/robot/send?access_token=...' :
+                        appConfig.webhookPlatform === 'feishu' ? 'https://open.feishu.cn/open-apis/bot/v2/hook/...' :
+                        'https://your-server.com/api/webhook'
+                      }
+                      className="h-8 rounded-lg text-xs font-mono w-full"
+                      onBlur={() => persistSettingItem('webhook_url', appConfig.webhookUrl, 'notification', 'Webhook 目标地址', 'string')}
+                    />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 rounded-lg text-xs px-2.5 shrink-0"
+                      onClick={() => persistSettingItem('webhook_url', appConfig.webhookUrl, 'notification', 'Webhook 目标地址', 'string')}
+                      disabled={savingKey === 'webhook_url'}
+                    >
+                      保存
+                    </Button>
+                  </div>
+                </div>
+
+                {/* 签名密钥 / Secret */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 gap-2.5">
+                  <div className="space-y-0.5">
+                    <div className="text-xs font-medium text-[#1d1d1f] dark:text-[#f5f5f7]">加签密钥 / Secret (可选)</div>
+                    <div className="text-[11px] text-[#6e6e73] dark:text-[#a1a1a6]">
+                      {appConfig.webhookPlatform === 'dingtalk' && '钉钉机器人加签密钥 (SEC 开头)'}
+                      {appConfig.webhookPlatform === 'feishu' && '飞书机器人加签安全密钥'}
+                      {appConfig.webhookPlatform === 'generic' && 'HMAC-SHA256 签名密钥，将在请求头中带入 X-Webhook-Signature'}
+                      {appConfig.webhookPlatform !== 'dingtalk' && appConfig.webhookPlatform !== 'feishu' && appConfig.webhookPlatform !== 'generic' && '可选的安全验证密钥或 Token'}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Input
+                      type={appConfig.maskSensitiveData ? "password" : "text"}
+                      value={appConfig.webhookSecret}
+                      onChange={(e) => setAppConfig(prev => ({ ...prev, webhookSecret: e.target.value }))}
+                      placeholder="SEC... 或自定义签名密钥"
+                      className="w-[200px] h-8 rounded-lg text-xs font-mono"
+                      onBlur={() => persistSettingItem('webhook_secret', appConfig.webhookSecret, 'notification', 'Webhook 验签/加签密钥', 'string')}
+                    />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 rounded-lg text-xs px-2.5"
+                      onClick={() => persistSettingItem('webhook_secret', appConfig.webhookSecret, 'notification', 'Webhook 验签/加签密钥', 'string')}
+                      disabled={savingKey === 'webhook_secret'}
+                    >
+                      保存
+                    </Button>
+                  </div>
+                </div>
+
+                {/* 触发事件订阅 */}
+                <div className="p-4 space-y-3 bg-black/[0.01] dark:bg-white/[0.01]">
+                  <div className="text-xs font-medium text-[#1d1d1f] dark:text-[#f5f5f7]">触发推送事件订阅</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="flex items-center justify-between p-3 rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-white dark:bg-[#1c1c1e]">
+                      <div className="space-y-0.5 pr-2">
+                        <div className="text-xs font-medium text-[#1d1d1f] dark:text-[#f5f5f7]">异地/新设备登录</div>
+                        <div className="text-[10px] text-[#6e6e73] dark:text-[#a1a1a6]">陌生 IP 或设备访问告警</div>
+                      </div>
+                      <Switch
+                        checked={appConfig.webhookEventSuspiciousLogin}
+                        onCheckedChange={(val) => {
+                          setAppConfig(prev => ({ ...prev, webhookEventSuspiciousLogin: val }))
+                        }}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between p-3 rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-white dark:bg-[#1c1c1e]">
+                      <div className="space-y-0.5 pr-2">
+                        <div className="text-xs font-medium text-[#1d1d1f] dark:text-[#f5f5f7]">VIP 卡密兑换</div>
+                        <div className="text-[10px] text-[#6e6e73] dark:text-[#a1a1a6]">激活码核销成功即时推送</div>
+                      </div>
+                      <Switch
+                        checked={appConfig.webhookEventVipActivation}
+                        onCheckedChange={(val) => {
+                          setAppConfig(prev => ({ ...prev, webhookEventVipActivation: val }))
+                        }}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between p-3 rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-white dark:bg-[#1c1c1e]">
+                      <div className="space-y-0.5 pr-2">
+                        <div className="text-xs font-medium text-[#1d1d1f] dark:text-[#f5f5f7]">系统严重异常</div>
+                        <div className="text-[10px] text-[#6e6e73] dark:text-[#a1a1a6]">关键错误与崩溃告警</div>
+                      </div>
+                      <Switch
+                        checked={appConfig.webhookEventSystemError}
+                        onCheckedChange={(val) => {
+                          setAppConfig(prev => ({ ...prev, webhookEventSystemError: val }))
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 测试 Webhook 推送功能 */}
+                <div className="p-4 bg-emerald-500/5 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs font-medium text-[#1d1d1f] dark:text-[#f5f5f7]">Webhook 通道连通性测试</div>
+                    <span className="text-[10px] text-muted-foreground">校验机器人地址与签名配置是否能真实接收消息</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={appConfig.webhookUrl}
+                      onChange={(e) => setAppConfig(prev => ({ ...prev, webhookUrl: e.target.value }))}
+                      placeholder="请先在上方输入 Webhook URL 地址"
+                      className="h-8 rounded-lg text-xs flex-1 font-mono"
+                    />
+                    <Button
+                      size="sm"
+                      onClick={handleSendTestWebhook}
+                      disabled={testWebhookSending || !appConfig.webhookUrl}
+                      className="h-8 rounded-lg text-xs px-3 bg-[#0071e3] hover:bg-[#0077ed] text-white shrink-0"
+                    >
+                      {testWebhookSending ? (
+                        <>
+                          <RefreshCw className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                          推送中
+                        </>
+                      ) : (
+                        <>
+                          <Send className="mr-1.5 h-3.5 w-3.5" />
+                          发送测试通知
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                  {testWebhookResult && (
+                    <div className={`text-[11px] p-2.5 rounded-xl border ${testWebhookResult.success ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-300' : 'bg-red-500/10 border-red-500/20 text-red-700 dark:text-red-300'} flex items-center justify-between`}>
+                      <span>{testWebhookResult.message}</span>
+                      {testWebhookResult.durationMs !== undefined && (
+                        <span className="font-mono text-[10px] opacity-80">耗时: {testWebhookResult.durationMs}ms</span>
+                      )}
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

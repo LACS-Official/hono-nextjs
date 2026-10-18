@@ -17,6 +17,7 @@ import * as donorsSchema from './donors-schema'
 import * as websiteManagementSchema from './website-management-schema'
 import * as infoManagementSchema from './info-management-schema'
 import * as appUsersSchema from './app-users-schema'
+import * as crashReportsSchema from './crash-reports-schema'
 
 // 合并主业务模式
 const unifiedSchema = {
@@ -27,6 +28,7 @@ const unifiedSchema = {
   ...websiteManagementSchema,
   ...infoManagementSchema,
   ...appUsersSchema,
+  ...crashReportsSchema,
 }
 
 // 统一主业务数据库连接字符串 (Neon)
@@ -76,6 +78,9 @@ export const {
   groupChats,
   mediaPlatforms,
   projectsList,
+
+  // 客户端崩溃日志相关表
+  clientCrashReports,
 } = unifiedSchema
 
 // 数据库健康检查函数

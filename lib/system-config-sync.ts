@@ -33,6 +33,13 @@ export const SETTING_TO_ENV_MAP: Record<string, string> = {
   // 外部集成与定时任务
   github_token: 'GITHUB_TOKEN',
   cron_secret: 'CRON_SECRET',
+
+  // Webhook 机器人与外部通知
+  webhook_enabled: 'WEBHOOK_ENABLED',
+  webhook_url: 'WEBHOOK_URL',
+  webhook_secret: 'WEBHOOK_SECRET',
+  webhook_platform: 'WEBHOOK_PLATFORM',
+  webhook_events: 'WEBHOOK_EVENTS',
 }
 
 /**

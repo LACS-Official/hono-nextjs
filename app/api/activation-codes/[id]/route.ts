@@ -2,8 +2,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { activationCodesDb as db, activationCodes } from '@/lib/activation-codes-db'
 import { eq } from 'drizzle-orm'
-import { corsResponse, validateApiKeyWithExpiration } from '@/lib/cors'
+import { corsResponse, handleOptions, validateApiKeyWithExpiration } from '@/lib/cors'
 import { authenticateRequest, isAuthorizedAdmin } from '@/lib/auth'
+
+// OPTIONS 方法处理 CORS 预检请求
+export async function OPTIONS(request: NextRequest) {
+  const origin = request.headers.get('Origin')
+  const userAgent = request.headers.get('User-Agent')
+  return handleOptions(origin, userAgent)
+}
 
 // GET - 获取单个激活码详情
 export async function GET(

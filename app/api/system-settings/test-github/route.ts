@@ -1,14 +1,22 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { authenticateRequest } from '@/lib/auth'
+import { authenticateRequest, isAuthorizedAdmin } from '@/lib/auth'
+import { handleOptions } from '@/lib/cors'
+
+// OPTIONS 方法处理 CORS 预检请求
+export async function OPTIONS(request: NextRequest) {
+  const origin = request.headers.get('Origin')
+  const userAgent = request.headers.get('User-Agent')
+  return handleOptions(origin, userAgent)
+}
 
 export async function POST(request: NextRequest) {
   try {
     const authResult = await authenticateRequest(request)
-    if (!authResult.success || !authResult.user) {
+    if (!authResult.success || !authResult.user || !isAuthorizedAdmin(authResult.user)) {
       return NextResponse.json(
-        { success: false, error: authResult.error || '未授权访问' },
+        { success: false, error: authResult.error || '未授权访问：需要管理员权限' },
         { status: 401 }
       )
     }

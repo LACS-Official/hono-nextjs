@@ -20,6 +20,7 @@ export const softwareUsage = pgTable('software_usage', {
   // 使用统计信息
   used: integer('used').notNull().default(1), // 使用次数，每次调用API时自增1
   usedAt: timestamp('used_at').notNull().defaultNow(), // 最后使用时间
+  clientIp: text('client_ip'), // 客户端请求IP地址
 
   // 时间戳
   createdAt: timestamp('created_at').notNull().defaultNow(),

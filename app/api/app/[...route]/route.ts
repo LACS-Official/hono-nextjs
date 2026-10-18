@@ -48,7 +48,7 @@ app.notFound((c) => {
 
 import { unifiedDb, appUsers, activationCodes } from '@/lib/unified-db-connection'
 import { hashPassword, verifyPassword, generateUserToken, verifyUserToken } from '@/lib/app-user-auth'
-import { eq } from 'drizzle-orm'
+import { eq, and } from 'drizzle-orm'
 import { sendVerificationCode } from '@/lib/email-service'
 
 // 验证码缓存，Key 为 email，Value 为 { code: string; expiresAt: Date; sentAt: number }
@@ -551,7 +551,7 @@ app.post('/user/activate', appUserAuth, async (c) => {
     const newVipExpireAt = new Date(baseTime.getTime() + codeDurationMs)
 
     await unifiedDb.transaction(async (tx) => {
-      await tx
+      const updatedCodes = await tx
         .update(activationCodes)
         .set({
           isUsed: true,
@@ -559,7 +559,12 @@ app.post('/user/activate', appUserAuth, async (c) => {
           usedBy: userId,
           userId: userId
         })
-        .where(eq(activationCodes.id, activationCode.id))
+        .where(and(eq(activationCodes.id, activationCode.id), eq(activationCodes.isUsed, false)))
+        .returning({ id: activationCodes.id })
+
+      if (updatedCodes.length === 0) {
+        throw new Error('CODE_ALREADY_USED')
+      }
 
       await tx
         .update(appUsers)
@@ -569,6 +574,21 @@ app.post('/user/activate', appUserAuth, async (c) => {
         })
         .where(eq(appUsers.id, userId))
     })
+
+    // 异步触发 Webhook VIP 激活通知
+    import('@/lib/webhook-service').then(({ sendWebhookNotification }) => {
+      sendWebhookNotification({
+        event: 'vip_activation',
+        title: '用户 VIP 兑换成功通知',
+        content: `用户 [${user.email}] 成功兑换激活码，VIP 有效期至 ${newVipExpireAt.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}。`,
+        fields: {
+          '用户邮箱': user.email,
+          '兑换卡密': activationCode.code,
+          '延长时间': `${Math.round(codeDurationMs / (24 * 60 * 60 * 1000))} 天`,
+          'VIP 到期时间': newVipExpireAt.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })
+        }
+      }).catch(err => console.error('[Webhook Alert] VIP兑换通知失败:', err))
+    }).catch(() => {})
 
     return c.json({
       success: true,
@@ -580,6 +600,13 @@ app.post('/user/activate', appUserAuth, async (c) => {
       }
     })
   } catch (error) {
+    if (error instanceof Error && error.message === 'CODE_ALREADY_USED') {
+      return c.json({
+        success: false,
+        error: 'Conflict',
+        message: '激活码已被使用'
+      }, 409)
+    }
     console.error('Activate VIP error:', error)
     return c.json({
       success: false,

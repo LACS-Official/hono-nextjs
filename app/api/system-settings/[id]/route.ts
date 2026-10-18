@@ -10,8 +10,17 @@ import { SupabaseSystemSettingsService } from '@/lib/supabase-system-settings'
 import { eq } from 'drizzle-orm'
 import { z } from 'zod'
 import { v4 as uuidv4 } from 'uuid'
-import { authenticateRequest } from '@/lib/auth'
+import { authenticateRequest, isAuthorizedAdmin } from '@/lib/auth'
+import { handleOptions, validateApiKeyWithExpiration } from '@/lib/cors'
 import { headers } from 'next/headers'
+
+// OPTIONS 方法处理 CORS 预检请求
+export async function OPTIONS(request: NextRequest) {
+  const origin = request.headers.get('Origin')
+  const userAgent = request.headers.get('User-Agent')
+  return handleOptions(origin, userAgent)
+}
+
 import { SettingValidator } from '@/lib/setting-validator'
 import { AuditLogService, AuditAction } from '@/lib/audit-log-service'
 import { syncSettingToProcessEnv } from '@/lib/system-config-sync'
@@ -82,12 +91,14 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    // 验证用户权限
+    // 验证管理员权限
     const authResult = await authenticateRequest(request)
+    const apiKeyResult = validateApiKeyWithExpiration(request)
+    const isAuthorized = (authResult.success && authResult.user && isAuthorizedAdmin(authResult.user)) || apiKeyResult.isValid
 
-    if (!authResult.success || !authResult.user) {
+    if (!isAuthorized) {
       return NextResponse.json(
-        { success: false, error: authResult.error || '未授权访问' },
+        { success: false, error: '未授权访问：需要管理员权限' },
         { status: 401 }
       )
     }
@@ -124,7 +135,7 @@ export async function PUT(
 
       updatedResult = await SupabaseSystemSettingsService.updateSetting(params.id, {
         ...validatedData,
-        updatedBy: authResult.user.id,
+        updatedBy: authResult.user?.id || 'admin',
       })
     } catch (supabaseErr: any) {
       console.warn('[Supabase REST] PUT [id] 回退至 SQL 执行:', supabaseErr.message)
@@ -163,7 +174,7 @@ export async function PUT(
       const updateData = {
         ...validatedData,
         updatedAt: new Date(),
-        updatedBy: authResult.user.id,
+        updatedBy: authResult.user?.id || 'admin',
       }
 
       const result = await safeQuery(() =>
@@ -187,7 +198,7 @@ export async function PUT(
         resourceType: 'system_setting',
         resourceId: params.id,
         action: AuditAction.UPDATE,
-        userId: authResult.user.id,
+        userId: authResult.user?.id || 'admin',
         details: {
           oldValue,
           newValue: validatedData.value !== undefined ? validatedData.value : oldValue,
@@ -223,12 +234,14 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    // 验证用户权限
+    // 验证管理员权限
     const authResult = await authenticateRequest(request)
+    const apiKeyResult = validateApiKeyWithExpiration(request)
+    const isAuthorized = (authResult.success && authResult.user && isAuthorizedAdmin(authResult.user)) || apiKeyResult.isValid
 
-    if (!authResult.success || !authResult.user) {
+    if (!isAuthorized) {
       return NextResponse.json(
-        { success: false, error: authResult.error || '未授权访问' },
+        { success: false, error: '未授权访问：需要管理员权限' },
         { status: 401 }
       )
     }
@@ -287,7 +300,7 @@ export async function DELETE(
         resourceType: 'system_setting',
         resourceId: params.id,
         action: AuditAction.DELETE,
-        userId: authResult.user.id,
+        userId: authResult.user?.id || 'admin',
         details: {
           oldValue,
           newValue: null,

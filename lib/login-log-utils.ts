@@ -273,6 +273,23 @@ export async function inspectAndNotifyLogin({
       alertType,
     }).catch(err => console.error('[Login Alert] 告警邮件投递失败:', err))
 
+    // 异步触发 Webhook 机器人告警
+    import('@/lib/webhook-service').then(({ sendWebhookNotification }) => {
+      sendWebhookNotification({
+        event: 'suspicious_login',
+        title: `异地/新设备登录安全提醒`,
+        content: `用户 [${email}] 于 ${timeStr} 进行了登录，检测到非日常登录特征 (${alertType === 'both' ? '新设备+异地' : alertType === 'new_device' ? '新设备' : '陌生IP'})。`,
+        fields: {
+          '登录账号': email,
+          '设备类型': devName,
+          '客户端环境': `${os} / ${browser}`,
+          '登录IP': ipAddress,
+          '网络归属': locationStr,
+          '警报类型': alertType === 'both' ? '新设备与异地' : alertType === 'new_device' ? '首次登录设备' : '异常IP地址'
+        }
+      }).catch(err => console.error('[Webhook Alert] 登录告警发送失败:', err))
+    }).catch(err => console.error('[Webhook Alert] 引入 Webhook 服务失败:', err))
+
     return true
   } catch (err) {
     console.warn('[Login Alert] 安全告警比对失败:', err)

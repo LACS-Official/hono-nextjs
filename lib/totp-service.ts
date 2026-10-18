@@ -19,10 +19,11 @@ export function clear2FACache() {
 
 /**
  * 获取当前全局 2FA 配置
+ * @param forceFresh 是否强制跳过内存缓存，直读数据库最新配置
  */
-export async function getTwoFactorConfig(): Promise<TwoFactorConfig> {
+export async function getTwoFactorConfig(forceFresh = false): Promise<TwoFactorConfig> {
   const now = Date.now()
-  if (cached2FAConfig && now < cacheExpiresAt) {
+  if (!forceFresh && cached2FAConfig && now < cacheExpiresAt) {
     return cached2FAConfig
   }
 

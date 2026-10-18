@@ -184,7 +184,10 @@ export default function LoginForm({ entranceCode }: LoginFormProps) {
 
       // 密码验证成功，先检测是否启用了 2FA 双因子认证
       try {
-        const twoFaCheck = await fetch('/api/auth/2fa/status');
+        const twoFaCheck = await fetch(`/api/auth/2fa/status?_t=${Date.now()}`, {
+          cache: 'no-store',
+          headers: { 'Cache-Control': 'no-cache' },
+        });
         const twoFaData = await twoFaCheck.json();
 
         if (twoFaData.success && twoFaData.enabled) {

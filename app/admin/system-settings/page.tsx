@@ -495,7 +495,10 @@ export default function SystemSettingsPage() {
 
   const fetchTwoFactorStatus = async () => {
     try {
-      const res = await fetch('/api/auth/2fa/status')
+      const res = await fetch(`/api/auth/2fa/status?_t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache' },
+      })
       const data = await res.json()
       if (data.success) {
         setTwoFactorStatus({
@@ -569,7 +572,14 @@ export default function SystemSettingsPage() {
           description: data.message || "后续登录将受到动态验证码保护",
         })
         setShowTwoFactorSetupDialog(false)
-        fetchTwoFactorStatus()
+        // 立即乐观更新本地状态，无需等待网络返回
+        setTwoFactorStatus({
+          enabled: true,
+          bound: true,
+          boundAt: new Date().toISOString(),
+          backupCodesCount: twoFactorSetupData?.backupCodes?.length || 8,
+        })
+        setTimeout(() => fetchTwoFactorStatus(), 500)
       } else {
         toast({
           variant: "destructive",
@@ -604,7 +614,14 @@ export default function SystemSettingsPage() {
         })
         setShowTwoFactorDisableDialog(false)
         setTwoFactorDisableCode('')
-        fetchTwoFactorStatus()
+        // 立即乐观更新本地状态
+        setTwoFactorStatus({
+          enabled: false,
+          bound: false,
+          boundAt: null,
+          backupCodesCount: 0,
+        })
+        setTimeout(() => fetchTwoFactorStatus(), 500)
       } else {
         toast({
           variant: "destructive",

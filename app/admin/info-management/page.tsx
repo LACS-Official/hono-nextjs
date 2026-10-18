@@ -431,9 +431,19 @@ export default function InfoManagementPage() {
         </BreadcrumbList>
       </Breadcrumb>
 
-      <div className="space-y-1">
-        <h2 className="text-3xl font-bold tracking-tight">信息管理中心</h2>
-        <p className="text-muted-foreground">管理联系方式、群聊、媒体平台和项目信息</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <h2 className="text-3xl font-bold tracking-tight">信息管理中心</h2>
+          <p className="text-muted-foreground">管理联系方式、群聊、媒体平台和项目信息</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <a href="/aboutus" target="_blank" rel="noreferrer">
+            <Button variant="outline" size="sm" className="text-xs">
+              <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+              查看前台公开展示页
+            </Button>
+          </a>
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">

@@ -77,6 +77,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { createClient } from '@/utils/supabase/client'
+import { exportToCsv } from '@/utils/export-csv'
 
 interface UsageRecord {
   id: string
@@ -449,9 +450,73 @@ export default function UserBehaviorPage() {
 
   // 导出数据
   const handleExport = () => {
+    const nowStr = dayjs().format('YYYYMMDD_HHmmss')
+
+    if (activeTab === 'device') {
+      const records = deviceStats?.recentConnections || []
+      if (records.length === 0) {
+        toast({
+          variant: "destructive",
+          title: "暂无数据可导出",
+          description: "当前外部设备连接明细为空",
+        })
+        return
+      }
+
+      const headers = ['记录ID', '设备序列号', '设备品牌', '设备型号', '关联软件ID', '用户设备指纹', '连接时间']
+      const rows = records.map(d => [
+        d.id,
+        d.deviceSerial,
+        d.deviceBrand || '未知',
+        d.deviceModel || '未知',
+        d.softwareId,
+        d.userDeviceFingerprint || '',
+        d.createdAt ? dayjs(d.createdAt).format('YYYY-MM-DD HH:mm:ss') : '',
+      ])
+
+      exportToCsv({
+        filename: `设备连接记录_${nowStr}.csv`,
+        headers,
+        rows,
+      })
+
+      toast({
+        title: "导出成功",
+        description: `已成功导出 ${records.length} 条设备连接记录至 CSV 文件`,
+      })
+      return
+    }
+
+    // 默认或 usage 标签页：导出软件使用流水
+    const records = usageStats?.recentUsage || []
+    if (records.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "暂无数据可导出",
+        description: "当前软件使用流水为空",
+      })
+      return
+    }
+
+    const headers = ['流水ID', '软件名称', '软件版本', '设备指纹/标识', '使用次数', '使用时间']
+    const rows = records.map(u => [
+      u.id,
+      u.softwareName,
+      u.softwareVersion || '默认版本',
+      u.deviceFingerprint,
+      u.used || 1,
+      u.usedAt ? dayjs(u.usedAt).format('YYYY-MM-DD HH:mm:ss') : '',
+    ])
+
+    exportToCsv({
+      filename: `软件使用流水_${nowStr}.csv`,
+      headers,
+      rows,
+    })
+
     toast({
-      title: "数据导出",
-      description: "已生成当前统计快照并准备导出...",
+      title: "导出成功",
+      description: `已成功导出 ${records.length} 条软件使用流水至 CSV 文件`,
     })
   }
 

@@ -83,6 +83,7 @@ import ResponsiveSoftwareGrid from '@/components/ResponsiveSoftwareGrid'
 import { SoftwareManagementSkeleton } from '@/components/SkeletonScreen'
 import ErrorBoundaryWrapper from '@/components/ErrorBoundaryWrapper'
 import type { Software } from '@/utils/software-api'
+import { exportToCsv } from '@/utils/export-csv'
 
 interface SoftwareStats {
   total: number
@@ -310,7 +311,57 @@ export default function SoftwareManagement() {
 
   // 导出数据
   const handleExport = () => {
-    toast({ title: '导出功能开发中...', description: "敬请期待" })
+    if (!software || software.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "暂无数据可导出",
+        description: "当前软件列表为空",
+      })
+      return
+    }
+
+    const headers = [
+      'ID',
+      '软件名称',
+      '英文名',
+      '分类',
+      '当前版本',
+      '文件类型',
+      '状态',
+      '浏览量',
+      '官方网站',
+      '开源/包名标识',
+      '创建时间',
+      '更新时间',
+    ]
+
+    const rows = software.map(s => [
+      s.id,
+      s.name,
+      s.nameEn || '',
+      s.category || '',
+      s.currentVersion || '',
+      s.filetype || '',
+      s.isActive ? '启用' : '禁用',
+      s.viewCount || 0,
+      s.officialWebsite || '',
+      s.openname || '',
+      s.createdAt || '',
+      s.updatedAt || '',
+    ])
+
+    const now = new Date()
+    const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '')
+    exportToCsv({
+      filename: `软件列表_${dateStr}.csv`,
+      headers,
+      rows,
+    })
+
+    toast({
+      title: "导出成功",
+      description: `已成功导出 ${software.length} 款软件记录至 CSV 文件`,
+    })
   }
 
   // 一键全量同步所有关联 GitHub 的软件
@@ -348,7 +399,7 @@ export default function SoftwareManagement() {
     view: (software: Software) => router.push(`/admin/software/${software.id}`),
     edit: (software: Software) => router.push(`/admin/software/${software.id}/edit`),
     delete: (id: number) => confirmDelete(id),
-    viewStats: (software: Software) => router.push(`/admin/software/${software.id}/analytics`)
+    viewStats: (software: Software) => router.push(`/admin/software/analytics?softwareId=${software.id}`)
   }
 
   useEffect(() => {

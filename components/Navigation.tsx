@@ -84,6 +84,11 @@ export default function Navigation({ className, collapsed, setCollapsed, isMobil
       label: '网站管理',
     },
     {
+      href: '/admin/announcements',
+      icon: Bell,
+      label: '公告中心',
+    },
+    {
       href: '/admin/activation-codes',
       icon: Key,
       label: '激活码管理',
@@ -97,6 +102,11 @@ export default function Navigation({ className, collapsed, setCollapsed, isMobil
       href: '/admin/crash-reports',
       icon: Bug,
       label: '崩溃日志监控',
+    },
+    {
+      href: '/admin/login-logs',
+      icon: FileText,
+      label: '登录日志',
     },
     {
       href: '/admin/donors',

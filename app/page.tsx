@@ -11,10 +11,13 @@ import {
   Monitor,
   Key,
   Bell,
-  ArrowRight
+  ArrowRight,
+  Sparkles,
+  Calendar
 } from 'lucide-react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
+import { changelogData } from '@/data/changelog'
 
 import { Button } from "@/components/ui/button"
 import Aurora from "@/components/animations/Aurora"
@@ -80,13 +83,37 @@ export default function HomePage() {
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-400">
             <a href="#features" className="hover:text-white transition-colors">核心功能</a>
             <a href="#stats" className="hover:text-white transition-colors">实时概况</a>
+            <a href="#changelog" className="hover:text-white transition-colors flex items-center gap-1.5">
+              <span>更新日志</span>
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30">v1.3.0</span>
+            </a>
+            <Link href="/aboutus" className="hover:text-white transition-colors">关于我们</Link>
+          </div>
+          <div className="flex items-center gap-3">
+            <Link href="/admin">
+              <Button size="sm" className="text-xs bg-blue-600 hover:bg-blue-500 text-white rounded-xl shadow-lg shadow-blue-500/20">
+                进入后台
+              </Button>
+            </Link>
           </div>
         </div>
       </header>
 
       <main className="relative z-10">
         {/* Hero Section */}
-        <section className="container mx-auto px-6 pt-24 pb-32 text-center lg:pt-32">
+        <section className="container mx-auto px-6 pt-20 pb-32 text-center lg:pt-28">
+
+          {/* 最新版本胶囊 */}
+          <div className="mb-6 flex justify-center">
+            <Link href="/changelog">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 hover:bg-blue-500/20 hover:border-blue-500/40 transition-all text-xs cursor-pointer group">
+                <span className="flex h-2 w-2 rounded-full bg-blue-400 animate-pulse" />
+                <span className="font-semibold">v1.3.0 正式发布</span>
+                <span className="text-slate-400 hidden sm:inline">• 智能化运维、崩溃监控与留存分析中枢</span>
+                <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
+              </div>
+            </Link>
+          </div>
 
           <div className="mb-10 min-h-[140px] flex items-center justify-center">
             <TrueFocus 
@@ -285,6 +312,93 @@ export default function HomePage() {
             </SpotlightCard>
           </div>
         </section>
+
+        {/* Changelog Section - 版本更新日志集成 */}
+        <section id="changelog" className="container mx-auto px-6 py-24 border-t border-white/5">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-12 gap-6 text-left">
+            <div className="space-y-3 max-w-2xl">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs">
+                <Rocket className="h-3.5 w-3.5" />
+                <span>持续迭代演进</span>
+              </div>
+              <h2 className="text-3xl md:text-5xl font-extrabold text-white tracking-tight">
+                版本更新日志
+              </h2>
+              <p className="text-slate-400 text-base leading-relaxed">
+                遵循 SemVer 2.0.0 规范，见证领创全栈平台从底层接口到现代化智能运维中枢的每次突破。
+              </p>
+            </div>
+            <Link href="/changelog">
+              <Button variant="outline" className="h-10 text-xs border-white/10 text-white hover:bg-white/10 rounded-xl gap-2">
+                <span>查看完整历史更新日志 ({changelogData.length} 个版本)</span>
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
+
+          {/* 最新版本 v1.3.0 精选大卡片 */}
+          <div className="p-8 md:p-10 rounded-3xl bg-gradient-to-br from-blue-950/30 via-slate-900/60 to-slate-900/80 border border-blue-500/30 shadow-[0_0_60px_rgba(59,130,246,0.12)] space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-white/10">
+              <div className="space-y-1">
+                <div className="flex items-center gap-3">
+                  <span className="font-mono text-3xl font-black text-white">{changelogData[0].version}</span>
+                  <Badge className="bg-blue-500/20 text-blue-400 border border-blue-500/40 text-xs px-2.5 py-0.5">
+                    最新稳定版本
+                  </Badge>
+                </div>
+                <div className="text-sm text-blue-400 font-medium">
+                  {changelogData[0].tagline}
+                </div>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-slate-400 font-mono">
+                <Calendar className="h-3.5 w-3.5" />
+                <span>发布于 {changelogData[0].date}</span>
+              </div>
+            </div>
+
+            <p className="text-sm text-slate-300 leading-relaxed">
+              {changelogData[0].summary}
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+              {changelogData[0].features.slice(0, 6).map((item, idx) => (
+                <div key={idx} className="flex items-start gap-2.5 p-3 rounded-xl bg-white/[0.02] border border-white/[0.05] text-xs text-slate-300">
+                  <CheckCircle2 className="h-4 w-4 text-blue-400 shrink-0 mt-0.5" />
+                  <span className="leading-relaxed">{item}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="pt-4 flex items-center justify-between flex-wrap gap-4 text-xs">
+              <span className="text-slate-500">
+                涵盖 1Panel 定时调度鉴权、崩溃监控、多平台 Webhook 机器人告警、DAU/MAU 留存漏斗等。
+              </span>
+              <Link href="/changelog" className="text-blue-400 hover:text-blue-300 font-medium inline-flex items-center gap-1 group">
+                阅读详细发布说明与修复清单
+                <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+              </Link>
+            </div>
+          </div>
+
+          {/* 历史里程碑极简胶囊 */}
+          <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {changelogData.slice(1, 5).map((m) => (
+              <Link key={m.version} href="/changelog">
+                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-blue-500/30 hover:bg-white/[0.05] transition-all cursor-pointer group space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono font-bold text-sm text-white group-hover:text-blue-400 transition-colors">
+                      {m.version}
+                    </span>
+                    <span className="text-[10px] text-slate-500 font-mono">{m.date}</span>
+                  </div>
+                  <p className="text-xs text-slate-400 line-clamp-1">
+                    {m.tagline}
+                  </p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
       </main>
 
       <footer className="relative z-10 border-t border-white/10 bg-black/40 py-16">
@@ -300,11 +414,17 @@ export default function HomePage() {
           </div>
           
           <div className="flex gap-10 text-sm font-medium">
-            <div className="flex flex-col gap-4">
-              <span className="text-white">支持</span>
+            <div className="flex flex-col gap-3">
+              <span className="text-white">快速导航</span>
+              <Link href="/changelog" className="text-slate-500 hover:text-white transition-colors">版本更新日志</Link>
+              <Link href="/aboutus" className="text-slate-500 hover:text-white transition-colors">关于我们</Link>
+              <Link href="/admin" className="text-slate-500 hover:text-white transition-colors">管理后台</Link>
+            </div>
+            <div className="flex flex-col gap-3">
+              <span className="text-white">技术支持</span>
               <Dialog>
                 <DialogTrigger asChild>
-                  <button className="text-slate-500 hover:text-white transition-colors">微信客服</button>
+                  <button className="text-slate-500 hover:text-white transition-colors text-left">微信客服</button>
                 </DialogTrigger>
                 <DialogContent className="max-w-[90vw] md:max-w-3xl bg-[#020617]/95 backdrop-blur-3xl border-white/10 rounded-[4rem] p-0 overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.8)]">
                   <DialogHeader className="sr-only">

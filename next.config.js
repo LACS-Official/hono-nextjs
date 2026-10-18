@@ -65,6 +65,20 @@ const nextConfig = {
       // 现在 /admin 将显示仪表板页面
     ]
   },
+
+  // 路由重写
+  async rewrites() {
+    return [
+      {
+        source: '/更新日志',
+        destination: '/changelog',
+      },
+      {
+        source: '/%E6%9B%B4%E6%96%B0%E6%97%A5%E5%BF%97',
+        destination: '/changelog',
+      },
+    ]
+  },
 }
 
 module.exports = nextConfig

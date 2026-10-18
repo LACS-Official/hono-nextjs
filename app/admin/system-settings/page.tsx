@@ -290,6 +290,13 @@ export default function SystemSettingsPage() {
   const [copiedCommand, setCopiedCommand] = useState(false)
   const [copiedSecret, setCopiedSecret] = useState(false)
   const [testingCronSecret, setTestingCronSecret] = useState(false)
+  const [currentOrigin, setCurrentOrigin] = useState('')
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setCurrentOrigin(window.location.origin)
+    }
+  }, [])
 
   const handleTestGithubToken = async (tokenOverride?: string) => {
     setTestingGithubToken(true)
@@ -1548,13 +1555,13 @@ export default function SystemSettingsPage() {
 
                   <div className="p-2.5 rounded-xl bg-black/[0.04] dark:bg-white/[0.05] border border-black/[0.05] dark:border-white/[0.06] text-[11px] font-mono break-all flex items-center justify-between gap-2">
                     <span className="text-[#333] dark:text-[#ccc]">
-                      curl -s "https://admin.lacs.cc/api/cron/github-sync?token={appConfig.cronSecret || 'YOUR_CRON_SECRET'}"
+                      curl -s "{currentOrigin || 'https://admin.lacs.cc'}/api/cron/github-sync?token={appConfig.cronSecret || 'YOUR_CRON_SECRET'}"
                     </span>
                     <Button
                       size="sm"
                       variant="ghost"
                       className="h-6 px-2 text-[10px] shrink-0 hover:bg-black/[0.05] dark:hover:bg-white/[0.08]"
-                      onClick={() => handleCopyText(`curl -s "https://admin.lacs.cc/api/cron/github-sync?token=${appConfig.cronSecret || 'YOUR_CRON_SECRET'}"`, 'command')}
+                      onClick={() => handleCopyText(`curl -s "${currentOrigin || 'https://admin.lacs.cc'}/api/cron/github-sync?token=${appConfig.cronSecret || 'YOUR_CRON_SECRET'}"`, 'command')}
                     >
                       {copiedCommand ? (
                         <span className="text-emerald-500 flex items-center gap-1">

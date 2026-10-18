@@ -334,7 +334,7 @@ export const SupabaseSystemSettingsService = {
     type: string
     value: string
     reason?: string
-    expiresAt?: string | null
+    expiresAt?: string | Date | null
     createdBy?: string
   }) {
     const id = uuidv4()
@@ -396,6 +396,37 @@ export const SupabaseSystemSettingsService = {
     }
 
     return true
+  },
+
+  // 10.1 获取封禁详细信息（包含原因与过期截止时间）
+  async getBlockedInfo(type: string, value: string): Promise<{
+    blocked: boolean
+    reason?: string
+    expiresAt?: string | null
+  }> {
+    const { data, error } = await supabase
+      .from('blocked_items')
+      .select('id, reason, expires_at, is_active')
+      .eq('type', type)
+      .eq('value', value)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .limit(1)
+
+    if (error || !data || data.length === 0) {
+      return { blocked: false }
+    }
+
+    const item = data[0]
+    if (item.expires_at && new Date(item.expires_at) < new Date()) {
+      return { blocked: false }
+    }
+
+    return {
+      blocked: true,
+      reason: item.reason || '您的 IP 或设备已被系统安全拦截，禁止访问。',
+      expiresAt: item.expires_at || null,
+    }
   },
 
   // 11. 获取登录日志

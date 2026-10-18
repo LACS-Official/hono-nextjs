@@ -21,12 +21,12 @@ export default function NotFound() {
           </Link>
           
           <div className="text-sm text-gray-500">
-            <Link href="/admin" className="hover:text-blue-600">
-              管理后台
+            <Link href="/changelog" className="hover:text-blue-600">
+              更新日志
             </Link>
             {' | '}
-            <Link href="/api-docs" className="hover:text-blue-600">
-              API 文档
+            <Link href="/aboutus" className="hover:text-blue-600">
+              关于我们
             </Link>
           </div>
         </div>

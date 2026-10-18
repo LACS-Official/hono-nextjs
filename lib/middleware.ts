@@ -42,10 +42,16 @@ export async function updateSession(request: NextRequest) {
   const isProtectedPath = pathname.startsWith('/admin') || pathname.startsWith('/protected')
 
   if (!user && isProtectedPath) {
-    // no user on protected routes, redirect to login page
+    // 仿 1Panel 安全机制：若未通过安全入口凭证，直接重定向回主页隐匿后台
+    const hasEntrancePass = Boolean(request.cookies.get('lacs_entrance_pass')?.value)
     const url = request.nextUrl.clone()
-    url.pathname = '/login'
-    return NextResponse.redirect(url)
+    if (hasEntrancePass) {
+      url.pathname = '/login'
+      return NextResponse.redirect(url)
+    } else {
+      url.pathname = '/'
+      return NextResponse.redirect(url)
+    }
   }
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is.

@@ -169,6 +169,10 @@ interface AppConfigState {
 
   allowedOrigins: string[]
 
+  // 1Panel 安全入口与登录防护
+  securityEntranceEnabled: boolean
+  securityEntranceCode: string
+
   // GitHub 与外部集成
   githubToken: string
   cronSecret: string
@@ -204,6 +208,9 @@ const defaultAppConfig: AppConfigState = {
   defaultPageSize: '20',
   maskSensitiveData: true,
   systemTitle: '玩机管家管理后台',
+
+  securityEntranceEnabled: false,
+  securityEntranceCode: '',
 
   enableApiKeyAuth: true,
   enableRateLimiting: true,
@@ -430,11 +437,36 @@ export default function SystemSettingsPage() {
     if (type === 'command') {
       setCopiedCommand(true)
       setTimeout(() => setCopiedCommand(false), 2000)
-    } else {
-      setCopiedSecret(true)
-      setTimeout(() => setCopiedSecret(false), 2000)
     }
     toast({ title: "已复制到剪贴板" })
+  }
+
+  const [copiedEntrance, setCopiedEntrance] = useState(false)
+
+  const handleGenerateEntranceCode = () => {
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
+    let randomStr = ''
+    for (let i = 0; i < 10; i++) {
+      randomStr += chars.charAt(Math.floor(Math.random() * chars.length))
+    }
+    const generated = `safe_${randomStr}`
+    setAppConfig(prev => ({ ...prev, securityEntranceCode: generated }))
+    persistSettingItem('security_entrance_code', generated, 'security', '1Panel 安全入口凭证代码', 'string')
+    toast({
+      title: "已生成新安全入口代码",
+      description: `新入口标识: ${generated}，请务必记录并保存`,
+    })
+  }
+
+  const handleCopyEntrance = (url: string) => {
+    if (!url) return
+    navigator.clipboard.writeText(url)
+    setCopiedEntrance(true)
+    setTimeout(() => setCopiedEntrance(false), 2000)
+    toast({
+      title: "安全入口链接已复制",
+      description: "请将此链接添加到浏览器书签或妥善备份",
+    })
   }
 
   // 邮件测试与保存状态
@@ -719,6 +751,12 @@ export default function SystemSettingsPage() {
             break
           case 'system_title':
             next.systemTitle = s.value || prev.systemTitle
+            break
+          case 'security_entrance_enabled':
+            next.securityEntranceEnabled = s.value === 'true'
+            break
+          case 'security_entrance_code':
+            next.securityEntranceCode = s.value || ''
             break
           case 'enable_api_key_auth':
             next.enableApiKeyAuth = s.value === 'true'
@@ -1381,6 +1419,135 @@ export default function SystemSettingsPage() {
                       <SelectItem value="168">7 天</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+
+                {/* ======================================================= */}
+                {/* 1Panel 安全入口机制 (仿 1Panel 核心安全策略) */}
+                {/* ======================================================= */}
+                <div className="p-4 space-y-3 bg-black/[0.015] dark:bg-white/[0.015]">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <div className="text-xs font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] flex items-center gap-1.5">
+                        <ShieldAlert className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                        1Panel 安全入口防护
+                        {appConfig.securityEntranceEnabled ? (
+                          <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] border-0">
+                            已启用 • 仅允许安全入口登录
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-[10px] text-zinc-500 border-zinc-300">
+                            未启用 • 默认常规登录
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="text-[11px] text-[#6e6e73] dark:text-[#a1a1a6]">
+                        仿照 1Panel 面板机制：开启后只能通过指定安全入口登录面板，直接访问将返回 404 彻底隐藏后台
+                      </div>
+                    </div>
+                    <Switch
+                      checked={appConfig.securityEntranceEnabled}
+                      onCheckedChange={(val) => {
+                        let targetCode = appConfig.securityEntranceCode
+                        if (val && !targetCode) {
+                          const chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
+                          let randomStr = ''
+                          for (let i = 0; i < 10; i++) {
+                            randomStr += chars.charAt(Math.floor(Math.random() * chars.length))
+                          }
+                          targetCode = `safe_${randomStr}`
+                          setAppConfig(prev => ({ ...prev, securityEntranceCode: targetCode, securityEntranceEnabled: val }))
+                          persistSettingItem('security_entrance_code', targetCode, 'security', '1Panel 安全入口凭证代码', 'string')
+                        } else {
+                          setAppConfig(prev => ({ ...prev, securityEntranceEnabled: val }))
+                        }
+                        persistSettingItem('security_entrance_enabled', String(val), 'security', '1Panel 安全入口开关', 'boolean')
+                        toast({
+                          title: val ? "安全入口已开启" : "安全入口已关闭",
+                          description: val ? "请务必妥善保存下方的安全入口链接！" : "已恢复常规登录入口",
+                        })
+                      }}
+                    />
+                  </div>
+
+                  {/* 安全入口代码配置 */}
+                  <div className="space-y-2 pt-1">
+                    <div className="text-[11px] font-medium text-[#1d1d1f] dark:text-[#f5f5f7]">
+                      安全入口识别代码 (Path / Token)
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="text"
+                        value={appConfig.securityEntranceCode}
+                        onChange={(e) => setAppConfig(prev => ({ ...prev, securityEntranceCode: e.target.value }))}
+                        placeholder="例如: safe_8k9x2p"
+                        className="h-8 rounded-lg text-xs font-mono bg-white dark:bg-[#1a1a1c]"
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={handleGenerateEntranceCode}
+                        className="h-8 rounded-lg text-xs px-2.5 whitespace-nowrap"
+                      >
+                        <RefreshCw className="mr-1 h-3 w-3" />
+                        随机生成
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          persistSettingItem('security_entrance_code', appConfig.securityEntranceCode, 'security', '1Panel 安全入口凭证代码', 'string')
+                          toast({ title: "安全入口代码已保存" })
+                        }}
+                        className="h-8 rounded-lg text-xs px-3 whitespace-nowrap bg-blue-600 hover:bg-blue-500 text-white"
+                      >
+                        保存
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* 实际安全入口 URL 展示与一键复制 */}
+                  <div className="rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-black/[0.02] dark:bg-white/[0.03] p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="text-[11px] font-medium text-[#1d1d1f] dark:text-[#f5f5f7] flex items-center gap-1.5">
+                        <Key className="h-3.5 w-3.5 text-blue-500" />
+                        <span>完整安全入口登录链接：</span>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleCopyEntrance(`${currentOrigin || 'https://admin.lacs.cc'}/login?entrance=${appConfig.securityEntranceCode || 'safe_entrance'}`)}
+                        className="h-6 rounded-md text-[11px] px-2"
+                      >
+                        {copiedEntrance ? (
+                          <>
+                            <Check className="mr-1 h-3 w-3 text-emerald-500" />
+                            已复制
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="mr-1 h-3 w-3" />
+                            复制链接
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                    <div className="font-mono text-xs text-blue-600 dark:text-blue-400 bg-white dark:bg-black/40 px-2.5 py-1.5 rounded-lg border border-black/[0.04] dark:border-white/[0.06] select-all break-all">
+                      {`${currentOrigin || 'https://admin.lacs.cc'}/login?entrance=${appConfig.securityEntranceCode || 'safe_entrance'}`}
+                    </div>
+                    <div className="text-[10px] text-[#6e6e73] dark:text-[#a1a1a6] leading-relaxed">
+                      💡 提示：开启安全入口后，直接访问 <code className="px-1 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-[10px]">/login</code> 或 <code className="px-1 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-[10px]">/admin</code> 将隐藏并返回 404；必须使用上方携带入口密钥的 URL 访问。
+                    </div>
+                  </div>
+
+                  {/* 连续 3 次登录失败锁定策略提示 */}
+                  <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 flex items-start gap-2.5 text-amber-800 dark:text-amber-300">
+                    <ShieldAlert className="h-4 w-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+                    <div className="text-[11px] leading-relaxed space-y-1">
+                      <div className="font-semibold">防暴力破解防御机制已就绪：</div>
+                      <div>
+                        任何 IP 连续登录失败超过 <strong>3 次</strong>，系统将自动触发安全封禁，封锁该 IP <strong>15 分钟</strong> 并向机器人发送告警。被锁定的 IP 将在下方的「黑名单拦截」中展示，管理员可随时手动提前解封。
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>

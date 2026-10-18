@@ -120,9 +120,9 @@ export default function AboutUsPublicPage() {
             <span>领创开放平台</span>
           </Link>
           <div className="flex items-center gap-3">
-            <Link href="/admin">
+            <Link href="/">
               <Button variant="ghost" size="sm" className="text-xs">
-                进入管理后台
+                返回首页
               </Button>
             </Link>
           </div>

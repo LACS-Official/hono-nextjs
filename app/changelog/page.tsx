@@ -81,10 +81,9 @@ export default function ChangelogPage() {
                 关于我们
               </Button>
             </Link>
-            <Link href="/admin">
-              <Button size="sm" className="text-xs bg-blue-600 hover:bg-blue-500 text-white rounded-xl shadow-lg shadow-blue-500/20">
-                进入管理后台
-                <ArrowUpRight className="ml-1 h-3.5 w-3.5" />
+            <Link href="/">
+              <Button size="sm" variant="outline" className="text-xs border-white/10 hover:bg-white/10 text-slate-300 rounded-xl">
+                返回首页
               </Button>
             </Link>
           </div>
@@ -246,7 +245,6 @@ export default function ChangelogPage() {
           <div className="flex items-center gap-6">
             <Link href="/" className="hover:text-white transition-colors">主页</Link>
             <Link href="/aboutus" className="hover:text-white transition-colors">关于我们</Link>
-            <Link href="/admin" className="hover:text-white transition-colors">管理后台</Link>
           </div>
         </div>
       </footer>

@@ -90,9 +90,9 @@ export default function HomePage() {
             <Link href="/aboutus" className="hover:text-white transition-colors">关于我们</Link>
           </div>
           <div className="flex items-center gap-3">
-            <Link href="/admin">
-              <Button size="sm" className="text-xs bg-blue-600 hover:bg-blue-500 text-white rounded-xl shadow-lg shadow-blue-500/20">
-                进入后台
+            <Link href="/aboutus">
+              <Button size="sm" variant="ghost" className="text-xs text-slate-300 hover:text-white rounded-xl">
+                了解我们
               </Button>
             </Link>
           </div>
@@ -418,7 +418,6 @@ export default function HomePage() {
               <span className="text-white">快速导航</span>
               <Link href="/changelog" className="text-slate-500 hover:text-white transition-colors">版本更新日志</Link>
               <Link href="/aboutus" className="text-slate-500 hover:text-white transition-colors">关于我们</Link>
-              <Link href="/admin" className="text-slate-500 hover:text-white transition-colors">管理后台</Link>
             </div>
             <div className="flex flex-col gap-3">
               <span className="text-white">技术支持</span>

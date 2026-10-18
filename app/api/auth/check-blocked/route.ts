@@ -4,21 +4,39 @@ import { blockedItems } from '@/lib/system-settings-schema'
 import { SupabaseSystemSettingsService } from '@/lib/supabase-system-settings'
 import { eq, and, or } from 'drizzle-orm'
 import { getClientIp } from '@/lib/login-log-utils'
+import { checkIpDefenseStatus } from '@/lib/login-defense'
 
 export async function GET(request: NextRequest) {
   try {
     const ip = getClientIp(request)
     const userAgent = request.headers.get('user-agent') || ''
 
-    try {
-      const isIpBlocked = ip ? await SupabaseSystemSettingsService.isBlocked('ip', ip) : false
-      const isDeviceBlocked = userAgent ? await SupabaseSystemSettingsService.isBlocked('device', userAgent) : false
+    // 1. 优先检查 IP 防爆破与黑名单状态
+    const ipDefense = await checkIpDefenseStatus(ip)
+    if (ipDefense.blocked) {
+      return NextResponse.json({
+        success: true,
+        blocked: true,
+        reason: ipDefense.reason,
+        expiresAt: ipDefense.expiresAt,
+        remainingSeconds: ipDefense.remainingSeconds,
+      })
+    }
 
-      if (isIpBlocked || isDeviceBlocked) {
+    try {
+      const deviceInfo = userAgent ? await SupabaseSystemSettingsService.getBlockedInfo('device', userAgent) : { blocked: false }
+
+      if (deviceInfo.blocked) {
+        const remainingSeconds = deviceInfo.expiresAt
+          ? Math.max(0, Math.floor((new Date(deviceInfo.expiresAt).getTime() - Date.now()) / 1000))
+          : null
+
         return NextResponse.json({
           success: true,
           blocked: true,
-          reason: '您的 IP 或设备已被管理员拉黑，禁止登录。'
+          reason: deviceInfo.reason || '您的设备已被系统安全拦截，禁止访问。',
+          expiresAt: deviceInfo.expiresAt,
+          remainingSeconds,
         })
       }
 

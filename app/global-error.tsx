@@ -37,10 +37,6 @@ export default function GlobalError({
                 <a href="/" className="hover:text-blue-600">
                   返回首页
                 </a>
-                {' | '}
-                <a href="/admin" className="hover:text-blue-600">
-                  管理后台
-                </a>
               </div>
             </div>
           </div>

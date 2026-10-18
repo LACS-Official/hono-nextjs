@@ -17,7 +17,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { changelogData } from '@/data/changelog'
+import { changelogData } from '@/lib/changelog-data'
 
 import { Button } from "@/components/ui/button"
 import Aurora from "@/components/animations/Aurora"

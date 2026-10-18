@@ -23,7 +23,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import Aurora from "@/components/animations/Aurora"
-import { changelogData, type ChangelogRelease } from "@/data/changelog"
+import { changelogData, type ChangelogRelease } from "@/lib/changelog-data"
 
 export default function ChangelogPage() {
   const [expandedVersions, setExpandedVersions] = useState<Record<string, boolean>>({

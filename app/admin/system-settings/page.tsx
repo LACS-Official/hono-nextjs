@@ -13,6 +13,7 @@ import {
   Search,
   History,
   ShieldAlert,
+  ShieldCheck,
   Monitor,
   Smartphone,
   Laptop,
@@ -288,6 +289,7 @@ export default function SystemSettingsPage() {
   const [triggeringSync, setTriggeringSync] = useState(false)
   const [copiedCommand, setCopiedCommand] = useState(false)
   const [copiedSecret, setCopiedSecret] = useState(false)
+  const [testingCronSecret, setTestingCronSecret] = useState(false)
 
   const handleTestGithubToken = async (tokenOverride?: string) => {
     setTestingGithubToken(true)
@@ -322,6 +324,46 @@ export default function SystemSettingsPage() {
     }
   }
 
+  const handleTestCronSecret = async () => {
+    if (!appConfig.cronSecret) {
+      toast({
+        variant: "destructive",
+        title: "请先配置或生成 Cron Secret",
+        description: "密钥为空，无法进行鉴权有效性测试",
+      })
+      return
+    }
+    setTestingCronSecret(true)
+    try {
+      const res = await fetch('/api/system-settings/test-cron-secret', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cronSecret: appConfig.cronSecret }),
+      })
+      const result = await res.json()
+      if (result.success) {
+        toast({
+          title: "Cron 密钥鉴权检测通过",
+          description: result.message || "密钥格式与运行时鉴权匹配成功，可安全用于 1Panel / Linux crontab 外部调度",
+        })
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Cron Secret 验证未通过",
+          description: result.error || "未能通过密钥鉴权测试",
+        })
+      }
+    } catch (e: any) {
+      toast({
+        variant: "destructive",
+        title: "测试异常",
+        description: e.message || "无法连接 Cron 鉴权测试接口",
+      })
+    } finally {
+      setTestingCronSecret(false)
+    }
+  }
+
   const handleTriggerGithubSync = async () => {
     setTriggeringSync(true)
     try {
@@ -332,9 +374,16 @@ export default function SystemSettingsPage() {
         const total = result.totalSoftware ?? result.total ?? 0
         const synced = result.syncedSoftware ?? result.successCount ?? 0
         const added = result.totalVersionsAdded ?? result.newVersionsCount ?? 0
+        const authBadge = result.authType === 'cron_secret'
+          ? ' [鉴权通过: 计划任务密钥]'
+          : result.authType === 'admin_session'
+            ? ' [鉴权通过: 管理员会话]'
+            : ''
         toast({
-          title: "GitHub 批量同步执行完成",
-          description: `扫描 ${total} 款关联 GitHub 的软件，已同步 ${synced} 款，入库 ${added} 个新版本`,
+          title: `GitHub 批量同步执行完成${authBadge}`,
+          description: result.authNotice
+            ? `${result.authNotice} 扫描 ${total} 款软件，已同步 ${synced} 款，入库 ${added} 个新版本`
+            : `扫描 ${total} 款关联 GitHub 的软件，已同步 ${synced} 款，入库 ${added} 个新版本`,
         })
       } else {
         toast({
@@ -1450,6 +1499,21 @@ export default function SystemSettingsPage() {
                       title="生成随机高强度密钥"
                     >
                       随机生成
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 rounded-lg text-xs px-2"
+                      onClick={handleTestCronSecret}
+                      disabled={testingCronSecret || !appConfig.cronSecret}
+                      title="测试外部 Cron 密钥鉴权机制是否生效"
+                    >
+                      {testingCronSecret ? (
+                        <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <ShieldCheck className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                      )}
+                      <span className="ml-1">测试鉴权</span>
                     </Button>
                     <Button
                       size="sm"

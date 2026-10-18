@@ -32,6 +32,8 @@ import {
   Check,
   ExternalLink,
   Key,
+  KeyRound,
+  QrCode,
   Terminal,
   Zap,
   Send
@@ -469,6 +471,158 @@ export default function SystemSettingsPage() {
     })
   }
 
+  // 2FA TOTP 状态与配置
+  const [twoFactorStatus, setTwoFactorStatus] = useState<{
+    enabled: boolean
+    bound: boolean
+    boundAt?: string | null
+    backupCodesCount: number
+  }>({ enabled: false, bound: false, backupCodesCount: 0 })
+  const [showTwoFactorSetupDialog, setShowTwoFactorSetupDialog] = useState(false)
+  const [twoFactorSetupData, setTwoFactorSetupData] = useState<{
+    secret: string
+    otpauthUrl: string
+    qrCodeDataUrl: string
+    backupCodes: string[]
+  } | null>(null)
+  const [twoFactorConfirmCode, setTwoFactorConfirmCode] = useState('')
+  const [bindingTwoFactor, setBindingTwoFactor] = useState(false)
+  const [copiedTwoFactorSecret, setCopiedTwoFactorSecret] = useState(false)
+  const [copiedBackupCodes, setCopiedBackupCodes] = useState(false)
+  const [showTwoFactorDisableDialog, setShowTwoFactorDisableDialog] = useState(false)
+  const [twoFactorDisableCode, setTwoFactorDisableCode] = useState('')
+  const [disablingTwoFactor, setDisablingTwoFactor] = useState(false)
+
+  const fetchTwoFactorStatus = async () => {
+    try {
+      const res = await fetch('/api/auth/2fa/status')
+      const data = await res.json()
+      if (data.success) {
+        setTwoFactorStatus({
+          enabled: Boolean(data.enabled),
+          bound: Boolean(data.bound),
+          boundAt: data.boundAt,
+          backupCodesCount: data.backupCodesCount || 0,
+        })
+      }
+    } catch (e) {
+      console.warn('获取 2FA 状态异常:', e)
+    }
+  }
+
+  const handleStartTwoFactorSetup = async () => {
+    setBindingTwoFactor(true)
+    try {
+      const res = await fetch('/api/auth/2fa/setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: 'admin@lacs.cc' }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setTwoFactorSetupData(data)
+        setTwoFactorConfirmCode('')
+        setShowTwoFactorSetupDialog(true)
+      } else {
+        toast({
+          variant: "destructive",
+          title: "初始化 2FA 失败",
+          description: data.error || "无法生成密钥",
+        })
+      }
+    } catch (e: any) {
+      toast({
+        variant: "destructive",
+        title: "请求异常",
+        description: e.message || "无法连通 2FA 生成服务",
+      })
+    } finally {
+      setBindingTwoFactor(false)
+    }
+  }
+
+  const handleVerifyAndEnableTwoFactor = async () => {
+    if (!twoFactorSetupData || !twoFactorConfirmCode.trim()) {
+      toast({
+        variant: "destructive",
+        title: "请输入 6 位动态口令",
+        description: "请在输入框中填入手机身份验证器生成的 6 位数字验证码",
+      })
+      return
+    }
+
+    setBindingTwoFactor(true)
+    try {
+      const res = await fetch('/api/auth/2fa/verify-binding', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          secret: twoFactorSetupData.secret,
+          code: twoFactorConfirmCode.trim(),
+          backupCodes: twoFactorSetupData.backupCodes,
+        }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        toast({
+          title: "2FA 双因子认证已成功启用！",
+          description: data.message || "后续登录将受到动态验证码保护",
+        })
+        setShowTwoFactorSetupDialog(false)
+        fetchTwoFactorStatus()
+      } else {
+        toast({
+          variant: "destructive",
+          title: "验证未通过",
+          description: data.error || "口令错误，请核对手机时间后重试",
+        })
+      }
+    } catch (e: any) {
+      toast({
+        variant: "destructive",
+        title: "请求异常",
+        description: e.message || "网络错误，无法完成 2FA 绑定",
+      })
+    } finally {
+      setBindingTwoFactor(false)
+    }
+  }
+
+  const handleDisableTwoFactor = async () => {
+    setDisablingTwoFactor(true)
+    try {
+      const res = await fetch('/api/auth/2fa/disable', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: twoFactorDisableCode.trim() }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        toast({
+          title: "2FA 已成功停用",
+          description: data.message || "已恢复常规密码登录保护",
+        })
+        setShowTwoFactorDisableDialog(false)
+        setTwoFactorDisableCode('')
+        fetchTwoFactorStatus()
+      } else {
+        toast({
+          variant: "destructive",
+          title: "停用失败",
+          description: data.error || "动态验证码错误，无法解绑",
+        })
+      }
+    } catch (e: any) {
+      toast({
+        variant: "destructive",
+        title: "请求异常",
+        description: e.message || "无法完成 2FA 解绑",
+      })
+    } finally {
+      setDisablingTwoFactor(false)
+    }
+  }
+
   // 邮件测试与保存状态
   const [testEmailTarget, setTestEmailTarget] = useState('')
   const [testEmailSending, setTestEmailSending] = useState(false)
@@ -726,6 +880,7 @@ export default function SystemSettingsPage() {
         maskSensitiveData: localMask !== null ? localMask === 'true' : prev.maskSensitiveData,
         systemTitle: localTitle || prev.systemTitle,
       }))
+      fetchTwoFactorStatus()
     } catch {}
   }, [])
 
@@ -1105,6 +1260,7 @@ export default function SystemSettingsPage() {
 
   useEffect(() => {
     fetchSettings()
+    fetchTwoFactorStatus()
   }, [])
 
   useEffect(() => {
@@ -1547,6 +1703,69 @@ export default function SystemSettingsPage() {
                         任何 IP 连续登录失败超过 <strong>3 次</strong>，系统将自动触发安全封禁，封锁该 IP <strong>15 分钟</strong> 并向机器人发送告警。被锁定的 IP 将在下方的「黑名单拦截」中展示，管理员可随时手动提前解封。
                       </div>
                     </div>
+                  </div>
+
+                  {/* 2FA 双因子身份认证 (TOTP 动态口令 + 应急备用码) */}
+                  <div className="rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-black/[0.02] dark:bg-white/[0.03] p-4 space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="space-y-0.5">
+                        <div className="text-xs font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] flex items-center gap-1.5">
+                          <QrCode className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                          <span>双因子身份验证 (2FA / TOTP)</span>
+                          {twoFactorStatus.enabled ? (
+                            <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] border-0">
+                              <ShieldCheck className="mr-1 h-3 w-3" />
+                              已启用 • 6 位动态口令保护
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-[10px] text-zinc-500 border-zinc-300">
+                              未开启 • 仅密码保护
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="text-[11px] text-[#6e6e73] dark:text-[#a1a1a6]">
+                          基于 RFC 6238 标准，支持 Google Authenticator、Microsoft Authenticator 等手机身份验证器离线 6 位动态口令
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        {twoFactorStatus.enabled ? (
+                          <>
+                            <div className="text-[11px] text-zinc-500 dark:text-zinc-400 hidden sm:block">
+                              剩余应急码: <span className="font-semibold text-emerald-600 dark:text-emerald-400">{twoFactorStatus.backupCodesCount}</span> 个
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setTwoFactorDisableCode('')
+                                setShowTwoFactorDisableDialog(true)
+                              }}
+                              className="h-8 rounded-lg text-xs px-3 border-red-200 dark:border-red-900/50 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30"
+                            >
+                              停用 2FA
+                            </Button>
+                          </>
+                        ) : (
+                          <Button
+                            size="sm"
+                            onClick={handleStartTwoFactorSetup}
+                            disabled={bindingTwoFactor}
+                            className="h-8 rounded-lg text-xs px-3 bg-[#0071e3] hover:bg-[#0077ed] text-white"
+                          >
+                            <QrCode className={`mr-1.5 h-3.5 w-3.5 ${bindingTwoFactor ? 'animate-spin' : ''}`} />
+                            配置并开启 2FA
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
+                    {twoFactorStatus.enabled && twoFactorStatus.boundAt && (
+                      <div className="text-[10px] text-emerald-600 dark:text-emerald-400/90 bg-emerald-50 dark:bg-emerald-950/30 px-3 py-1.5 rounded-lg border border-emerald-200/50 dark:border-emerald-800/40 flex items-center justify-between">
+                        <span>绑定时间：{new Date(twoFactorStatus.boundAt).toLocaleString('zh-CN')}</span>
+                        <span className="font-mono">备用恢复码可用: {twoFactorStatus.backupCodesCount} / 8</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -2922,6 +3141,201 @@ export default function SystemSettingsPage() {
             </Button>
             <Button onClick={handleCreateRawSetting} className="rounded-lg text-xs h-8 bg-[#0071e3] hover:bg-[#0077ed] text-white">
               新增
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 2FA 绑定激活弹窗 */}
+      <Dialog open={showTwoFactorSetupDialog} onOpenChange={setShowTwoFactorSetupDialog}>
+        <DialogContent className="rounded-2xl max-w-md sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-base font-semibold flex items-center gap-2">
+              <QrCode className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              配置 TOTP 双因子身份验证 (2FA)
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              使用手机身份验证器扫描二维码，输入 6 位验证码以完成安全绑定
+            </DialogDescription>
+          </DialogHeader>
+
+          {twoFactorSetupData && (
+            <div className="space-y-4 py-2 text-xs">
+              {/* 步骤 1: 扫描二维码 */}
+              <div className="rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-black/[0.02] dark:bg-white/[0.03] p-3.5 space-y-3">
+                <div className="font-semibold text-xs text-[#1d1d1f] dark:text-[#f5f5f7] flex items-center gap-1.5">
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-[10px] text-white font-bold">1</span>
+                  <span>使用手机验证器 App 扫码</span>
+                </div>
+                <div className="flex flex-col sm:flex-row items-center gap-4">
+                  <div className="p-2 bg-white rounded-xl shadow-sm border border-zinc-200 shrink-0">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={twoFactorSetupData.qrCodeDataUrl}
+                      alt="TOTP 2FA 二维码"
+                      className="w-36 h-36"
+                    />
+                  </div>
+                  <div className="space-y-2 text-[11px] text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                    <p>支持 <strong>Google Authenticator</strong>、<strong>Microsoft Authenticator</strong>、<strong>1Password</strong>、<strong>Bitwarden</strong> 等所有主流 TOTP 客户端。</p>
+                    <div className="pt-1">
+                      <div className="text-[10px] text-zinc-500 font-medium mb-1">若无法扫码，可手动录入 Base32 密钥：</div>
+                      <div className="flex items-center gap-1.5">
+                        <code className="px-2 py-1 bg-white dark:bg-black/50 border border-black/10 dark:border-white/10 rounded font-mono text-[10px] select-all break-all text-blue-600 dark:text-blue-400">
+                          {twoFactorSetupData.secret}
+                        </code>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 shrink-0"
+                          onClick={() => {
+                            navigator.clipboard.writeText(twoFactorSetupData.secret)
+                            setCopiedTwoFactorSecret(true)
+                            setTimeout(() => setCopiedTwoFactorSecret(false), 2000)
+                            toast({ title: "2FA 密钥已复制" })
+                          }}
+                        >
+                          {copiedTwoFactorSecret ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 步骤 2: 妥善保存应急备用码 */}
+              <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3.5 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="font-semibold text-xs text-amber-900 dark:text-amber-300 flex items-center gap-1.5">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-600 text-[10px] text-white font-bold">2</span>
+                    <span>妥善保存应急备用码 (重要)</span>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-6 text-[10px] px-2 border-amber-300 dark:border-amber-700/60 text-amber-800 dark:text-amber-300"
+                    onClick={() => {
+                      navigator.clipboard.writeText(twoFactorSetupData.backupCodes.join('\n'))
+                      setCopiedBackupCodes(true)
+                      setTimeout(() => setCopiedBackupCodes(false), 2000)
+                      toast({ title: "8 个应急备用码已复制到剪贴板" })
+                    }}
+                  >
+                    {copiedBackupCodes ? (
+                      <>
+                        <Check className="mr-1 h-3 w-3 text-emerald-600" />
+                        已复制备用码
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="mr-1 h-3 w-3" />
+                        一键复制备用码
+                      </>
+                    )}
+                  </Button>
+                </div>
+                <div className="text-[10px] text-amber-800 dark:text-amber-300/90 leading-relaxed">
+                  若手机遗失或无法接收验证码，每个备用码可作为一次性通行证应急登录后台（每个备用码仅限使用一次）。
+                </div>
+                <div className="grid grid-cols-4 gap-1.5 pt-1">
+                  {twoFactorSetupData.backupCodes.map((code, idx) => (
+                    <div
+                      key={idx}
+                      className="px-2 py-1 text-center font-mono text-[11px] font-semibold bg-white/80 dark:bg-black/40 border border-amber-300/40 dark:border-amber-700/40 rounded select-all text-amber-900 dark:text-amber-200"
+                    >
+                      {code}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* 步骤 3: 输入 6 位动态口令激活 */}
+              <div className="rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-black/[0.02] dark:bg-white/[0.03] p-3.5 space-y-2">
+                <div className="font-semibold text-xs text-[#1d1d1f] dark:text-[#f5f5f7] flex items-center gap-1.5">
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-600 text-[10px] text-white font-bold">3</span>
+                  <span>输入 App 当前显示的 6 位验证码以确认</span>
+                </div>
+                <div className="flex items-center gap-2 pt-1">
+                  <Input
+                    type="text"
+                    maxLength={6}
+                    placeholder="例如: 123456"
+                    value={twoFactorConfirmCode}
+                    onChange={(e) => setTwoFactorConfirmCode(e.target.value.replace(/\D/g, ''))}
+                    className="h-10 text-center font-mono text-base tracking-[0.3em] font-bold rounded-xl"
+                    autoFocus
+                  />
+                  <Button
+                    type="button"
+                    onClick={handleVerifyAndEnableTwoFactor}
+                    disabled={bindingTwoFactor || twoFactorConfirmCode.length !== 6}
+                    className="h-10 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs whitespace-nowrap"
+                  >
+                    {bindingTwoFactor ? '验证中...' : '验证并启用'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowTwoFactorSetupDialog(false)}
+              className="rounded-xl text-xs h-8"
+            >
+              取消
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 2FA 停用确认弹窗 */}
+      <Dialog open={showTwoFactorDisableDialog} onOpenChange={setShowTwoFactorDisableDialog}>
+        <DialogContent className="rounded-2xl max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-base font-semibold text-red-600 dark:text-red-400 flex items-center gap-2">
+              <ShieldAlert className="h-5 w-5" />
+              停用双因子认证 (2FA)
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground leading-relaxed">
+              停用后将仅使用账号密码登录后台，降低账户防御能力。为确认管理员身份，请输入当前验证器中的 6 位动态口令。
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 py-2 text-xs">
+            <div className="space-y-1.5">
+              <label className="font-medium text-xs text-[#1d1d1f] dark:text-[#f5f5f7]">
+                6 位动态口令
+              </label>
+              <Input
+                type="text"
+                maxLength={6}
+                placeholder="6 位数字口令"
+                value={twoFactorDisableCode}
+                onChange={(e) => setTwoFactorDisableCode(e.target.value.replace(/\D/g, ''))}
+                className="h-10 text-center font-mono text-base tracking-[0.25em] font-bold rounded-xl"
+                autoFocus
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowTwoFactorDisableDialog(false)}
+              className="rounded-xl text-xs h-8"
+            >
+              取消
+            </Button>
+            <Button
+              onClick={handleDisableTwoFactor}
+              disabled={disablingTwoFactor || twoFactorDisableCode.length !== 6}
+              className="rounded-xl text-xs h-8 bg-red-600 hover:bg-red-700 text-white"
+            >
+              {disablingTwoFactor ? '停用中...' : '确认停用 2FA'}
             </Button>
           </DialogFooter>
         </DialogContent>

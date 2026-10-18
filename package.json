@@ -70,6 +70,7 @@
     "nodemailer": "^9.0.3",
     "ogl": "^1.0.11",
     "pg": "^8.16.3",
+    "qrcode": "^1.5.4",
     "react": "18.3.1",
     "react-day-picker": "^9.13.2",
     "react-dom": "18.3.1",
@@ -84,6 +85,7 @@
   "devDependencies": {
     "@types/crypto-js": "^4.2.2",
     "@types/node": "18.11.18",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "18.0.26",
     "@types/react-dom": "18.0.10",
     "@types/ua-parser-js": "^0.7.39",

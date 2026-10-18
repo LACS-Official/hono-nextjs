@@ -1,4 +1,7 @@
 {
+  "name": "lacs-admin-nextjs",
+  "version": "1.3.0",
+  "private": true,
   "scripts": {
     "dev": "next dev -p 29351",
     "build": "next build",

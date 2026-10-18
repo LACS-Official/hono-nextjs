@@ -140,9 +140,14 @@ export default function Navigation({ className, collapsed, setCollapsed, isMobil
       )}>
         <Link href="/admin" className="flex items-center gap-2 overflow-hidden">
           {!collapsed ? (
-            <span className="text-xl font-bold text-foreground truncate">
-              领创全栈管理平台
-            </span>
+            <div className="flex items-center gap-2 overflow-hidden">
+              <span className="text-xl font-bold text-foreground truncate">
+                领创全栈管理平台
+              </span>
+              <span className="text-[10px] font-mono font-medium px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 shrink-0">
+                v1.3.0
+              </span>
+            </div>
           ) : (
              <span className="text-xl font-bold text-foreground">LACS</span>
           )}

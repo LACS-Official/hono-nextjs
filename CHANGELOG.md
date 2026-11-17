@@ -9,7 +9,22 @@
 
 ---
 
-## [v1.3.0] - 2026-10-18 (当前版本)
+## [v1.3.1] - 2026-11-17 (当前版本)
+### ✨ 新增功能 (Features)
+- **Supabase 免费版保活端点**：
+  - 新增 `/api/cron/keep-alive`，通过 PostgREST 发起真实数据库查询，规避免费项目连续 7 天无活动被自动暂停的风险。
+  - 完全复用「计划任务同步密钥 (Cron Secret)」鉴权体系，支持 Query / Header / Vercel Cron / 管理员会话四种渠道。
+  - 双表探针（system_settings、login_logs）容错判定：数据库有响应即视为有效活动，仅网络级不可达才判失败。
+  - 探针失败时复用现有 Webhook 通道（钉钉/企微/飞书/自定义）推送告警；`?alert=1` 可主动验证告警链路。
+- **后台保活可视化监控**：系统设置页新增「Supabase 保活监控」卡片，支持手动探测、实时探针状态展示、1Panel 命令一键复制与告警通道测试。
+
+### 🛠️ 优化与修复 (Fixes & Improvements)
+- 保活端点响应内置 1Panel / crontab 可直接复制的定时命令，推荐执行频率每 6 小时一次。
+- 建议执行顺序：先配置外部定时任务并观察一周，长期生产环境仍推荐升级 Supabase Pro 以获得永不暂停的 SLA 保障。
+
+---
+
+## [v1.3.0] - 2026-10-18
 ### ✨ 新增功能 (Features)
 - **1Panel / Linux crontab 外部定时同步鉴权**：
   - 新增专用计划任务密钥（`Cron Secret`）安全防护体系，支持 Header (`Authorization: Bearer`, `X-Cron-Secret`) 与 Query 参数鉴权。

@@ -36,7 +36,8 @@ import {
   QrCode,
   Terminal,
   Zap,
-  Send
+  Send,
+  HeartPulse
 } from 'lucide-react'
 
 import { Button } from "@/components/ui/button"
@@ -301,6 +302,19 @@ export default function SystemSettingsPage() {
   const [testingCronSecret, setTestingCronSecret] = useState(false)
   const [currentOrigin, setCurrentOrigin] = useState('')
 
+  // Supabase 保活状态
+  const [triggeringKeepAlive, setTriggeringKeepAlive] = useState(false)
+  const [keepAliveResult, setKeepAliveResult] = useState<{
+    success: boolean
+    timestamp: string
+    authType?: string
+    durationMs?: number
+    probes?: Array<{ table: string; reachable: boolean; rowCount: number | null; durationMs: number; detail?: string }>
+    error?: string
+    alert?: { sent: boolean; reason?: string }
+  } | null>(null)
+  const [keepAliveLastRun, setKeepAliveLastRun] = useState<string | null>(null)
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
       setCurrentOrigin(window.location.origin)
@@ -416,6 +430,52 @@ export default function SystemSettingsPage() {
       })
     } finally {
       setTriggeringSync(false)
+    }
+  }
+
+  /**
+   * 手动触发 Supabase 保活探测
+   * 复用系统设置中的 Cron Secret 作为鉴权凭证，行为与 1Panel 外部调度一致
+   */
+  const handleTriggerKeepAlive = async (sendTestAlert = false) => {
+    setTriggeringKeepAlive(true)
+    try {
+      const secret = appConfig.cronSecret?.trim()
+      const query = [
+        secret ? `token=${encodeURIComponent(secret)}` : '',
+        sendTestAlert ? 'alert=1' : '',
+      ].filter(Boolean).join('&')
+      const url = `/api/cron/keep-alive${query ? `?${query}` : ''}`
+      const res = await fetch(url, { cache: 'no-store' })
+      const result = await res.json()
+      setKeepAliveResult(result)
+      setKeepAliveLastRun(new Date().toLocaleString('zh-CN', { hour12: false }))
+
+      if (result.success) {
+        const reachable = result.probes?.filter((p: any) => p.reachable).length || 0
+        const total = result.probes?.length || 0
+        toast({
+          title: `保活成功 · ${reachable}/${total} 项探针正常`,
+          description: `Supabase 已收到真实查询请求（耗时 ${result.durationMs}ms），免费版项目将保持活跃。${sendTestAlert ? ' 测试告警已尝试推送，请检查告警群。' : ''}`,
+        })
+      } else {
+        toast({
+          variant: "destructive",
+          title: "保活探针失败",
+          description: result.error || "无法连接 Supabase 数据库，请检查项目是否已被暂停。",
+        })
+      }
+    } catch (e: any) {
+      const errResult = { success: false, timestamp: new Date().toISOString(), error: e?.message || '请求异常' }
+      setKeepAliveResult(errResult)
+      setKeepAliveLastRun(new Date().toLocaleString('zh-CN', { hour12: false }))
+      toast({
+        variant: "destructive",
+        title: "请求异常",
+        description: e?.message || "无法连接保活接口",
+      })
+    } finally {
+      setTriggeringKeepAlive(false)
     }
   }
 
@@ -2005,6 +2065,149 @@ export default function SystemSettingsPage() {
                         立即执行同步
                       </>
                     )}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 卡片 3.5: Supabase 保活监控 */}
+            <Card className="rounded-2xl bg-white dark:bg-[#161618] border border-black/[0.06] dark:border-white/[0.08] shadow-sm">
+              <CardHeader className="pb-3 border-b border-black/[0.05] dark:border-white/[0.06]">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                      <HeartPulse className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
+                        Supabase 保活监控
+                      </CardTitle>
+                      <CardDescription className="text-xs text-[#6e6e73] dark:text-[#a1a1a6]">
+                        定时真实查询防止免费版项目因 7 天无活动被暂停
+                      </CardDescription>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {keepAliveResult ? (
+                      <Badge
+                        variant="secondary"
+                        className={`text-[10px] font-mono border-0 ${
+                          keepAliveResult.success
+                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                            : 'bg-red-500/10 text-red-600 dark:text-red-400'
+                        }`}
+                      >
+                        {keepAliveResult.success ? '运行正常' : '探针异常'}
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-[10px] text-muted-foreground">未检测</Badge>
+                    )}
+                    <Button
+                      size="sm"
+                      onClick={() => handleTriggerKeepAlive()}
+                      disabled={triggeringKeepAlive}
+                      className="h-7 rounded-lg text-xs px-2.5 bg-[#0071e3] hover:bg-[#0077ed] text-white"
+                    >
+                      <HeartPulse className={`mr-1 h-3 w-3 ${triggeringKeepAlive ? 'animate-pulse' : ''}`} />
+                      {triggeringKeepAlive ? '探测中...' : '立即探测'}
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0 divide-y divide-black/[0.04] dark:divide-white/[0.05]">
+                {/* 探针结果 */}
+                <div className="p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <div className="text-xs font-medium text-[#1d1d1f] dark:text-[#f5f5f7]">数据库探针状态</div>
+                      <div className="text-[11px] text-[#6e6e73] dark:text-[#a1a1a6]">
+                        通过 PostgREST 发起真实查询，只要数据库响应即视为有效活动
+                      </div>
+                    </div>
+                    {keepAliveLastRun && (
+                      <span className="text-[10px] font-mono text-muted-foreground shrink-0">{keepAliveLastRun}</span>
+                    )}
+                  </div>
+
+                  {keepAliveResult?.probes && keepAliveResult.probes.length > 0 ? (
+                    <div className="space-y-1.5 pt-1">
+                      {keepAliveResult.probes.map((probe) => (
+                        <div
+                          key={probe.table}
+                          className="flex items-center justify-between p-2 rounded-lg bg-black/[0.02] dark:bg-white/[0.03]"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            {probe.reachable ? (
+                              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                            ) : (
+                              <AlertTriangle className="h-3.5 w-3.5 text-red-500 shrink-0" />
+                            )}
+                            <span className="text-[11px] font-mono text-[#333] dark:text-[#ccc]">{probe.table}</span>
+                            {probe.rowCount !== null && (
+                              <span className="text-[10px] text-muted-foreground">{probe.rowCount} 行</span>
+                            )}
+                          </div>
+                          <span className="text-[10px] font-mono text-muted-foreground shrink-0">{probe.durationMs}ms</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-3 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] text-[11px] text-muted-foreground">
+                      {keepAliveResult?.error ? (
+                        <span className="text-red-500">{keepAliveResult.error}</span>
+                      ) : (
+                        '点击「立即探测」验证 Supabase 项目活跃状态'
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* 1Panel / crontab 命令 */}
+                <div className="p-4 space-y-2 bg-black/[0.01] dark:bg-white/[0.01]">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-medium text-[#1d1d1f] dark:text-[#f5f5f7] flex items-center gap-1.5">
+                      <Terminal className="h-3.5 w-3.5 text-slate-500" />
+                      1Panel 定时保活命令
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">建议每 6 小时一次</span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-black/[0.04] dark:bg-white/[0.05] border border-black/[0.05] dark:border-white/[0.06] text-[11px] font-mono break-all flex items-center justify-between gap-2">
+                    <span className="text-[#333] dark:text-[#ccc]">
+                      curl -s "{currentOrigin || 'https://admin.lacs.cc'}/api/cron/keep-alive?token={appConfig.cronSecret || 'YOUR_CRON_SECRET'}"
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 px-2 text-[10px] shrink-0 hover:bg-black/[0.05] dark:hover:bg-white/[0.08]"
+                      onClick={() => handleCopyText(`curl -s "${currentOrigin || 'https://admin.lacs.cc'}/api/cron/keep-alive?token=${appConfig.cronSecret || 'YOUR_CRON_SECRET'}"`, 'command')}
+                    >
+                      {copiedCommand ? (
+                        <span className="text-emerald-500 flex items-center gap-1"><Check className="h-3 w-3" /> 已复制</span>
+                      ) : (
+                        <span className="flex items-center gap-1"><Copy className="h-3 w-3" /> 复制命令</span>
+                      )}
+                    </Button>
+                  </div>
+                  <div className="text-[10px] text-muted-foreground">
+                    每 6 小时执行 1 次（每天 4 次）即可避免免费版暂停，无需高频调用。
+                  </div>
+                </div>
+
+                {/* 告警通道测试 */}
+                <div className="p-4 flex items-center justify-between bg-black/[0.02] dark:bg-white/[0.02]">
+                  <div className="space-y-0.5 pr-4">
+                    <div className="text-xs font-medium text-[#1d1d1f] dark:text-[#f5f5f7]">告警通道测试</div>
+                    <div className="text-[11px] text-[#6e6e73] dark:text-[#a1a1a6]">主动推送一条测试通知，验证 Webhook 机器人是否可达</div>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleTriggerKeepAlive(true)}
+                    disabled={triggeringKeepAlive}
+                    className="h-8 rounded-lg text-xs px-3 shrink-0"
+                  >
+                    <Send className="mr-1.5 h-3.5 w-3.5" />
+                    发送测试告警
                   </Button>
                 </div>
               </CardContent>

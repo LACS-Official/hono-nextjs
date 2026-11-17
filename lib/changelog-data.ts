@@ -10,9 +10,25 @@ export interface ChangelogRelease {
 
 export const changelogData: ChangelogRelease[] = [
   {
+    version: 'v1.3.1',
+    date: '2026-11-17',
+    isLatest: true,
+    tagline: 'Supabase 免费版保活与后台可观测性增强',
+    summary: '新增专用保活端点和后台可视化监控卡片，通过定时真实数据库查询规避免费项目因 7 天无活动被自动暂停的风险，并复用现有 Webhook 通道提供异常告警。',
+    features: [
+      'Supabase 保活端点 (/api/cron/keep-alive)：通过 PostgREST 发起真实数据库查询，双表探针容错判定，保持免费项目活跃',
+      '保活端点复用现有 Cron Secret 鉴权体系，支持 Query / Header / Vercel Cron / 管理员会话四种渠道',
+      '探针失败时复用多平台 Webhook 机器人推送告警，支持 ?alert=1 主动验证告警链路连通性',
+      '系统设置页「Supabase 保活监控」卡片：手动探测、实时状态展示、1Panel 命令一键复制、告警通道测试'
+    ],
+    improvements: [
+      '保活端点响应内置 1Panel / crontab 可直接复制的定时命令，推荐每 6 小时执行一次',
+      '长期生产环境建议升级 Supabase Pro 以获得永不暂停的服务保障'
+    ]
+  },
+  {
     version: 'v1.3.0',
     date: '2026-10-18',
-    isLatest: true,
     tagline: '智能化运维、可观测性与企业级中枢平台成熟',
     summary: '引入 1Panel 外部定时同步鉴权体系、全生命周期崩溃监控、多平台 Webhook 机器人告警、DAU/MAU 深度留存漏斗、统一公告中枢与真 CSV 导出。',
     features: [

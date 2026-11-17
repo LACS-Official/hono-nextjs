@@ -147,3 +147,6 @@ tests/
 .augment/
 script/
 scripts/
+
+# WorkBuddy workspace data
+.workbuddy/

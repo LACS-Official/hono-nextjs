@@ -233,13 +233,35 @@ export default function EnhancedVersionManager({
   }
 
   // 获取版本统计
+  // 后端 getVersionStats 返回字段为 total/stable/beta/prerelease/latest，
+  // 此处统一映射为前端 VersionStats 结构，避免字段名不一致导致统计卡片显示 undefined
   const fetchStats = async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/software/version-management?action=stats&softwareId=${softwareId}`)
       const data = await response.json()
-      
-      if (data.success) {
-        setStats(data.data)
+
+      if (data.success && data.data) {
+        const raw = data.data
+        setStats({
+          totalVersions: raw.total ?? 0,
+          stableVersions: raw.stable ?? 0,
+          betaVersions: raw.beta ?? 0,
+          prereleaseVersions: raw.prerelease ?? 0,
+          latestVersion: raw.latest ?? '-',
+          oldestVersion: raw.oldest ?? '-',
+          averageReleaseInterval: raw.releaseFrequency ?? 0,
+        })
+      } else {
+        // 接口未返回有效统计（如版本列表为空）时，按空数据兜底，避免卡片消失
+        setStats({
+          totalVersions: 0,
+          stableVersions: 0,
+          betaVersions: 0,
+          prereleaseVersions: 0,
+          latestVersion: '-',
+          oldestVersion: '-',
+          averageReleaseInterval: 0,
+        })
       }
     } catch (error) {
       console.error('获取版本统计失败:', error)

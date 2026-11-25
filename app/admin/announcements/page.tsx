@@ -66,6 +66,7 @@ interface SoftwareItem {
 export default function AnnouncementsCenterPage() {
   const router = useRouter()
   const { toast } = useToast()
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:29351/app'
 
   const [loading, setLoading] = useState(true)
   const [websites, setWebsites] = useState<WebsiteItem[]>([])
@@ -78,7 +79,7 @@ export default function AnnouncementsCenterPage() {
     try {
       const [websitesRes, softwareRes] = await Promise.all([
         fetch('/api/websites'),
-        fetch('/api/software?page=1&pageSize=100'),
+        fetch(`${API_BASE_URL}/software?limit=100`),
       ])
 
       const websitesData = await websitesRes.json()

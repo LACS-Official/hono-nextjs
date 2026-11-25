@@ -10,9 +10,22 @@ export interface ChangelogRelease {
 
 export const changelogData: ChangelogRelease[] = [
   {
+    version: 'v1.3.2',
+    date: '2026-11-25',
+    isLatest: true,
+    tagline: '公告草稿、活动图标与公告中心等多项修复',
+    summary: '修复软件公告草稿在管理端不可见、仪表盘最近活动图标全部退化为默认时钟、公告中心软件列表加载失败与旧版版本管理器字段读取等问题，提升后台可用性与数据一致性。',
+    features: [],
+    improvements: [
+      '软件公告管理页新增 includeUnpublished 参数，草稿公告可在管理端查看/编辑/删除，客户端仍只展示已发布内容',
+      '仪表盘「最近活动」保留细分事件类型，按软件新增/更新、激活码生成/使用、软件使用分别渲染对应图标与颜色',
+      '修复 /admin/announcements 请求不存在的 /api/software 路由与错误参数，软件列表恢复正常加载',
+      '旧版 VersionManager 兼容后端直接返回数组的版本列表结构'
+    ]
+  },
+  {
     version: 'v1.3.1',
     date: '2026-11-17',
-    isLatest: true,
     tagline: 'Supabase 免费版保活与后台可观测性增强',
     summary: '新增专用保活端点和后台可视化监控卡片，通过定时真实数据库查询规避免费项目因 7 天无活动被自动暂停的风险，并复用现有 Webhook 通道提供异常告警。',
     features: [

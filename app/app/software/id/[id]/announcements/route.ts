@@ -51,16 +51,20 @@ export async function GET(
       }, { status: 404 }, origin, userAgent)
     }
     
+    // 管理端可通过 includeUnpublished=true 查看未发布（草稿）公告
+    // 默认仍只返回已发布公告，避免客户端展示出草稿内容
+    const includeUnpublished = new URL(request.url).searchParams.get('includeUnpublished') === 'true'
+
+    const conditions = [eq(softwareAnnouncements.softwareId, softwareId)]
+    if (!includeUnpublished) {
+      conditions.push(eq(softwareAnnouncements.isPublished, true))
+    }
+
     // 获取该软件的公告，置顶公告排在前面
     const announcements = await db
       .select()
       .from(softwareAnnouncements)
-      .where(
-        and(
-          eq(softwareAnnouncements.softwareId, softwareId),
-          eq(softwareAnnouncements.isPublished, true)
-        )
-      )
+      .where(and(...conditions))
       .orderBy(
         desc(softwareAnnouncements.isSticky), // 置顶公告优先
         desc(softwareAnnouncements.publishedAt) // 然后按发布时间排序

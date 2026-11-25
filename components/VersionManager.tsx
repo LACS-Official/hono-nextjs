@@ -67,7 +67,8 @@ export default function VersionManager({ softwareId, softwareName }: VersionMana
       const response = await fetch(`${API_BASE_URL}/software/id/${softwareId}/versions`)
       const data = await response.json()
       if (data.success) {
-        setVersions(data.data.versions || [])
+        // 后端 /software/id/[id]/versions 的 data 直接是版本数组
+        setVersions(Array.isArray(data.data) ? data.data : (data.data?.versions || []))
       }
     } catch (error) {
       toast({ variant: "destructive", title: "获取版本失败" })

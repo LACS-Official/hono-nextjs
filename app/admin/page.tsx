@@ -69,7 +69,7 @@ interface DashboardStats {
 // 活动记录接口
 interface ActivityItem {
   id: string
-  type: 'software_created' | 'software_updated' | 'activation_code_generated' | 'activation_code_used' | 'software_activated'
+  type: 'software_created' | 'software_updated' | 'activation_code_generated' | 'activation_code_used' | 'software_used'
   title: string
   description: string
   timestamp: string
@@ -200,7 +200,7 @@ export default function AdminDashboard() {
         return <Key className="h-4 w-4 text-purple-500" />
       case 'activation_code_used':
         return <CheckCircle className="h-4 w-4 text-green-500" />
-      case 'software_activated':
+      case 'software_used':
         return <User className="h-4 w-4 text-orange-500" />
       default:
         return <Clock className="h-4 w-4 text-gray-500" />

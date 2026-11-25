@@ -146,7 +146,7 @@ const SoftwareAnnouncementManager: React.FC<SoftwareAnnouncementManagerProps> = 
   const fetchAnnouncements = async () => {
     setLoading(true)
     try {
-      const response = await fetch(`${API_BASE_URL}/software/id/${softwareId}/announcements`)
+      const response = await fetch(`${API_BASE_URL}/software/id/${softwareId}/announcements?includeUnpublished=true`)
       const data = await response.json()
 
       if (data.success) {

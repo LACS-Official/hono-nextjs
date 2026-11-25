@@ -27,7 +27,7 @@ import { changelogData, type ChangelogRelease } from "@/lib/changelog-data"
 
 export default function ChangelogPage() {
   const [expandedVersions, setExpandedVersions] = useState<Record<string, boolean>>({
-    'v1.3.1': true,
+    'v1.3.2': true,
     'v1.3.0': true,
     'v1.2.3': true,
     'v1.2.0': true,
@@ -46,7 +46,7 @@ export default function ChangelogPage() {
   }
 
   const collapseAll = () => {
-    setExpandedVersions({ 'v1.3.1': true })
+    setExpandedVersions({ 'v1.3.2': true })
   }
 
   return (

@@ -145,7 +145,7 @@ export default function Navigation({ className, collapsed, setCollapsed, isMobil
                 领创全栈管理平台
               </span>
               <span className="text-[10px] font-mono font-medium px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 shrink-0">
-                v1.3.1
+                v1.3.2
               </span>
             </div>
           ) : (

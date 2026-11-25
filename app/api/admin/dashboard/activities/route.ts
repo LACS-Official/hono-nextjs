@@ -101,10 +101,13 @@ export async function GET(request: NextRequest) {
     ])
 
     // 合并所有活动并按时间排序
+    // 注意：各子函数已设置细分 type（software_created/software_updated/
+    // activation_code_generated/activation_code_used/software_used），
+    // 此处不可覆盖，否则前端无法按类型渲染对应图标
     const allActivities = [
-      ...softwareActivities.map(activity => ({ ...activity, type: 'software' })),
-      ...activationCodeActivities.map(activity => ({ ...activity, type: 'activation_code' })),
-      ...userActivationActivities.map(activity => ({ ...activity, type: 'user_activation' }))
+      ...softwareActivities,
+      ...activationCodeActivities,
+      ...userActivationActivities
     ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
      .slice(0, limit)
 

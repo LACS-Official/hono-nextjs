@@ -15,7 +15,7 @@ import { z } from 'zod'
 import crypto from 'crypto'
 import { UserBehaviorSecurity } from '@/lib/user-behavior-security'
 import { authenticateRequest, isAuthorizedAdmin } from '@/lib/auth'
-import { ensureOsPlatformColumns, normalizeOsPlatform } from '@/lib/os-platform-utils'
+import { ensureOsPlatformColumns, normalizeOsPlatform, parseOsFromUserAgent } from '@/lib/os-platform-utils'
 
 // OPTIONS 方法处理 CORS 预检请求
 export async function OPTIONS(request: NextRequest) {
@@ -93,9 +93,10 @@ export async function POST(request: NextRequest) {
 
     // 检查设备序列号是否已存在
     await ensureOsPlatformColumns().catch(() => {})
+    // 客户端显式上报优先；未上报时从 User-Agent 自动推断（旧客户端/浏览器端自动记录）
     const osPlatform = validatedData.osPlatform
       ? normalizeOsPlatform(validatedData.osPlatform)
-      : undefined
+      : parseOsFromUserAgent(userAgent)
 
     const existingDevice = await userBehaviorDb
       .select()

@@ -41,6 +41,26 @@ export function normalizeOsPlatform(raw?: string | null): OsPlatform {
   return 'unknown'
 }
 
+/**
+ * 从 HTTP User-Agent 自动推断客户端运行平台
+ * 兜底场景：旧版客户端未上报 osPlatform、Web/浏览器端、任意 HTTP 上报方
+ * 覆盖 Tauri WebView UA（内嵌 Windows NT / Macintosh / Linux / Android）与常见浏览器 UA
+ */
+export function parseOsFromUserAgent(ua?: string | null): OsPlatform {
+  if (!ua) return 'unknown'
+  const s = ua.toLowerCase()
+
+  // Android UA 含 'Linux'，必须先判
+  if (s.includes('android')) return 'android'
+  // iOS UA 含 'like Mac OS X'，先排除（不在四平台之列）
+  if (s.includes('iphone') || s.includes('ipad') || s.includes('ios')) return 'unknown'
+  if (s.includes('windows') || s.includes('win64') || s.includes('win32') || s.includes('wow64')) return 'windows'
+  if (s.includes('macintosh') || s.includes('mac os x') || s.includes('macos')) return 'macos'
+  if (s.includes('linux') || s.includes('x11') || s.includes('cros')) return 'linux'
+
+  return 'unknown'
+}
+
 let osColumnsEnsured = false
 
 /**

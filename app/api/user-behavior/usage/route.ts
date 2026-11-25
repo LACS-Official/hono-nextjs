@@ -19,7 +19,7 @@ import { UserBehaviorSecurity } from "@/lib/user-behavior-security";
 import { authenticateRequest, isAuthorizedAdmin } from "@/lib/auth";
 import { validateApiKeyWithExpiration } from "@/lib/cors";
 import { ensureSoftwareUsageIpColumn } from "@/lib/ip-geo-utils";
-import { ensureOsPlatformColumns, normalizeOsPlatform } from "@/lib/os-platform-utils";
+import { ensureOsPlatformColumns, normalizeOsPlatform, parseOsFromUserAgent } from "@/lib/os-platform-utils";
 
 // OPTIONS 方法处理 CORS 预检请求
 export async function OPTIONS(request: NextRequest) {
@@ -136,9 +136,10 @@ export async function POST(request: NextRequest) {
 
     await ensureSoftwareUsageIpColumn().catch(() => {});
     await ensureOsPlatformColumns().catch(() => {});
+    // 客户端显式上报优先；未上报时从 User-Agent 自动推断（旧客户端/浏览器端自动记录）
     const osPlatform = validatedData.osPlatform
       ? normalizeOsPlatform(validatedData.osPlatform)
-      : undefined;
+      : parseOsFromUserAgent(userAgent);
 
     if (existingUsage.length > 0) {
       // 更新现有记录，增加使用次数（os_platform 仅在缺失或本次明确上报时回填）

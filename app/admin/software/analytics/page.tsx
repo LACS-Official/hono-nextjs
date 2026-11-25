@@ -76,7 +76,10 @@ export default function SoftwareAnalytics() {
     maxViewCount: ''
   })
 
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:29351'
+  // 该接口是同源 Next.js 路由（app/admin/software/view-count/route.ts），
+  // 实际路径为 /admin/software/view-count，不带 /app 前缀。
+  // 使用相对路径可避免 NEXT_PUBLIC_API_URL 的 /app 前缀叠加导致 404。
+  const VIEW_COUNT_API = '/admin/software/view-count'
 
   // 获取统计数据
   const fetchStats = async () => {
@@ -90,11 +93,14 @@ export default function SoftwareAnalytics() {
         ...(filters.maxViewCount && { maxViewCount: filters.maxViewCount })
       })
 
-      const response = await fetch(`${API_BASE_URL}/admin/software/view-count?${params}`, {
+      const response = await fetch(`${VIEW_COUNT_API}?${params}`, {
         headers: {
           'X-API-Key': process.env.NEXT_PUBLIC_API_KEY || ''
         }
       })
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`)
+      }
       const data = await response.json()
 
       if (data.success) {
@@ -129,7 +135,7 @@ export default function SoftwareAnalytics() {
         ...(filters.maxViewCount && { maxViewCount: filters.maxViewCount })
       })
 
-      const response = await fetch(`${API_BASE_URL}/admin/software/view-count?${params}`, {
+      const response = await fetch(`${VIEW_COUNT_API}?${params}`, {
         headers: {
           'X-API-Key': process.env.NEXT_PUBLIC_API_KEY || ''
         }

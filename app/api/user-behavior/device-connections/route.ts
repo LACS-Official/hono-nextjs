@@ -15,6 +15,7 @@ import { z } from 'zod'
 import crypto from 'crypto'
 import { UserBehaviorSecurity } from '@/lib/user-behavior-security'
 import { authenticateRequest, isAuthorizedAdmin } from '@/lib/auth'
+import { ensureOsPlatformColumns, normalizeOsPlatform } from '@/lib/os-platform-utils'
 
 // OPTIONS 方法处理 CORS 预检请求
 export async function OPTIONS(request: NextRequest) {
@@ -28,6 +29,7 @@ const deviceConnectionRequestSchema = z.object({
   deviceSerial: z.string().min(1), // 设备序列号（必需）
   softwareId: z.number().int().positive(), // 软件ID（必需）
   userDeviceFingerprint: z.string().optional(), // 用户设备指纹（可选）
+  osPlatform: z.string().optional(), // 发起连接的桌面端运行系统：windows/macos/linux/android
 })
 
 
@@ -90,6 +92,11 @@ export async function POST(request: NextRequest) {
     }
 
     // 检查设备序列号是否已存在
+    await ensureOsPlatformColumns().catch(() => {})
+    const osPlatform = validatedData.osPlatform
+      ? normalizeOsPlatform(validatedData.osPlatform)
+      : undefined
+
     const existingDevice = await userBehaviorDb
       .select()
       .from(deviceConnections)
@@ -98,12 +105,16 @@ export async function POST(request: NextRequest) {
 
     let result
     if (existingDevice.length > 0) {
-      // 设备已存在，更新 linked 字段自增
+      // 设备已存在，更新 linked 字段自增（os_platform 缺失时回填）
       const [updatedConnection] = await userBehaviorDb
         .update(deviceConnections)
         .set({
           linked: existingDevice[0].linked + 1,
           updatedAt: new Date(),
+          osPlatform:
+            osPlatform && osPlatform !== 'unknown'
+              ? osPlatform
+              : existingDevice[0].osPlatform,
         })
         .where(eq(deviceConnections.deviceSerial, validatedData.deviceSerial))
         .returning()
@@ -117,6 +128,7 @@ export async function POST(request: NextRequest) {
           deviceSerial: validatedData.deviceSerial,
           softwareId: validatedData.softwareId,
           userDeviceFingerprint: validatedData.userDeviceFingerprint,
+          osPlatform: osPlatform && osPlatform !== 'unknown' ? osPlatform : null,
           linked: 1, // 初始连接次数为1
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -211,6 +223,8 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    await ensureOsPlatformColumns().catch(() => {})
+
     // 获取总连接次数（基于 linked 字段的总和）
     const [totalConnectionsResult] = await userBehaviorDb
       .select({
@@ -258,6 +272,8 @@ export async function GET(request: NextRequest) {
         deviceBrand: deviceConnections.deviceBrand,
         deviceModel: deviceConnections.deviceModel,
         softwareId: deviceConnections.softwareId,
+        userDeviceFingerprint: deviceConnections.userDeviceFingerprint,
+        osPlatform: deviceConnections.osPlatform,
         linked: deviceConnections.linked,
         createdAt: deviceConnections.createdAt,
         updatedAt: deviceConnections.updatedAt,

@@ -14,6 +14,7 @@ import { blockedItems } from "@/lib/system-settings-schema";
 import { eq, and, sql } from "drizzle-orm";
 import { corsResponse, handleOptions, getClientIp } from "@/lib/cors";
 import { checkUserBehaviorRateLimit } from "@/lib/user-behavior-rate-limit";
+import { ensureOsPlatformColumns } from "@/lib/os-platform-utils";
 import { z } from "zod";
 
 // 安卓版专属软件ID
@@ -156,6 +157,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 1. 记录 Software Usage (软件使用统计)
+    await ensureOsPlatformColumns().catch(() => {});
     const existingUsage = await userBehaviorDb
       .select()
       .from(softwareUsage)
@@ -175,6 +177,7 @@ export async function POST(request: NextRequest) {
           usedAt: new Date(),
           updatedAt: new Date(),
           softwareVersion: validatedData.softwareVersion || existingUsage[0].softwareVersion,
+          osPlatform: "android", // 安卓端专属入口，固定为 android
         })
         .where(
           and(
@@ -190,6 +193,7 @@ export async function POST(request: NextRequest) {
         deviceFingerprint: validatedData.deviceFingerprint,
         used: validatedData.used,
         usedAt: new Date(),
+        osPlatform: "android", // 安卓端专属入口，固定为 android
         createdAt: new Date(),
         updatedAt: new Date(),
       });
@@ -215,6 +219,7 @@ export async function POST(request: NextRequest) {
           updatedAt: new Date(),
           deviceBrand: validatedData.deviceBrand || existingDevice[0].deviceBrand,
           deviceModel: validatedData.deviceModel || existingDevice[0].deviceModel,
+          osPlatform: "android",
         })
         .where(
           and(
@@ -229,6 +234,7 @@ export async function POST(request: NextRequest) {
         deviceBrand: validatedData.deviceBrand,
         deviceModel: validatedData.deviceModel,
         userDeviceFingerprint: validatedData.deviceFingerprint,
+        osPlatform: "android",
         linked: 1,
         createdAt: new Date(),
         updatedAt: new Date(),

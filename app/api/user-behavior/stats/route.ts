@@ -15,6 +15,7 @@ import { eq, count, desc, and, gte, lte, sql } from 'drizzle-orm'
 import { corsResponse, handleOptions, validateApiKeyWithExpiration } from '@/lib/cors'
 import { authenticateRequest, isAuthorizedAdmin } from '@/lib/auth'
 import { parseIpGeoAndIsp, ensureSoftwareUsageIpColumn } from '@/lib/ip-geo-utils'
+import { ensureOsPlatformColumns, OS_PLATFORM_LABELS, type OsPlatform } from '@/lib/os-platform-utils'
 
 // OPTIONS 方法处理 CORS 预检请求
 export async function OPTIONS(request: NextRequest) {
@@ -49,6 +50,7 @@ export async function GET(request: NextRequest) {
     }
 
     await ensureSoftwareUsageIpColumn().catch(() => {})
+    await ensureOsPlatformColumns().catch(() => {})
 
     const { searchParams } = new URL(request.url)
     const softwareId = searchParams.get('softwareId')
@@ -95,7 +97,10 @@ export async function GET(request: NextRequest) {
       vipActivatedResult,
       // 5. 客户端 IP 采样 (用于地域与运营商画像)
       usageIpsResult,
-      crashIpsResult
+      crashIpsResult,
+      // 6. 操作系统平台维度 (windows/macos/linux/android)
+      osDistributionResult,
+      osRetentionResult
     ] = await Promise.all([
       // 总使用次数
       userBehaviorDb
@@ -279,7 +284,37 @@ export async function GET(request: NextRequest) {
         .select({ clientIp: clientCrashReports.clientIp })
         .from(clientCrashReports)
         .where(sql`${clientCrashReports.clientIp} IS NOT NULL`)
-        .limit(200)
+        .limit(200),
+
+      // OS 平台分布：各平台设备数与使用量
+      userBehaviorDb
+        .select({
+          platform: sql<string>`COALESCE(${softwareUsage.osPlatform}, 'unknown')`,
+          devices: sql<number>`count(DISTINCT ${softwareUsage.deviceFingerprint})`,
+          usage: sql<number>`COALESCE(sum(${softwareUsage.used}), 0)`
+        })
+        .from(softwareUsage)
+        .where(usageConditions.length > 0 ? and(...usageConditions) : undefined)
+        .groupBy(sql`COALESCE(${softwareUsage.osPlatform}, 'unknown')`)
+        .orderBy(desc(sql`count(DISTINCT ${softwareUsage.deviceFingerprint})`)),
+
+      // 按平台拆分的留存矩阵 (Day 1 / 3 / 7 / 30，与总体留存同口径)
+      userBehaviorDb
+        .select({
+          platform: sql<string>`COALESCE(${softwareUsage.osPlatform}, 'unknown')`,
+          devices: sql<number>`count(DISTINCT ${softwareUsage.deviceFingerprint})`,
+          totalEligibleDay1: sql<number>`count(DISTINCT CASE WHEN ${softwareUsage.createdAt} <= NOW() - INTERVAL '1 day' THEN ${softwareUsage.deviceFingerprint} END)`,
+          retainedDay1: sql<number>`count(DISTINCT CASE WHEN ${softwareUsage.createdAt} <= NOW() - INTERVAL '1 day' AND (${softwareUsage.usedAt} >= ${softwareUsage.createdAt} + INTERVAL '1 day' OR ${softwareUsage.used} >= 2) THEN ${softwareUsage.deviceFingerprint} END)`,
+          totalEligibleDay3: sql<number>`count(DISTINCT CASE WHEN ${softwareUsage.createdAt} <= NOW() - INTERVAL '3 days' THEN ${softwareUsage.deviceFingerprint} END)`,
+          retainedDay3: sql<number>`count(DISTINCT CASE WHEN ${softwareUsage.createdAt} <= NOW() - INTERVAL '3 days' AND (${softwareUsage.usedAt} >= ${softwareUsage.createdAt} + INTERVAL '3 days' OR ${softwareUsage.used} >= 3) THEN ${softwareUsage.deviceFingerprint} END)`,
+          totalEligibleDay7: sql<number>`count(DISTINCT CASE WHEN ${softwareUsage.createdAt} <= NOW() - INTERVAL '7 days' THEN ${softwareUsage.deviceFingerprint} END)`,
+          retainedDay7: sql<number>`count(DISTINCT CASE WHEN ${softwareUsage.createdAt} <= NOW() - INTERVAL '7 days' AND (${softwareUsage.usedAt} >= ${softwareUsage.createdAt} + INTERVAL '7 days' OR ${softwareUsage.used} >= 4) THEN ${softwareUsage.deviceFingerprint} END)`,
+          totalEligibleDay30: sql<number>`count(DISTINCT CASE WHEN ${softwareUsage.createdAt} <= NOW() - INTERVAL '30 days' THEN ${softwareUsage.deviceFingerprint} END)`,
+          retainedDay30: sql<number>`count(DISTINCT CASE WHEN ${softwareUsage.createdAt} <= NOW() - INTERVAL '30 days' AND (${softwareUsage.usedAt} >= ${softwareUsage.createdAt} + INTERVAL '30 days' OR ${softwareUsage.used} >= 8) THEN ${softwareUsage.deviceFingerprint} END)`
+        })
+        .from(softwareUsage)
+        .where(usageConditions.length > 0 ? and(...usageConditions) : undefined)
+        .groupBy(sql`COALESCE(${softwareUsage.osPlatform}, 'unknown')`)
     ])
 
     // 处理基础统计
@@ -299,7 +334,7 @@ export async function GET(request: NextRequest) {
     const calcRate = (retained?: number, eligible?: number): number => {
       const r = Number(retained) || 0
       const e = Number(eligible) || 0
-      if (e === 0) return uniqueUsedDevices > 1 ? 68.5 : 0
+      if (e === 0) return 0 // 无可评估样本时返回 0，不展示伪值
       return Math.min(100, Math.round((r / e) * 1000) / 10)
     }
 
@@ -450,6 +485,37 @@ export async function GET(request: NextRequest) {
       }))
       .sort((a, b) => b.count - a.count)
 
+    // 处理 OS 平台分布与按平台留存
+    const platformLabel = (p: string): string =>
+      OS_PLATFORM_LABELS[p as OsPlatform] || p
+
+    const totalOsDevices = osDistributionResult.reduce(
+      (acc, r) => acc + (Number(r.devices) || 0),
+      0
+    ) || 1
+
+    const osDistribution = osDistributionResult.map(r => ({
+      platform: r.platform,
+      label: platformLabel(r.platform),
+      devices: Number(r.devices) || 0,
+      usage: Number(r.usage) || 0,
+      percentage: Math.round(((Number(r.devices) || 0) / totalOsDevices) * 1000) / 10
+    }))
+
+    const osRetention = osRetentionResult.map(r => {
+      const row = r as Record<string, unknown>
+      const devices = Number(row.devices) || 0
+      return {
+        platform: r.platform,
+        label: platformLabel(r.platform),
+        devices,
+        day1Rate: calcRate(row.retainedDay1 as number, row.totalEligibleDay1 as number),
+        day3Rate: calcRate(row.retainedDay3 as number, row.totalEligibleDay3 as number),
+        day7Rate: calcRate(row.retainedDay7 as number, row.totalEligibleDay7 as number),
+        day30Rate: calcRate(row.retainedDay30 as number, row.totalEligibleDay30 as number)
+      }
+    }).sort((a, b) => b.devices - a.devices)
+
     return corsResponse(
       {
         success: true,
@@ -499,6 +565,12 @@ export async function GET(request: NextRequest) {
           geoProfile: {
             topProvinces,
             ispDistribution
+          },
+
+          // 4.1 操作系统平台维度 (windows/macos/linux/android)
+          osPlatform: {
+            distribution: osDistribution,
+            retention: osRetention
           },
 
           // 历史趋势与设备品牌 (保持向后兼容)

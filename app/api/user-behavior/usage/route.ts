@@ -19,6 +19,7 @@ import { UserBehaviorSecurity } from "@/lib/user-behavior-security";
 import { authenticateRequest, isAuthorizedAdmin } from "@/lib/auth";
 import { validateApiKeyWithExpiration } from "@/lib/cors";
 import { ensureSoftwareUsageIpColumn } from "@/lib/ip-geo-utils";
+import { ensureOsPlatformColumns, normalizeOsPlatform } from "@/lib/os-platform-utils";
 
 // OPTIONS 方法处理 CORS 预检请求
 export async function OPTIONS(request: NextRequest) {
@@ -34,6 +35,7 @@ const usageRequestSchema = z.object({
   softwareVersion: z.string().optional(),
   deviceFingerprint: z.string().min(1),
   used: z.number().int().positive().optional().default(1), // 使用次数增量，默认为1
+  osPlatform: z.string().optional(), // 运行系统：windows/macos/linux/android（服务端归一化）
 });
 
 // POST - 记录软件使用
@@ -133,9 +135,13 @@ export async function POST(request: NextRequest) {
       .limit(1);
 
     await ensureSoftwareUsageIpColumn().catch(() => {});
+    await ensureOsPlatformColumns().catch(() => {});
+    const osPlatform = validatedData.osPlatform
+      ? normalizeOsPlatform(validatedData.osPlatform)
+      : undefined;
 
     if (existingUsage.length > 0) {
-      // 更新现有记录，增加使用次数
+      // 更新现有记录，增加使用次数（os_platform 仅在缺失或本次明确上报时回填）
       const [updatedUsage] = await userBehaviorDb
         .update(softwareUsage)
         .set({
@@ -145,6 +151,10 @@ export async function POST(request: NextRequest) {
           clientIp: clientIp || existingUsage[0].clientIp,
           softwareVersion:
             validatedData.softwareVersion || existingUsage[0].softwareVersion,
+          osPlatform:
+            osPlatform && osPlatform !== "unknown"
+              ? osPlatform
+              : existingUsage[0].osPlatform,
         })
         .where(
           and(
@@ -184,6 +194,7 @@ export async function POST(request: NextRequest) {
         used: validatedData.used,
         usedAt: new Date(),
         clientIp: clientIp,
+        osPlatform: osPlatform && osPlatform !== "unknown" ? osPlatform : null,
         createdAt: new Date(),
         updatedAt: new Date(),
       })
@@ -265,6 +276,8 @@ export async function GET(request: NextRequest) {
     const endDate = searchParams.get("endDate");
     const search = searchParams.get("search");
 
+    await ensureOsPlatformColumns().catch(() => {});
+
     // 构建查询条件
     const conditions = [];
     if (softwareId) {
@@ -304,6 +317,7 @@ export async function GET(request: NextRequest) {
         deviceFingerprint: softwareUsage.deviceFingerprint,
         used: softwareUsage.used,
         usedAt: softwareUsage.usedAt,
+        osPlatform: softwareUsage.osPlatform,
       })
       .from(softwareUsage)
       .where(conditions.length > 0 ? and(...conditions) : undefined)

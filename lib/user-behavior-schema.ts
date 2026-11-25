@@ -22,6 +22,9 @@ export const softwareUsage = pgTable('software_usage', {
   usedAt: timestamp('used_at').notNull().defaultNow(), // 最后使用时间
   clientIp: text('client_ip'), // 客户端请求IP地址
 
+  // 运行平台维度：windows / macos / linux / android（历史数据为 null，统计时归入 unknown）
+  osPlatform: text('os_platform'),
+
   // 时间戳
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
@@ -52,6 +55,9 @@ export const deviceConnections = pgTable('device_connections', {
 
   // 用户设备指纹（关联到激活记录）
   userDeviceFingerprint: text('user_device_fingerprint'), // 用户设备指纹
+
+  // 发起连接的桌面端运行平台：windows / macos / linux / android
+  osPlatform: text('os_platform'),
 
   // 连接统计
   linked: integer('linked').notNull().default(1), // 连接次数，每次连接时自增

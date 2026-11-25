@@ -168,6 +168,18 @@ interface ComprehensiveStats {
     topProvinces: Array<{ province: string; count: number; percentage: number }>
     ispDistribution: Array<{ isp: string; count: number; percentage: number }>
   }
+  osPlatform?: {
+    distribution: Array<{ platform: string; label: string; devices: number; usage: number; percentage: number }>
+    retention: Array<{
+      platform: string
+      label: string
+      devices: number
+      day1Rate: number
+      day3Rate: number
+      day7Rate: number
+      day30Rate: number
+    }>
+  }
   trends: {
     usageTrend: Array<{ date: string; count: string | number }>
     connectionTrend: Array<{ date: string; count: number }>
@@ -1006,6 +1018,91 @@ export default function UserBehaviorPage() {
               </CardContent>
             </Card>
           </div>
+
+          {/* 6. 操作系统平台分布与分平台留存 */}
+          <Card className="shadow-sm border-slate-200/80">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-base font-semibold flex items-center gap-2">
+                    <Layers className="h-4 w-4 text-indigo-600" />
+                    操作系统平台分布 (OS Platform)
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    使用软件的运行系统：Windows / macOS / Linux / Android，含各平台留存表现
+                  </CardDescription>
+                </div>
+                <Badge variant="secondary" className="text-xs">四平台识别</Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              {/* 平台设备占比 */}
+              <div className="space-y-2.5">
+                {compStats?.osPlatform?.distribution?.length ? (
+                  compStats.osPlatform.distribution.map((item, idx) => (
+                    <div key={item.platform} className="space-y-1">
+                      <div className="flex justify-between text-xs">
+                        <span className="font-medium flex items-center gap-2">
+                          <span className={`h-2.5 w-2.5 rounded-full ${
+                            item.platform === 'windows' ? 'bg-blue-500' :
+                            item.platform === 'macos' ? 'bg-slate-600' :
+                            item.platform === 'linux' ? 'bg-amber-500' :
+                            item.platform === 'android' ? 'bg-emerald-500' : 'bg-slate-300'
+                          }`} />
+                          {item.label}
+                        </span>
+                        <span className="text-slate-700 font-semibold">
+                          {item.devices} 台 <span className="font-normal text-muted-foreground text-[11px]">({item.percentage}%) · 使用 {item.usage} 次</span>
+                        </span>
+                      </div>
+                      <Progress value={item.percentage} className="h-1.5" />
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-xs text-muted-foreground py-2">暂无平台数据（历史记录未标注系统时归入「未知平台」）</div>
+                )}
+              </div>
+
+              {/* 分平台留存矩阵 */}
+              {compStats?.osPlatform?.retention?.length ? (
+                <div className="pt-3 border-t border-slate-100">
+                  <span className="text-xs font-medium text-muted-foreground block mb-2">分平台留存率 (D1 / D3 / D7 / D30)</span>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-xs">平台</TableHead>
+                        <TableHead className="text-xs text-right">设备数</TableHead>
+                        <TableHead className="text-xs text-right">D1</TableHead>
+                        <TableHead className="text-xs text-right">D3</TableHead>
+                        <TableHead className="text-xs text-right">D7</TableHead>
+                        <TableHead className="text-xs text-right">D30</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {compStats.osPlatform.retention.map((r) => (
+                        <TableRow key={r.platform}>
+                          <TableCell className="text-xs font-medium flex items-center gap-2">
+                            <span className={`h-2.5 w-2.5 rounded-full ${
+                              r.platform === 'windows' ? 'bg-blue-500' :
+                              r.platform === 'macos' ? 'bg-slate-600' :
+                              r.platform === 'linux' ? 'bg-amber-500' :
+                              r.platform === 'android' ? 'bg-emerald-500' : 'bg-slate-300'
+                            }`} />
+                            {r.label}
+                          </TableCell>
+                          <TableCell className="text-xs text-right">{r.devices}</TableCell>
+                          <TableCell className="text-xs text-right">{r.day1Rate}%</TableCell>
+                          <TableCell className="text-xs text-right">{r.day3Rate}%</TableCell>
+                          <TableCell className="text-xs text-right">{r.day7Rate}%</TableCell>
+                          <TableCell className="text-xs text-right">{r.day30Rate}%</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : null}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* ============================================================== */}

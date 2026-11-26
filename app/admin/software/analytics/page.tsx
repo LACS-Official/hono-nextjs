@@ -93,11 +93,7 @@ export default function SoftwareAnalytics() {
         ...(filters.maxViewCount && { maxViewCount: filters.maxViewCount })
       })
 
-      const response = await fetch(`${VIEW_COUNT_API}?${params}`, {
-        headers: {
-          'X-API-Key': process.env.NEXT_PUBLIC_API_KEY || ''
-        }
-      })
+      const response = await fetch(`${VIEW_COUNT_API}?${params}`)
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`)
       }
@@ -135,11 +131,7 @@ export default function SoftwareAnalytics() {
         ...(filters.maxViewCount && { maxViewCount: filters.maxViewCount })
       })
 
-      const response = await fetch(`${VIEW_COUNT_API}?${params}`, {
-        headers: {
-          'X-API-Key': process.env.NEXT_PUBLIC_API_KEY || ''
-        }
-      })
+      const response = await fetch(`${VIEW_COUNT_API}?${params}`)
 
       if (response.ok) {
         const blob = await response.blob()

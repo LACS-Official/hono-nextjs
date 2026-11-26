@@ -85,7 +85,7 @@ export default function HomePage() {
             <a href="#stats" className="hover:text-white transition-colors">实时概况</a>
             <a href="#changelog" className="hover:text-white transition-colors flex items-center gap-1.5">
               <span>更新日志</span>
-              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30">v1.3.2</span>
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30">v1.4.0</span>
             </a>
             <Link href="/aboutus" className="hover:text-white transition-colors">关于我们</Link>
           </div>
@@ -108,8 +108,8 @@ export default function HomePage() {
             <Link href="/changelog">
               <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 hover:bg-blue-500/20 hover:border-blue-500/40 transition-all text-xs cursor-pointer group">
                 <span className="flex h-2 w-2 rounded-full bg-blue-400 animate-pulse" />
-                <span className="font-semibold">v1.3.2 正式发布</span>
-                <span className="text-slate-400 hidden sm:inline">• Supabase 保活、智能化运维与留存分析中枢</span>
+                <span className="font-semibold">v1.4.0 正式发布</span>
+                <span className="text-slate-400 hidden sm:inline">• 安全加固、版本对比与批量操作能力升级</span>
                 <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
               </div>
             </Link>
@@ -336,7 +336,7 @@ export default function HomePage() {
             </Link>
           </div>
 
-          {/* 最新版本 v1.3.2 精选大卡片 */}
+          {/* 最新版本 v1.4.0 精选大卡片 */}
           <div className="p-8 md:p-10 rounded-3xl bg-gradient-to-br from-blue-950/30 via-slate-900/60 to-slate-900/80 border border-blue-500/30 shadow-[0_0_60px_rgba(59,130,246,0.12)] space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-white/10">
               <div className="space-y-1">

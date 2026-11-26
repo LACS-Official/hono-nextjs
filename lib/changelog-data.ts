@@ -10,9 +10,29 @@ export interface ChangelogRelease {
 
 export const changelogData: ChangelogRelease[] = [
   {
+    version: 'v1.4.0',
+    date: '2026-11-26',
+    isLatest: true,
+    tagline: '安全加固与批量操作能力升级',
+    summary: '修复管理 API Key 泄露、鉴权缺失与输入清洗失效等安全隐患，补齐审计日志筛选与访问量分析等缺陷，并上线完整版版本对比、激活码批量操作与排名导出等增强功能。',
+    features: [
+      '完整版版本对比组件：支持时间线模式、体积差、时间差与版本哈希对比',
+      '激活码批量操作：多选框选、批量删除与批量 CSV 导出',
+      '软件排名页 CSV 导出：后端 ranking 接口新增 format=csv，一键导出全部排名数据',
+      '导航交互接线：个人资料、设置与通知铃铛接入真实页面路由'
+    ],
+    improvements: [
+      '安全加固：移除全部前端 NEXT_PUBLIC_API_KEY 请求头，API Key 漏配改为 fail-closed，恢复审计日志与激活码统计接口鉴权',
+      '输入清洗中间件真实拦截危险字符，清理泄露密钥片段/设备指纹/用户邮箱的 DEBUG 日志',
+      '审计日志日期筛选由 eq 改为 gte/lte 区间查询，Excel 导出格式明确映射并消除中文乱码',
+      '版本历史降级数据增加 degraded 标记，前端明确提示；分页解析增加缺失兜底',
+      '软件访问量分析改用同源相对路径，修复 404 误报网络错误',
+      '版本号统一为构建时注入，README 从过时的 2.2.0 对齐，新增脱敏 .env.example'
+    ]
+  },
+  {
     version: 'v1.3.2',
     date: '2026-11-25',
-    isLatest: true,
     tagline: '公告草稿、活动图标与公告中心等多项修复',
     summary: '修复软件公告草稿在管理端不可见、仪表盘最近活动图标全部退化为默认时钟、公告中心软件列表加载失败与旧版版本管理器字段读取等问题，提升后台可用性与数据一致性。',
     features: [],

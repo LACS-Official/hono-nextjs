@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import dayjs from 'dayjs'
+import VersionComparison from './VersionComparison'
 import {
   Plus,
   Edit,
@@ -209,10 +210,17 @@ export default function EnhancedVersionManager({
       const data = await response.json()
       
       if (data.success) {
-        const sortedVersions = data.data.sort((a: VersionHistory, b: VersionHistory) => 
+        const sortedVersions = (Array.isArray(data.data) ? data.data : []).sort((a: VersionHistory, b: VersionHistory) =>
           new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime()
         )
         setVersions(sortedVersions)
+        if (data.meta?.degraded) {
+          toast({
+            variant: "default",
+            title: "版本历史降级展示",
+            description: data.meta.notice || "当前展示的是临时版本记录，历史数据暂不可用",
+          })
+        }
       } else {
         toast({
           variant: "destructive",
@@ -1120,44 +1128,13 @@ export default function EnhancedVersionManager({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* 版本比较对话框 (简化版) */}
-      <Dialog open={comparisonVisible} onOpenChange={setComparisonVisible}>
-        <DialogContent className="max-w-4xl">
-          <DialogHeader>
-            <DialogTitle>版本比较</DialogTitle>
-            <DialogDescription>
-              比较两个版本之间的差异
-            </DialogDescription>
-          </DialogHeader>
-          {selectedVersions.length === 2 && (
-            <div className="grid grid-cols-2 gap-4">
-              {selectedVersions.map((version, index) => (
-                <Card key={version.id}>
-                  <CardHeader>
-                    <CardTitle className="text-lg">版本 {version.version}</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    <div>
-                      <span className="font-medium">发布日期:</span>
-                      <span className="ml-2">{new Date(version.releaseDate).toLocaleDateString('zh-CN')}</span>
-                    </div>
-                    <div>
-                      <span className="font-medium">文件大小:</span>
-                      <span className="ml-2">{version.fileSize || '-'}</span>
-                    </div>
-                    <div>
-                      <span className="font-medium">更新日志:</span>
-                      <p className="mt-1 text-sm text-muted-foreground whitespace-pre-wrap">
-                        {version.releaseNotes || '无'}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      {/* 版本比较对话框：复用完整版组件（支持并排/时间线、体积差与时间差） */}
+      <VersionComparison
+        visible={comparisonVisible}
+        onClose={() => setComparisonVisible(false)}
+        versions={versions}
+        selectedVersions={selectedVersions}
+      />
 
       {/* GitHub 同步与导入弹窗 */}
       <GithubSyncModal

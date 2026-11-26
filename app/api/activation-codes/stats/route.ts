@@ -3,7 +3,8 @@ export const dynamic = 'force-dynamic'
 import { NextRequest } from 'next/server'
 import { activationCodesDb as db, activationCodes } from '@/lib/activation-codes-db'
 import { eq, and, lt, gt, count } from 'drizzle-orm'
-import { corsResponse, handleOptions } from '@/lib/cors'
+import { corsResponse, handleOptions, validateApiKeyWithExpiration } from '@/lib/cors'
+import { authenticateRequest, isAuthorizedAdmin } from '@/lib/auth'
 
 // OPTIONS 方法处理 CORS 预检请求
 export async function OPTIONS(request: NextRequest) {
@@ -17,6 +18,21 @@ export async function GET(request: NextRequest) {
   const userAgent = request.headers.get('User-Agent')
 
   try {
+    // 与主路由保持一致的双重鉴权：Supabase 管理员会话 或 API Key
+    let isAuthenticated = false
+    const supabaseAuth = await authenticateRequest(request)
+    if (supabaseAuth.success && supabaseAuth.user && isAuthorizedAdmin(supabaseAuth.user)) {
+      isAuthenticated = true
+    } else if (process.env.ENABLE_API_KEY_AUTH === 'true' && validateApiKeyWithExpiration(request).isValid) {
+      isAuthenticated = true
+    }
+    if (!isAuthenticated) {
+      return corsResponse({
+        success: false,
+        error: '未授权访问：需要管理员会话或有效 API Key'
+      }, { status: 401 }, origin, userAgent)
+    }
+
     const now = new Date()
 
     // 并行查询各种统计数据

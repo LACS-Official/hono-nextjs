@@ -26,7 +26,14 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url)
-    const format = searchParams.get('format') // json, csv, excel
+    // 支持 json / csv；excel 作为 csv 别名（带 UTF-8 BOM，可直接用 Excel 打开）
+    const format = searchParams.get('format')
+    if (format && !['json', 'csv', 'excel'].includes(format)) {
+      return corsResponse({
+        success: false,
+        error: '不支持的导出格式，仅支持 json / csv / excel'
+      }, { status: 400 }, origin, userAgent)
+    }
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
     const minViewCount = searchParams.get('minViewCount')
@@ -82,19 +89,29 @@ export async function GET(request: NextRequest) {
       .where(and(...conditions))
 
     // 根据格式返回数据
-    if (format === 'csv') {
-      // 生成CSV格式
+    if (format === 'csv' || format === 'excel') {
+      // 生成 CSV；添加 UTF-8 BOM 确保 Excel 直接打开中文不乱码
       const csvHeader = 'ID,软件名称,英文名称,分类,访问量,创建时间,更新时间\n'
-      const csvData = softwareStats.map(item => 
-        `${item.id},"${item.name}","${item.nameEn || ''}","${item.category || ''}",${item.viewCount},"${item.createdAt}","${item.updatedAt}"`
-      ).join('\n')
-      
-      const csvContent = csvHeader + csvData
+      const escapeCsv = (value: any) => `"${String(value ?? '').replace(/"/g, '""')}"`
+      const csvData = softwareStats.map(item =>
+        [
+          item.id,
+          escapeCsv(item.name),
+          escapeCsv(item.nameEn),
+          escapeCsv(item.category),
+          item.viewCount,
+          escapeCsv(item.createdAt),
+          escapeCsv(item.updatedAt)
+        ].join(',')
+      ).join('\r\n')
+
+      const csvContent = '\uFEFF' + csvHeader + csvData
+      const ext = format === 'excel' ? 'csv' : 'csv'
 
       return new Response(csvContent, {
         headers: {
           'Content-Type': 'text/csv; charset=utf-8',
-          'Content-Disposition': `attachment; filename="software-view-stats-${new Date().toISOString().split('T')[0]}.csv"`
+          'Content-Disposition': `attachment; filename="software-view-stats-${new Date().toISOString().split('T')[0]}.${ext}"`
         }
       })
     }

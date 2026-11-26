@@ -153,10 +153,10 @@ export class SoftwareApiClient {
   }
 
   private getHeaders(): HeadersInit {
+    // 鉴权统一走 Supabase 会话 Cookie，不再向浏览器 bundle 注入 API Key
     return {
       'Content-Type': 'application/json',
-      'Accept': 'application/json',
-      'X-API-Key': process.env.NEXT_PUBLIC_API_KEY || ''
+      'Accept': 'application/json'
     }
   }
 

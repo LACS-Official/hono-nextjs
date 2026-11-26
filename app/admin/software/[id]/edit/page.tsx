@@ -318,8 +318,7 @@ export default function SoftwareEdit() {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-          'X-API-Key': process.env.NEXT_PUBLIC_API_KEY || ''
+          'Authorization': `Bearer ${session.access_token}`
         },
         body: JSON.stringify(processedValues)
       })

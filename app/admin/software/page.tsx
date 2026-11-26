@@ -191,11 +191,13 @@ export default function SoftwareManagement() {
       const data = await response.json()
 
       if (data.success) {
-        setSoftware(data.data.software)
+        setSoftware(data.data?.software || [])
+        // 兼容 pagination 位于 data 内或顶层的两种响应结构
+        const pg = data.data?.pagination || data.pagination || {}
         setPagination({
-          current: data.data.pagination.page,
-          pageSize: data.data.pagination.limit,
-          total: data.data.pagination.total
+          current: pg.page || 1,
+          pageSize: pg.limit || 20,
+          total: pg.total || 0
         })
       } else {
         toast({ title: '获取软件列表失败', variant: 'destructive' })
@@ -220,8 +222,7 @@ export default function SoftwareManagement() {
       const response = await fetch(`${API_BASE_URL}/software/id/${softwareToDelete}`, {
         method: 'DELETE',
         headers: {
-          'Content-Type': 'application/json',
-          'X-API-Key': process.env.NEXT_PUBLIC_API_KEY || ''
+          'Content-Type': 'application/json'
         }
       })
 
@@ -260,8 +261,7 @@ export default function SoftwareManagement() {
         fetch(`${API_BASE_URL}/software/id/${id}`, {
           method: 'DELETE',
           headers: {
-            'Content-Type': 'application/json',
-            'X-API-Key': process.env.NEXT_PUBLIC_API_KEY || ''
+            'Content-Type': 'application/json'
           }
         })
       )

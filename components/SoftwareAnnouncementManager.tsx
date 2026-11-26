@@ -181,8 +181,7 @@ const SoftwareAnnouncementManager: React.FC<SoftwareAnnouncementManagerProps> = 
       const response = await fetch(url, {
         method,
         headers: {
-          'Content-Type': 'application/json',
-          'X-API-Key': process.env.NEXT_PUBLIC_API_KEY || ''
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify(values)
       })
@@ -223,8 +222,7 @@ const SoftwareAnnouncementManager: React.FC<SoftwareAnnouncementManagerProps> = 
       const response = await fetch(`${API_BASE_URL}/software/id/${softwareId}/announcements/${deleteTarget}`, {
         method: 'DELETE',
         headers: {
-          'Content-Type': 'application/json',
-          'X-API-Key': process.env.NEXT_PUBLIC_API_KEY || ''
+          'Content-Type': 'application/json'
         }
       })
 

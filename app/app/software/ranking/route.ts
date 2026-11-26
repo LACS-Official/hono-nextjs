@@ -17,7 +17,8 @@ export async function GET(request: NextRequest) {
 
   try {
     const { searchParams } = new URL(request.url)
-    
+    const format = searchParams.get('format')
+
     // 分页参数
     const page = Math.max(1, parseInt(searchParams.get('page') || '1'))
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '10')))
@@ -111,6 +112,32 @@ export async function GET(request: NextRequest) {
       .where(eq(software.isActive, true))
 
     const totalPages = Math.ceil(count / limit)
+
+    // CSV 导出：使用当前筛选条件查询全部数据（不受分页限制），带 BOM 防 Excel 中文乱码
+    if (format === 'csv') {
+      const allRows = await db
+        .select({
+          name: software.name,
+          nameEn: software.nameEn,
+          category: software.category,
+          currentVersion: software.currentVersion,
+          viewCount: software.viewCount
+        })
+        .from(software)
+        .where(and(...conditions))
+        .orderBy(desc(software.viewCount), desc(software.updatedAt))
+      const esc = (v: any) => `"${String(v ?? '').replace(/"/g, '""')}"`
+      const header = '排名,软件名称,英文名称,分类,当前版本,访问量\r\n'
+      const rows = allRows.map((r, i) =>
+        [i + 1, esc(r.name), esc(r.nameEn), esc(r.category), esc(r.currentVersion), r.viewCount].join(',')
+      ).join('\r\n')
+      return new Response('\uFEFF' + header + rows, {
+        headers: {
+          'Content-Type': 'text/csv; charset=utf-8',
+          'Content-Disposition': `attachment; filename="software-ranking-${new Date().toISOString().split('T')[0]}.csv"`
+        }
+      })
+    }
 
     return corsResponse({
       success: true,

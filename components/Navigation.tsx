@@ -145,7 +145,7 @@ export default function Navigation({ className, collapsed, setCollapsed, isMobil
                 领创全栈管理平台
               </span>
               <span className="text-[10px] font-mono font-medium px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 shrink-0">
-                v1.3.2
+                v1.4.0
               </span>
             </div>
           ) : (
@@ -220,13 +220,13 @@ export default function Navigation({ className, collapsed, setCollapsed, isMobil
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel>我的账户</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={() => router.push('/admin/system-settings')}>
               <User className="mr-2 h-4 w-4" />
-              <span>个人资料</span>
+              <span>账户与资料</span>
             </DropdownMenuItem>
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={() => router.push('/admin/system-settings')}>
               <Settings className="mr-2 h-4 w-4" />
-              <span>设置</span>
+              <span>系统设置</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
@@ -334,7 +334,7 @@ export default function Navigation({ className, collapsed, setCollapsed, isMobil
           
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" aria-label="通知中心" onClick={() => router.push('/admin/announcements')}>
               <Bell className="h-5 w-5" />
             </Button>
           </div>

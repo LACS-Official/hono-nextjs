@@ -180,17 +180,25 @@ export function securityHeaders() {
 }
 
 // 输入清理中间件
+// Hono 的 c.req.param() 返回值不可就地改写，静默清洗后丢弃会造成虚假安全感。
+// 改为对 URL 参数与查询串做危险字符检测，命中即拒绝（400），防护真实生效。
+const DANGEROUS_INPUT_PATTERN = /<script|javascript:|on\w+\s*=|<\/|<!--/i
+
 export function sanitizeInput() {
   return async (c: Context, next: Next) => {
-    // 清理 URL 参数
-    const params = c.req.param()
-    for (const [, value] of Object.entries(params)) {
-      if (typeof value === 'string') {
-        // 移除潜在的危险字符
-        const sanitized = value.replace(/[<>'"&]/g, '').trim()
-        // 这里我们不能直接修改 params，但可以在路由中使用 sanitizeInput 函数
-        console.log('Sanitized value:', sanitized) // 临时日志，实际使用中可以移除
-      }
+    const values: string[] = []
+
+    for (const value of Object.values(c.req.param())) {
+      if (typeof value === 'string') values.push(value)
+    }
+
+    const query = c.req.query()
+    for (const value of Object.values(query)) {
+      if (typeof value === 'string') values.push(value)
+    }
+
+    if (values.some(v => DANGEROUS_INPUT_PATTERN.test(v))) {
+      return c.json({ success: false, error: '请求参数包含非法字符' }, 400)
     }
 
     return next()

@@ -13,9 +13,9 @@ import {
   safeQuery
 } from '@/lib/system-settings-db'
 import { SupabaseSystemSettingsService } from '@/lib/supabase-system-settings'
-import { eq, desc, and, ilike } from 'drizzle-orm'
+import { eq, desc, and, ilike, gte, lte } from 'drizzle-orm'
 import { z } from 'zod'
-import { authenticateRequest } from '@/lib/auth'
+import { authenticateRequest, isAuthorizedAdmin } from '@/lib/auth'
 import { headers } from 'next/headers'
 
 // 验证模式
@@ -32,11 +32,10 @@ const queryAuditLogSchema = z.object({
 // 获取审计日志列表
 export async function GET(request: NextRequest) {
   try {
-    // 验证用户权限（如未登录则提示未授权）
+    // 验证管理员权限：审计日志含操作人/IP/新旧值，必须鉴权
     const authResult = await authenticateRequest(request)
-    if (!authResult.success || !authResult.user) {
-      // 如果需要开放读取或临时权限检查
-      // return NextResponse.json({ success: false, error: authResult.error || '未授权访问' }, { status: 401 })
+    if (!authResult.success || !authResult.user || !isAuthorizedAdmin(authResult.user)) {
+      return NextResponse.json({ success: false, error: '未授权访问' }, { status: 401 })
     }
 
     const { searchParams } = new URL(request.url)
@@ -67,14 +66,16 @@ export async function GET(request: NextRequest) {
     if (startDateStr) {
       const startDate = new Date(startDateStr)
       if (!isNaN(startDate.getTime())) {
-        conditions.push(eq(systemSettingsAuditLog.timestamp, startDate))
+        conditions.push(gte(systemSettingsAuditLog.timestamp, startDate))
       }
     }
 
     if (endDateStr) {
       const endDate = new Date(endDateStr)
       if (!isNaN(endDate.getTime())) {
-        conditions.push(eq(systemSettingsAuditLog.timestamp, endDate))
+        // 包含结束日期当天的全部时间
+        endDate.setHours(23, 59, 59, 999)
+        conditions.push(lte(systemSettingsAuditLog.timestamp, endDate))
       }
     }
 

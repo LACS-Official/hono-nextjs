@@ -54,6 +54,7 @@ export async function GET(
     
     // 获取该软件的版本历史
     let versions = []
+    let degraded = false
     
     try {
       // 尝试查询版本历史表，如果表不存在则返回空数组
@@ -63,8 +64,9 @@ export async function GET(
         .where(eq(softwareVersionHistory.softwareId, softwareId))
         .orderBy(desc(softwareVersionHistory.releaseDate))
     } catch (error) {
-      // 如果表不存在，创建一个基于当前软件信息的临时版本记录
-      console.warn('版本历史表不存在，返回基于当前软件信息的临时数据:', error instanceof Error ? error.message : String(error))
+      // 表不存在时降级为基于当前软件的临时版本记录，并通过 degraded 标记告知前端
+      degraded = true
+      console.warn('版本历史查询失败，返回降级数据:', error instanceof Error ? error.message : String(error))
       versions = [{
         id: `temp-${softwareId}`,
         softwareId: softwareId,
@@ -88,7 +90,9 @@ export async function GET(
       data: versions,
       meta: {
         software: softwareInfo,
-        total: versions.length
+        total: versions.length,
+        degraded,
+        ...(degraded ? { notice: '版本历史表暂不可用，当前展示的是基于软件信息的临时版本记录' } : {})
       }
     }, undefined, origin, userAgent)
     

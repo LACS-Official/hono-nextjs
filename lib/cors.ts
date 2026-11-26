@@ -122,6 +122,22 @@ export interface ApiKeyValidationResult {
   error?: string
 }
 
+// 启动期安全检查：NEXT_PUBLIC_API_KEY 会被打包进浏览器 bundle，
+// 若与服务端 API_KEY 同值，等于公开管理凭证。仅告警一次，不阻断运行。
+let apiKeyLeakChecked = false
+function checkApiKeyExposure() {
+  if (apiKeyLeakChecked) return
+  apiKeyLeakChecked = true
+  const serverKey = process.env.API_KEY
+  const publicKey = process.env.NEXT_PUBLIC_API_KEY
+  if (serverKey && publicKey && serverKey === publicKey) {
+    console.error(
+      '[SECURITY] 检测到 NEXT_PUBLIC_API_KEY 与 API_KEY 同值，该密钥会被打包进前端 bundle。' +
+      '请立即轮换 API_KEY，并移除所有前端对 NEXT_PUBLIC_API_KEY 的引用。'
+    )
+  }
+}
+
 // API Key 验证函数（带过期时间）
 export function validateApiKey(request: Request): boolean {
   const result = validateApiKeyWithExpiration(request)
@@ -130,13 +146,18 @@ export function validateApiKey(request: Request): boolean {
 
 // 带过期时间的 API Key 验证函数
 export function validateApiKeyWithExpiration(request: Request): ApiKeyValidationResult {
+  checkApiKeyExposure()
   const apiKey = request.headers.get('X-API-Key')
   const validApiKey = process.env.API_KEY
   const apiKeyExpirationHours = parseInt(process.env.API_KEY_EXPIRATION_HOURS || '24')
 
-  // 如果没有设置API Key，则跳过验证（开发模式）
+  // API Key 未配置时：仅开发环境放行，生产环境 fail-closed 避免管理接口裸奔
   if (!validApiKey) {
-    console.warn('⚠️ API_KEY 环境变量未设置，跳过API Key验证')
+    if (process.env.NODE_ENV === 'production') {
+      console.error('[SECURITY] API_KEY 未配置，生产环境拒绝未鉴权请求')
+      return { isValid: false, error: 'API_KEY not configured' }
+    }
+    console.warn('⚠️ API_KEY 环境变量未设置，开发模式跳过API Key验证')
     return { isValid: true }
   }
 
@@ -172,10 +193,11 @@ export function validateUserBehaviorRecordApiKey(request: Request): ApiKeyValida
   // 优先使用专用的API Key，如果没有设置则使用通用的API Key
   const validApiKey = process.env.USER_BEHAVIOR_RECORD_API_KEY || process.env.USER_BEHAVIOR_API_KEY
 
-  console.log('🔍 [DEBUG] validateUserBehaviorRecordApiKey 被调用')
-  console.log('🔍 [DEBUG] 请求中的API Key:', apiKey ? `${apiKey.substring(0, 8)}...` : '未提供')
-  console.log('🔍 [DEBUG] 使用的环境变量:', process.env.USER_BEHAVIOR_RECORD_API_KEY ? 'USER_BEHAVIOR_RECORD_API_KEY' : 'USER_BEHAVIOR_API_KEY')
-  console.log('🔍 [DEBUG] 环境变量API Key:', validApiKey ? '已设置' : '未设置')
+  if (process.env.NODE_ENV !== 'production') {
+    console.debug('[DEBUG] validateUserBehaviorRecordApiKey 被调用')
+    // 安全：不再打印 API Key 任何片段，仅记录是否提供
+    console.debug('[DEBUG] 请求中的API Key:', apiKey ? '已提供' : '未提供')
+  }
 
   // 如果两个API Key都没有设置，返回错误
   if (!validApiKey) {
@@ -187,7 +209,7 @@ export function validateUserBehaviorRecordApiKey(request: Request): ApiKeyValida
   }
 
   if (!apiKey) {
-    console.log('❌ [DEBUG] API Key验证失败: 缺少API Key')
+    if (process.env.NODE_ENV !== 'production') console.debug('[DEBUG] API Key验证失败: 缺少API Key')
     return {
       isValid: false,
       error: 'Missing API Key for user behavior recording'
@@ -195,14 +217,14 @@ export function validateUserBehaviorRecordApiKey(request: Request): ApiKeyValida
   }
 
   if (apiKey !== validApiKey) {
-    console.log('❌ [DEBUG] API Key验证失败: API Key不匹配')
+    if (process.env.NODE_ENV !== 'production') console.debug('[DEBUG] API Key验证失败: API Key不匹配')
     return {
       isValid: false,
       error: 'Invalid API Key for user behavior recording'
     }
   }
 
-  console.log('✅ [DEBUG] API Key验证成功')
+  if (process.env.NODE_ENV !== 'production') console.debug('[DEBUG] API Key验证成功')
   return { isValid: true }
 }
 

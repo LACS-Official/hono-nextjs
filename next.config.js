@@ -1,5 +1,11 @@
+const packageVersion = require('./package.json').version
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // 统一版本号来源，避免 health/stats 等端点硬编码旧版本
+  env: {
+    NEXT_PUBLIC_APP_VERSION: packageVersion,
+  },
   reactStrictMode: true,
   poweredByHeader: false, // 隐藏 X-Powered-By 头部
   compress: true, // 启用 gzip 压缩
@@ -8,6 +14,7 @@ const nextConfig = {
   experimental: {
     optimizeCss: true, // CSS 优化
     scrollRestoration: true, // 滚动位置恢复
+    cpus: 1, // 限制构建 worker 数，避免静态生成阶段多进程并发导致内存/句柄耗尽崩溃
   },
 
   // 图片优化配置

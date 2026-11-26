@@ -243,8 +243,7 @@ export default function SoftwareNew() {
       const response = await fetch(`${API_BASE_URL}/software`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'X-API-Key': process.env.NEXT_PUBLIC_API_KEY || ''
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify(processedValues)
       })

@@ -144,8 +144,7 @@ export default function SoftwareDetail() {
       const response = await fetch(`${API_BASE_URL}/software/id/${softwareId}`, {
         method: 'DELETE',
         headers: {
-          'Content-Type': 'application/json',
-          'X-API-Key': process.env.NEXT_PUBLIC_API_KEY || ''
+          'Content-Type': 'application/json'
         }
       })
 

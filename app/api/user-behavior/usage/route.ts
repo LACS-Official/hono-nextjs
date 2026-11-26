@@ -66,8 +66,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 移除API Key验证 - 现在只依赖频率限制进行访问控制
-    console.log("ℹ️ [DEBUG] 跳过API Key验证，仅使用频率限制控制访问");
+    // API Key 验证已移除 - 仅依赖频率限制进行访问控制
 
     // 读取请求体
     const bodyText = await request.text();
@@ -82,9 +81,6 @@ export async function POST(request: NextRequest) {
         userAgent,
       );
     }
-
-    // 完全跳过安全检查 - POST记录端点只依赖频率限制
-    console.log("ℹ️ [DEBUG] 完全跳过安全检查，POST记录端点只使用频率限制");
 
     const body = JSON.parse(bodyText);
     const validatedData = usageRequestSchema.parse(body);
@@ -103,9 +99,6 @@ export async function POST(request: NextRequest) {
       .limit(1);
 
     if (blocked.length > 0) {
-      console.log(
-        `[DEBUG] 跳过记录已拉黑的设备: ${validatedData.deviceFingerprint}`,
-      );
       return corsResponse(
         {
           success: true,
@@ -265,11 +258,6 @@ export async function GET(request: NextRequest) {
         userAgent,
       );
     }
-
-    console.log(
-      "[DEBUG] GET端点使用认证通过，用户:",
-      authResult.user?.email || "API_KEY",
-    );
 
     const { searchParams } = new URL(request.url);
     const softwareId = searchParams.get("softwareId");

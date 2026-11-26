@@ -32,7 +32,7 @@ yarn-error.log*
 .env*.local
 .env.production
 .env.development
-.env.example
+# .env.example 是脱敏模板，需要入库供新环境参考
 
 # Vercel
 .vercel
@@ -127,7 +127,6 @@ app/security-test/
 
 # Security and configuration files
 SECURITY.md
-.env.example
 
 # Temporary and backup files
 *.tmp

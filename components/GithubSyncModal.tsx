@@ -294,7 +294,6 @@ export default function GithubSyncModal({
         headers: {
           'Content-Type': 'application/json',
           ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {}),
-          'X-API-Key': process.env.NEXT_PUBLIC_API_KEY || '',
         },
         body: JSON.stringify(payload),
       })

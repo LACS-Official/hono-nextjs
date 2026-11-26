@@ -277,7 +277,9 @@ async function getSystemHealth() {
   try {
     const healthChecks = {
       database: false,
-      apiResponse: true, // 如果能执行到这里，API响应是正常的
+      // 该接口能返回响应即证明 API 可用；显式标注为自检结果，避免伪装成独立探测
+      apiResponse: true,
+      apiResponseSource: 'self-check',
       timestamp: new Date().toISOString()
     }
 
@@ -297,7 +299,7 @@ async function getSystemHealth() {
       checks: healthChecks,
       uptime: process.uptime(), // 进程运行时间（秒）
       memory: process.memoryUsage(),
-      version: process.env.npm_package_version || '1.0.0'
+      version: process.env.NEXT_PUBLIC_APP_VERSION || process.env.npm_package_version || 'unknown'
     }
   } catch (error) {
     console.error('Error checking system health:', error)

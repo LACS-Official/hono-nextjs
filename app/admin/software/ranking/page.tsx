@@ -9,6 +9,7 @@ import {
   AppWindow,
   Search,
   RefreshCw,
+  Download,
   Crown,
   Medal,
   Flame
@@ -120,9 +121,11 @@ export default function SoftwareRanking() {
 
       if (data.success) {
         setRankingData(data)
+        // 兼容 pagination 位于顶层或 data 内的两种响应结构
+        const pg = data.pagination || data.data?.pagination || {}
         setPagination({
-          current: data.pagination.page,
-          pageSize: data.pagination.limit
+          current: pg.page || page,
+          pageSize: pg.limit || pageSize
         })
       } else {
         toast({
@@ -169,6 +172,33 @@ export default function SoftwareRanking() {
   // 刷新数据
   const handleRefresh = () => {
     fetchRanking(pagination.current, pagination.pageSize)
+  }
+
+  // 导出排行榜 CSV（按当前筛选条件，导出全部数据）
+  const handleExportCSV = async () => {
+    try {
+      const params = new URLSearchParams({
+        format: 'csv',
+        ...(filters.category && { category: filters.category }),
+        ...(filters.search && { search: filters.search }),
+        ...(filters.minViewCount && { minViewCount: filters.minViewCount })
+      })
+      const response = await fetch(`${API_BASE_URL}/software/ranking?${params}`)
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `software-ranking-${new Date().toISOString().split('T')[0]}.csv`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+      toast({ title: '导出成功', description: '排行榜数据已导出为 CSV 文件' })
+    } catch (error) {
+      console.error('Error exporting ranking:', error)
+      toast({ variant: 'destructive', title: '导出失败', description: '请稍后重试' })
+    }
   }
 
   useEffect(() => {
@@ -306,10 +336,16 @@ export default function SoftwareRanking() {
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">操作</label>
-              <Button variant="outline" onClick={handleRefresh} className="w-full">
-                <RefreshCw className="mr-2 h-4 w-4" />
-                刷新
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={handleRefresh} className="flex-1">
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  刷新
+                </Button>
+                <Button variant="outline" onClick={handleExportCSV} className="flex-1">
+                  <Download className="mr-2 h-4 w-4" />
+                  导出CSV
+                </Button>
+              </div>
             </div>
           </div>
         </CardContent>

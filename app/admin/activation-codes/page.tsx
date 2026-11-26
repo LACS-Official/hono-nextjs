@@ -67,6 +67,7 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/hooks/use-toast"
 import {
   activationCodeApi,
@@ -94,6 +95,8 @@ export default function ActivationCodesPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   const [total, setTotal] = useState(0)
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [batchDeleting, setBatchDeleting] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [cleanupDialogOpen, setCleanupDialogOpen] = useState(false)
   const [codeToDelete, setCodeToDelete] = useState<ActivationCode | null>(null)
@@ -201,6 +204,63 @@ export default function ActivationCodesPage() {
     }
   }
 
+  // 切换单选
+  const toggleSelect = (id: string, checked: boolean) => {
+    setSelectedIds(prev => checked ? [...prev, id] : prev.filter(x => x !== id))
+  }
+
+  // 全选/取消全选（当前页）
+  const toggleSelectAll = (checked: boolean) => {
+    setSelectedIds(checked ? filteredCodes.map(c => c.id) : [])
+  }
+
+  // 批量删除
+  const handleBatchDelete = async () => {
+    if (selectedIds.length === 0) return
+    setBatchDeleting(true)
+    const results = await Promise.allSettled(
+      selectedIds.map(id => activationCodeApi.deleteActivationCode(id))
+    )
+    const succeeded = results.filter(r => r.status === 'fulfilled').length
+    const failed = results.length - succeeded
+    setBatchDeleting(false)
+    toast({
+      variant: failed > 0 ? 'destructive' : 'default',
+      title: '批量删除完成',
+      description: `成功 ${succeeded} 条${failed > 0 ? `，失败 ${failed} 条` : ''}`,
+    })
+    setSelectedIds([])
+    loadActivationCodes()
+    loadStats()
+  }
+
+  // 批量导出选中项为 CSV（带 BOM）
+  const handleBatchExport = () => {
+    const selected = codes.filter(c => selectedIds.includes(c.id))
+    if (selected.length === 0) return
+    const esc = (v: any) => `"${String(v ?? '').replace(/"/g, '""')}"`
+    const header = '激活码,状态,产品名称,版本,客户,创建时间,过期时间\r\n'
+    const rows = selected.map(c => [
+      esc(c.code),
+      esc(getActivationCodeStatusText(c)),
+      esc(c.productInfo?.name),
+      esc(c.productInfo?.version),
+      esc(c.metadata?.customerEmail),
+      esc(formatDate(c.createdAt)),
+      esc(formatDate(c.expiresAt))
+    ].join(',')).join('\r\n')
+    const blob = new Blob(['\uFEFF' + header + rows], { type: 'text/csv; charset=utf-8' })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `activation-codes-${new Date().toISOString().split('T')[0]}.csv`
+    document.body.appendChild(a)
+    a.click()
+    window.URL.revokeObjectURL(url)
+    document.body.removeChild(a)
+    toast({ title: '导出成功', description: `已导出 ${selected.length} 条激活码` })
+  }
+
   // 执行清理
   const handleCleanupExpired = async () => {
     try {
@@ -251,6 +311,19 @@ export default function ActivationCodesPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+            {selectedIds.length > 0 && (
+                <>
+                    <Badge variant="secondary">已选 {selectedIds.length} 条</Badge>
+                    <Button variant="outline" onClick={handleBatchExport}>
+                        <Copy className="mr-2 h-4 w-4" />
+                        导出
+                    </Button>
+                    <Button variant="destructive" onClick={handleBatchDelete} disabled={batchDeleting}>
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        {batchDeleting ? '删除中...' : '批量删除'}
+                    </Button>
+                </>
+            )}
             <Button variant="outline" onClick={() => router.push('/admin/activation-codes/stats')}>
                 <BarChart className="mr-2 h-4 w-4" />
                 统计
@@ -357,6 +430,13 @@ export default function ActivationCodesPage() {
           <Table>
               <TableHeader>
                   <TableRow>
+                      <TableHead className="w-10">
+                          <Checkbox
+                              checked={filteredCodes.length > 0 && selectedIds.length === filteredCodes.length}
+                              onCheckedChange={(checked) => toggleSelectAll(checked === true)}
+                              aria-label="全选当前页"
+                          />
+                      </TableHead>
                       <TableHead>激活码</TableHead>
                       <TableHead>状态</TableHead>
                       <TableHead className="hidden md:table-cell">产品信息</TableHead>
@@ -369,6 +449,7 @@ export default function ActivationCodesPage() {
                   {loading ? (
                        Array(5).fill(0).map((_, i) => (
                            <TableRow key={i}>
+                               <TableCell><Skeleton className="h-4 w-4" /></TableCell>
                                <TableCell><Skeleton className="h-4 w-[150px]" /></TableCell>
                                <TableCell><Skeleton className="h-4 w-[80px]" /></TableCell>
                                <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-[100px]" /></TableCell>
@@ -379,13 +460,20 @@ export default function ActivationCodesPage() {
                        ))
                   ) : filteredCodes.length === 0 ? (
                       <TableRow>
-                          <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
-                              暂无数据
-                          </TableCell>
+                      <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                          暂无数据
+                      </TableCell>
                       </TableRow>
                   ) : (
                       filteredCodes.map((code) => (
                           <TableRow key={code.id}>
+                              <TableCell>
+                                  <Checkbox
+                                      checked={selectedIds.includes(code.id)}
+                                      onCheckedChange={(checked) => toggleSelect(code.id, checked === true)}
+                                      aria-label={`选择激活码 ${code.code}`}
+                                  />
+                              </TableCell>
                               <TableCell className="font-mono font-medium">
                                   <div className="flex items-center gap-2">
                                       {code.code}
